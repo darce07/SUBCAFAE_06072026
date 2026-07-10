@@ -193,7 +193,7 @@ export function DashboardLayout() {
           <button className="mr-3 rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
           <form onSubmit={submitSearch} className="relative hidden w-full max-w-md md:block">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} className="border-transparent bg-slate-100 pl-9 dark:bg-slate-900" placeholder="Buscar documento, código o ruta..." />
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} className="border-transparent bg-slate-100 pl-9 dark:bg-slate-900" placeholder="Buscar documento, descripción o ruta..." />
           </form>
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Cambiar tema">

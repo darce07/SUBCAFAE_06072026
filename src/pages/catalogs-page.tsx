@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { Boxes, Pencil, Plus, Power, Search, X } from "lucide-react";
+import { Boxes, Pencil, Plus, Power, RotateCcw, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Input, PageHeader, Select, Badge } from "../components/ui";
 import { useCatalogos } from "../hooks/use-catalogos";
-import type { CatalogItem, CatalogTable, CatalogosData, Entidad } from "../types";
+import type { CatalogItem, CatalogTable, CatalogosData, Entidad, EntityDocumentType } from "../types";
 import { usePermissions } from "../hooks/use-permissions";
 
 const definitions: Array<{
@@ -24,23 +24,68 @@ const definitions: Array<{
   { table: "catalogo_tipo_anexo", key: "tiposAnexo", name: "Tipos de anexo", description: "Clasificación de documentos complementarios", color: "bg-cyan-500" },
 ];
 
+type StatusFilter = "todos" | "activos" | "inactivos";
+type DescriptionFilter = "todos" | "con_descripcion" | "sin_descripcion";
+
 export function CatalogsPage() {
   const catalogos = useCatalogos();
   const { canCreate, canEdit } = usePermissions();
   const [selectedTable, setSelectedTable] = useState<CatalogTable>("catalogo_categorias");
   const [search, setSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
+  const [descriptionFilter, setDescriptionFilter] = useState<DescriptionFilter>("todos");
+  const [entityTypeFilter, setEntityTypeFilter] = useState("");
+  const [entityDocumentFilter, setEntityDocumentFilter] = useState<"" | EntityDocumentType>("");
   const [editing, setEditing] = useState<CatalogItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [entityTypeId, setEntityTypeId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const selectedDefinition = definitions.find((item) => item.table === selectedTable)!;
   const selectedItems = catalogos[selectedDefinition.key] as CatalogItem[];
-  const filteredItems = useMemo(
-    () => selectedItems.filter((item) => item.nombre.toLocaleLowerCase("es").includes(search.toLocaleLowerCase("es"))),
-    [search, selectedItems],
-  );
+  const activeFilterCount = [
+    statusFilter !== "todos",
+    descriptionFilter !== "todos",
+    selectedTable === "entidades" && Boolean(entityTypeFilter),
+    selectedTable === "entidades" && Boolean(entityDocumentFilter),
+  ].filter(Boolean).length;
+  const filteredItems = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase("es");
+    return selectedItems.filter((item) => {
+      const entity = selectedTable === "entidades" ? item as Entidad : null;
+      const entityTypeName = entity ? catalogos.tiposEntidad.find((type) => type.id === entity.tipo_entidad_id)?.nombre ?? "" : "";
+      const searchable = [
+        item.nombre,
+        item.descripcion ?? "",
+        entity?.tipo_documento ?? "",
+        entity?.numero_documento ?? "",
+        entityTypeName,
+      ].join(" ").toLocaleLowerCase("es");
+      const matchesSearch = !term || searchable.includes(term);
+      const matchesStatus =
+        statusFilter === "todos"
+        || (statusFilter === "activos" && item.activo)
+        || (statusFilter === "inactivos" && !item.activo);
+      const hasDescription = Boolean(item.descripcion?.trim());
+      const matchesDescription =
+        descriptionFilter === "todos"
+        || (descriptionFilter === "con_descripcion" && hasDescription)
+        || (descriptionFilter === "sin_descripcion" && !hasDescription);
+      const matchesEntityType = selectedTable !== "entidades" || !entityTypeFilter || entity?.tipo_entidad_id === entityTypeFilter;
+      const matchesEntityDocument = selectedTable !== "entidades" || !entityDocumentFilter || entity?.tipo_documento === entityDocumentFilter;
+      return matchesSearch && matchesStatus && matchesDescription && matchesEntityType && matchesEntityDocument;
+    });
+  }, [catalogos.tiposEntidad, descriptionFilter, entityDocumentFilter, entityTypeFilter, search, selectedItems, selectedTable, statusFilter]);
+
+  const resetFilters = () => {
+    setStatusFilter("todos");
+    setDescriptionFilter("todos");
+    setEntityTypeFilter("");
+    setEntityDocumentFilter("");
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -82,6 +127,21 @@ export function CatalogsPage() {
     }
   };
 
+  const removeItem = async (item: CatalogItem) => {
+    if (deletingId) return;
+    const confirmed = window.confirm(`¿Eliminar "${item.nombre}"? Esta acción no se puede deshacer.`);
+    if (!confirmed) return;
+    try {
+      setDeletingId(item.id);
+      await catalogos.remove(selectedTable, item);
+      toast.success("Valor eliminado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo eliminar el valor.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -96,16 +156,55 @@ export function CatalogsPage() {
         <div className="space-y-2">
           {definitions.map((definition) => {
             const values = catalogos[definition.key] as CatalogItem[];
-            return <button key={definition.table} onClick={() => { setSelectedTable(definition.table); setSearch(""); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${selectedTable === definition.table ? "border-teal-500 bg-teal-50 dark:bg-teal-950/40" : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900"}`}><div className={`grid size-9 place-items-center rounded-lg text-white ${definition.color}`}><Boxes className="size-4" /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{definition.name}</p><p className="text-xs text-slate-500">{values.length} valores</p></div></button>;
+            return <button key={definition.table} onClick={() => { setSelectedTable(definition.table); setSearch(""); resetFilters(); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${selectedTable === definition.table ? "border-teal-500 bg-teal-50 dark:bg-teal-950/40" : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900"}`}><div className={`grid size-9 place-items-center rounded-lg text-white ${definition.color}`}><Boxes className="size-4" /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{definition.name}</p><p className="text-xs text-slate-500">{values.length} valores</p></div></button>;
           })}
         </div>
 
         <Card className="overflow-hidden">
           <div className="border-b border-slate-200 p-5 dark:border-slate-800">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-              <div><h2 className="text-lg font-bold">{selectedDefinition.name}</h2><p className="text-sm text-slate-500">{selectedDefinition.description}</p></div>
-              <div className="relative w-full sm:w-72"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Buscar por nombre..." /></div>
+              <div><h2 className="text-lg font-bold">{selectedDefinition.name}</h2><p className="text-sm text-slate-500">{filteredItems.length} de {selectedItems.length} valores</p></div>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <div className="relative w-full sm:w-72"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Buscar nombre o descripción..." /></div>
+                <Button variant="secondary" onClick={() => setShowFilters((value) => !value)}>
+                  <SlidersHorizontal className="size-4" />
+                  Filtros{activeFilterCount ? ` (${activeFilterCount})` : ""}
+                </Button>
+              </div>
             </div>
+            {showFilters && (
+              <div className="mt-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950 sm:grid-cols-2 lg:grid-cols-4">
+                <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}>
+                  <option value="todos">Estado: todos</option>
+                  <option value="activos">Estado: activos</option>
+                  <option value="inactivos">Estado: inactivos</option>
+                </Select>
+                <Select value={descriptionFilter} onChange={(event) => setDescriptionFilter(event.target.value as DescriptionFilter)}>
+                  <option value="todos">Descripción: todas</option>
+                  <option value="con_descripcion">Con descripción</option>
+                  <option value="sin_descripcion">Sin descripción</option>
+                </Select>
+                {selectedTable === "entidades" && (
+                  <>
+                    <Select value={entityTypeFilter} onChange={(event) => setEntityTypeFilter(event.target.value)}>
+                      <option value="">Tipo entidad: todos</option>
+                      {catalogos.tiposEntidad.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                    </Select>
+                    <Select value={entityDocumentFilter} onChange={(event) => setEntityDocumentFilter(event.target.value as "" | EntityDocumentType)}>
+                      <option value="">Documento: todos</option>
+                      <option value="DNI">DNI</option>
+                      <option value="CE">CE</option>
+                      <option value="PASAPORTE">Pasaporte</option>
+                      <option value="RUC">RUC</option>
+                      <option value="OTRO">Otro</option>
+                    </Select>
+                  </>
+                )}
+                <Button variant="secondary" onClick={resetFilters} disabled={!activeFilterCount}>
+                  <RotateCcw className="size-4" />Limpiar
+                </Button>
+              </div>
+            )}
           </div>
           <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">
             {filteredItems.map((item) => {
@@ -123,13 +222,16 @@ export function CatalogsPage() {
                     <Badge tone={item.activo ? "green" : "slate"}>{item.activo ? "Activo" : "Inactivo"}</Badge>
                   </div>
                   {canEdit("catalogos") && (
-                    <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
                       <Button variant="secondary" onClick={() => openEdit(item)}>
                         <Pencil className="size-4" />Editar
                       </Button>
                       <Button variant="secondary" onClick={() => void catalogos.toggleActive(selectedTable, item)}>
                         <Power className={`size-4 ${item.activo ? "text-rose-600" : "text-emerald-600"}`} />
                         {item.activo ? "Desactivar" : "Activar"}
+                      </Button>
+                      <Button variant="danger" loading={deletingId === item.id} onClick={() => void removeItem(item)}>
+                        <Trash2 className="size-4" />Eliminar
                       </Button>
                     </div>
                   )}
@@ -151,7 +253,7 @@ export function CatalogsPage() {
                   const identity = entity
                     ? [entity.tipo_documento, entity.numero_documento].filter(Boolean).join(" · ")
                     : "";
-                  return <tr key={item.id} className={!item.activo ? "opacity-60" : ""}><td className="px-5 py-4 font-semibold">{item.nombre}</td><td className="max-w-md px-5 py-4 text-slate-500">{identity || item.descripcion || "Sin descripción"}</td><td className="px-5 py-4"><Badge tone={item.activo ? "green" : "slate"}>{item.activo ? "Activo" : "Inactivo"}</Badge></td><td className="px-5 py-4"><div className="flex justify-end gap-1">{canEdit("catalogos") && <><Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(item)}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" title={item.activo ? "Desactivar" : "Activar"} onClick={() => void catalogos.toggleActive(selectedTable, item)}><Power className={`size-4 ${item.activo ? "text-rose-600" : "text-emerald-600"}`} /></Button></>}</div></td></tr>;
+                  return <tr key={item.id} className={!item.activo ? "opacity-60" : ""}><td className="px-5 py-4 font-semibold">{item.nombre}</td><td className="max-w-md px-5 py-4 text-slate-500">{identity || item.descripcion || "Sin descripción"}</td><td className="px-5 py-4"><Badge tone={item.activo ? "green" : "slate"}>{item.activo ? "Activo" : "Inactivo"}</Badge></td><td className="px-5 py-4"><div className="flex justify-end gap-1">{canEdit("catalogos") && <><Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(item)}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" title={item.activo ? "Desactivar" : "Activar"} onClick={() => void catalogos.toggleActive(selectedTable, item)}><Power className={`size-4 ${item.activo ? "text-rose-600" : "text-emerald-600"}`} /></Button><Button variant="ghost" size="icon" loading={deletingId === item.id} title="Eliminar" onClick={() => void removeItem(item)}><Trash2 className="size-4 text-rose-600" /></Button></>}</div></td></tr>;
                 })}
               </tbody>
             </table>

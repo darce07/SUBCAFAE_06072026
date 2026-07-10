@@ -101,6 +101,12 @@ export async function setCatalogItemActive(table: CatalogTable, id: string, acti
   return updateCatalogItem(table, id, { activo });
 }
 
+export async function deleteCatalogItem(table: CatalogTable, id: string) {
+  if (!supabase) return;
+  const { error } = await supabase.from(table).delete().eq("id", id);
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo eliminar el valor del catálogo."));
+}
+
 export async function createOrGetEntidad(command: CreateEntityCommand): Promise<Entidad> {
   const normalizedNumber = normalizeEntityDocumentNumber(command.tipoDocumento ?? "", command.numeroDocumento ?? "");
   const validationError = validateEntityDocument(command.tipoDocumento ?? "", normalizedNumber, Boolean(command.tipoDocumento));

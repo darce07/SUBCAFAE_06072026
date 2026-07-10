@@ -109,6 +109,7 @@ export async function getDocumentos(filters: DocumentoFilters = {}): Promise<Pag
       const searchParts = [
         `codigo_documento.ilike.%${term}%`,
         `titulo.ilike.%${term}%`,
+        `descripcion.ilike.%${term}%`,
         `ruta_historica.ilike.%${term}%`,
         ...(entityIds.length ? [`entidad_id.in.(${entityIds.join(",")})`] : []),
       ];
@@ -183,6 +184,7 @@ function filterMockDocumentos(filters: DocumentoFilters) {
     const matchesSearch = !search || [
       documento.codigo_documento,
       documento.titulo,
+      documento.descripcion ?? "",
       documento.ruta_historica ?? "",
       documento.categoria?.nombre ?? "",
       documento.entidad?.nombre ?? "",

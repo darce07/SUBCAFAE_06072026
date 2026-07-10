@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   createCatalogItem,
+  deleteCatalogItem,
   getArchivadores,
   getCategorias,
   getEntidades,
@@ -115,5 +116,18 @@ export function useCatalogos(options: { includeEntidades?: boolean } = {}) {
     await refresh();
   };
 
-  return { ...data, loading, error, usingFallback, refresh, create, update, toggleActive };
+  const remove = async (table: CatalogTable, item: CatalogItem) => {
+    const key = keyForTable[table];
+    if (!isSupabaseConfigured) {
+      setData((current) => ({
+        ...current,
+        [key]: current[key].filter((currentItem) => currentItem.id !== item.id),
+      }));
+      return;
+    }
+    await deleteCatalogItem(table, item.id);
+    await refresh();
+  };
+
+  return { ...data, loading, error, usingFallback, refresh, create, update, toggleActive, remove };
 }
