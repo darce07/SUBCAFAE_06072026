@@ -21,8 +21,25 @@ import type { DocumentoAnexo, PendingDocumentoAnexo } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
 import { findMatchingEntity, validateEntityDocument } from "../lib/entity-document";
 
+const minDocumentYear = 2000;
+const maxDocumentYear = new Date().getFullYear() + 1;
+
+function isValidDocumentDate(value: string) {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const [, yearValue, monthValue, dayValue] = match;
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+  const day = Number(dayValue);
+  if (year < minDocumentYear || year > maxDocumentYear || month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
 const schema = z.object({
-  fecha_documento: z.string().min(1, "Selecciona la fecha del documento."),
+  fecha_documento: z.string()
+    .min(1, "Selecciona la fecha del documento.")
+    .refine(isValidDocumentDate, `Ingresa una fecha válida entre ${minDocumentYear} y ${maxDocumentYear}.`),
   categoria_id: z.string().min(1, "Selecciona una categoría."),
   tipo_entidad_id: z.string().optional(),
   entidad_id: z.string().optional(),
@@ -388,7 +405,7 @@ export function EditDocumentPage() {
             <Field label="Fecha del documento *" error={errors.fecha_documento?.message}>
               <div className="relative">
                 <CalendarDays className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                <Input type="date" readOnly={!canChangeDate} className={`pl-9 ${!canChangeDate ? "cursor-not-allowed bg-slate-100 text-slate-500 dark:bg-slate-800" : ""}`} {...register("fecha_documento")} />
+                <Input type="date" min={`${minDocumentYear}-01-01`} max={`${maxDocumentYear}-12-31`} readOnly={!canChangeDate} className={`pl-9 ${!canChangeDate ? "cursor-not-allowed bg-slate-100 text-slate-500 dark:bg-slate-800" : ""}`} {...register("fecha_documento")} />
               </div>
               {!canChangeDate && <span className="mt-1 block text-xs text-amber-700">Tu rol actual no permite modificar la fecha.</span>}
             </Field>
