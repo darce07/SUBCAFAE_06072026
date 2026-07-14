@@ -308,6 +308,7 @@ export function NewDocumentPage() {
     handleSubmit,
     watch,
     setValue,
+    getValues,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -398,21 +399,24 @@ export function NewDocumentPage() {
     const evidence = fileTitle;
     const useAmount = shouldUseAmount(evidence);
     const suggestions: string[] = [];
+    const current = getValues();
 
-    setValue("titulo", fileTitle, { shouldDirty: true, shouldValidate: true });
-    suggestions.push("título");
+    type SuggestibleField = "titulo" | "ruta_historica" | "fecha_documento" | "categoria_id" | "estado_id" | "tipo_categoria_id" | "tipo_movimiento_id" | "monto" | "tipo_operacion_id" | "tipo_entidad_id" | "archivador_id" | "descripcion";
+    const fillIfEmpty = (field: SuggestibleField, value: string | number, label: string, validate = false) => {
+      const existing = current[field];
+      const isEmpty = typeof existing === "number" ? existing === 0 : !existing?.toString().trim();
+      if (!isEmpty) return;
+      setValue(field as never, value as never, { shouldDirty: true, shouldValidate: validate });
+      suggestions.push(label);
+    };
+
+    fillIfEmpty("titulo", fileTitle, "título", true);
 
     const localRoute = localRouteFromFile(file);
-    if (localRoute) {
-      setValue("ruta_historica", localRoute, { shouldDirty: true });
-      suggestions.push("ruta histórica");
-    }
+    if (localRoute) fillIfEmpty("ruta_historica", localRoute, "ruta histórica");
 
     const inferredDate = dateFromEvidence(evidence);
-    if (inferredDate) {
-      setValue("fecha_documento", inferredDate, { shouldDirty: true, shouldValidate: true });
-      suggestions.push("fecha");
-    }
+    if (inferredDate) fillIfEmpty("fecha_documento", inferredDate, "fecha", true);
 
     const categoryKeywords = [
       { keywords: ["resolucion", "resolución", "rd", "r d", "directoral"], targets: ["resolucion", "resolución"] },
@@ -430,16 +434,10 @@ export function NewDocumentPage() {
     const category = categoryRule
       ? catalogos.categorias.find((item) => item.activo && matchesAny(item.nombre, categoryRule.targets))
       : catalogos.categorias.find((item) => item.activo && matchesAny(evidence, [item.nombre]));
-    if (category) {
-      setValue("categoria_id", category.id, { shouldDirty: true, shouldValidate: true });
-      suggestions.push("categoría");
-    }
+    if (category) fillIfEmpty("categoria_id", category.id, "categoría", true);
 
     const verified = catalogos.estadosDocumento.find((item) => item.activo && normalizeText(item.nombre).includes("verific"));
-    if (verified) {
-      setValue("estado_id", verified.id, { shouldDirty: true, shouldValidate: true });
-      suggestions.push("estado");
-    }
+    if (verified) fillIfEmpty("estado_id", verified.id, "estado", true);
 
     const administrativeType = firstActiveMatch(catalogos.tiposCategoria, ["administrativo", "administrativa"]);
     const financialType = firstActiveMatch(catalogos.tiposCategoria, ["financiero", "financiera", "contable", "tesoreria", "tesorería"]);
@@ -450,32 +448,21 @@ export function NewDocumentPage() {
       : matchesAny(evidence, ["planilla", "inasistencia", "tardanza", "permiso", "honorario"]) ? laborType
       : (isResolutionEvidence(evidence) || matchesAny(evidence, ["oficio", "acta", "carta"])) ? administrativeType
       : null;
-    if (typeCategory) {
-      setValue("tipo_categoria_id", typeCategory.id, { shouldDirty: true });
-      suggestions.push("tipo de categoría");
-    }
+    if (typeCategory) fillIfEmpty("tipo_categoria_id", typeCategory.id, "tipo de categoría");
 
     const noAplicaMovement = catalogos.tiposMovimiento.find((item) => item.activo && normalizeText(item.nombre).includes("no aplica"));
     const egresoMovement = catalogos.tiposMovimiento.find((item) => item.activo && normalizeText(item.nombre).includes("egreso"));
     if (useAmount && egresoMovement) {
-      setValue("tipo_movimiento_id", egresoMovement.id, { shouldDirty: true });
-      suggestions.push("movimiento");
+      fillIfEmpty("tipo_movimiento_id", egresoMovement.id, "movimiento");
     } else if (noAplicaMovement) {
-      setValue("tipo_movimiento_id", noAplicaMovement.id, { shouldDirty: true });
-      suggestions.push("movimiento");
+      fillIfEmpty("tipo_movimiento_id", noAplicaMovement.id, "movimiento");
     }
 
     const amount = useAmount ? amountFromText(evidence) : null;
-    if (amount !== null) {
-      setValue("monto", amount, { shouldDirty: true, shouldValidate: true });
-      suggestions.push("monto");
-    }
+    if (amount !== null) fillIfEmpty("monto", amount, "monto", true);
 
     const paymentOperation = firstActiveMatch(catalogos.tiposOperacion, ["pago", "proveedor", "servicio"]);
-    if (useAmount && paymentOperation) {
-      setValue("tipo_operacion_id", paymentOperation.id, { shouldDirty: true });
-      suggestions.push("tipo de operación");
-    }
+    if (useAmount && paymentOperation) fillIfEmpty("tipo_operacion_id", paymentOperation.id, "tipo de operación");
 
     const publicEntity = catalogos.tiposEntidad.find((item) => item.activo && matchesAny(item.nombre, ["institucion publica", "institución pública", "entidad publica", "entidad pública", "ugel"]));
     const naturalEntity = catalogos.tiposEntidad.find((item) => item.activo && matchesAny(item.nombre, ["persona natural", "trabajador"]));
@@ -484,14 +471,11 @@ export function NewDocumentPage() {
       : matchesAny(evidence, ["dni", "honorario"]) ? naturalEntity
       : matchesAny(evidence, ["ruc", "factura", "proveedor"]) ? legalEntity
       : null;
-    if (entityType) {
-      setValue("tipo_entidad_id", entityType.id, { shouldDirty: true });
-      suggestions.push("tipo de entidad");
-    }
+    if (entityType) fillIfEmpty("tipo_entidad_id", entityType.id, "tipo de entidad");
 
     const suggestedEntityName = documentEntityName(evidence);
-    if (suggestedEntityName && entityType) {
-      setEntityDraft((current) => ({ ...current, nombre: suggestedEntityName }));
+    if (suggestedEntityName && entityType && !entityDraft.nombre.trim()) {
+      setEntityDraft((prev) => (prev.nombre.trim() ? prev : { ...prev, nombre: suggestedEntityName }));
       suggestions.push("entidad");
     }
 
@@ -499,16 +483,10 @@ export function NewDocumentPage() {
       : (isResolutionEvidence(evidence) || matchesAny(evidence, ["oficio", "acta"])) ? ["administracion", "administración", "resolucion", "resolución", "oficio", "archivo central", "a-"]
       : [category?.nombre ?? "", typeCategory?.nombre ?? ""].filter(Boolean);
     const archive = firstActiveMatch(catalogos.archivadores, archiveKeywords) ?? firstActive(catalogos.archivadores);
-    if (archive) {
-      setValue("archivador_id", archive.id, { shouldDirty: true });
-      suggestions.push("archivador");
-    }
+    if (archive) fillIfEmpty("archivador_id", archive.id, "archivador");
 
     const detectedDescription = descriptionSuggestion(evidence);
-    if (detectedDescription) {
-      setValue("descripcion", detectedDescription, { shouldDirty: true });
-      suggestions.push("descripción");
-    }
+    if (detectedDescription) fillIfEmpty("descripcion", detectedDescription, "descripción");
 
     if (notify && suggestions.length) {
       toast.success(`Se autocompletó: ${Array.from(new Set(suggestions)).join(", ")}.`);
