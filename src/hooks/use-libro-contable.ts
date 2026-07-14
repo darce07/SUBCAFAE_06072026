@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getAllDocumentosMovimiento } from "../services/documentos.service";
+import { getAllDocumentosMovimientoLigero } from "../services/documentos.service";
 import type { Documento, DocumentoFilters } from "../types";
 
 export function useLibroContable(filters: Omit<DocumentoFilters, "page" | "pageSize" | "orderBy" | "orderDirection"> = {}) {
@@ -14,7 +14,7 @@ export function useLibroContable(filters: Omit<DocumentoFilters, "page" | "pageS
     setLoading(true);
     setError(null);
     try {
-      const data = await getAllDocumentosMovimiento(filters);
+      const data = await getAllDocumentosMovimientoLigero(filters);
       if (currentRequest !== requestId.current) return;
       setMovimientos(data);
     } catch (loadError) {

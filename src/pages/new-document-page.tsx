@@ -294,14 +294,6 @@ function matchesAny(value: string, keywords: string[]) {
   return keywords.some((keyword) => normalized.includes(normalizeText(keyword)));
 }
 
-function canExtractDocumentTextLocally(file: File) {
-  const extension = file.name.split(".").pop()?.toLocaleLowerCase("es") ?? "";
-  return file.type === "application/pdf"
-    || file.type.startsWith("image/")
-    || extension === "pdf"
-    || extension === "docx";
-}
-
 function readableSource(source: ExtractedDocumentText["source"]) {
   if (source === "ocr") return "OCR";
   if (source === "pdf-text") return "texto del PDF";
@@ -580,25 +572,8 @@ export function NewDocumentPage() {
     applyFileSuggestions(file, "", undefined, false);
 
     setExtractionSource(null);
-    if (!canExtractDocumentTextLocally(file)) return;
-    setExtractingText(true);
-    try {
-      const { extractDocumentText } = await import("../lib/document-intelligence");
-      const extracted = await extractDocumentText(file);
-      if (extractionRequest.current !== requestId) return;
-      setExtractionSource(extracted.source);
-      if (extracted.text.trim()) {
-        applyFileSuggestions(file, extracted.text, extracted.source);
-      } else {
-        toast.info("No se detectó texto legible para autocompletar más campos.");
-      }
-    } catch (error) {
-      if (extractionRequest.current === requestId) {
-        toast.error(error instanceof Error ? error.message : "No se pudo extraer texto del archivo.");
-      }
-    } finally {
-      if (extractionRequest.current === requestId) setExtractingText(false);
-    }
+    // Autocompletado por OCR/lectura de texto deshabilitado temporalmente: el personal
+    // asumía que lo detectado era 100% correcto y no lo revisaba antes de guardar.
   };
 
   const clearForm = () => {

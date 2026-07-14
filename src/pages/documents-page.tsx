@@ -14,7 +14,7 @@ import { Badge, Button, Card, Input, PageHeader, Select } from "../components/ui
 import { useDocumentos } from "../hooks/use-documentos";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { formatCurrency, formatDate, formatDateTime, formatRelativeTime, getStatusTone } from "../lib/utils";
-import { deleteDocumento, updateDocumento } from "../services/documentos.service";
+import { cambiarEstadoDocumento, deleteDocumento } from "../services/documentos.service";
 import { useDebounce } from "../hooks/use-debounce";
 import { downloadDocumentoFile, getSignedUrl } from "../services/storage.service";
 import { usePermissions } from "../hooks/use-permissions";
@@ -107,6 +107,10 @@ export function DocumentsPage() {
   const catalogos = useCatalogos();
   const { canCreate, canDelete, canEdit } = usePermissions();
   const { userContext } = useAuth();
+  const years = useMemo(() => {
+    const current = new Date().getFullYear();
+    return Array.from({ length: 15 }, (_, index) => current - index);
+  }, []);
   const watermarkUsuario = userContext?.nombreCompleto ?? userContext?.email ?? "usuario del sistema";
   const totalPages = Math.max(Math.ceil(count / pageSize), 1);
 
@@ -162,7 +166,7 @@ export function DocumentsPage() {
       return;
     }
     try {
-      await updateDocumento(documento.id, { estado_id: observed.id });
+      await cambiarEstadoDocumento(documento.id, observed.id);
       await refresh();
       toast.success("Documento marcado como observado.");
     } catch (error) {
@@ -308,7 +312,7 @@ export function DocumentsPage() {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex">
             <Select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(1); }}><option value="">Todas las categorías</option>{catalogos.categorias.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={statusId} onChange={(event) => { setStatusId(event.target.value); setPage(1); }}><option value="">Todos los estados</option>{catalogos.estadosDocumento.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
-            <Select value={year} onChange={(event) => { setYear(event.target.value); setPage(1); }}><option value="">Todos los años</option>{[2026, 2025, 2024].map((value) => <option key={value}>{value}</option>)}</Select>
+            <Select value={year} onChange={(event) => { setYear(event.target.value); setPage(1); }}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
             <Select value={orderMode} onChange={(event) => { setOrderMode(event.target.value as "registro_desc" | "registro_asc"); setPage(1); }}><option value="registro_desc">Registro: recientes primero</option><option value="registro_asc">Registro: antiguos primero</option></Select>
             <Select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value={10}>10 filas</option><option value={20}>20 filas</option><option value={50}>50 filas</option></Select>
           </div>

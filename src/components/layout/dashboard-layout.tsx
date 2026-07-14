@@ -146,7 +146,7 @@ export function DashboardLayout() {
             <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[var(--brand)] font-black text-white">S</div>
             {!sidebarCollapsed && (
               <div className="min-w-0">
-                <p className="text-lg font-black tracking-wide text-white">SIGDAF</p>
+                <p className="font-serif text-lg font-black tracking-wide text-white">SIGDAF</p>
                 <p className="truncate text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">Gestión integral</p>
               </div>
             )}

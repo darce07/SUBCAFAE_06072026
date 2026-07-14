@@ -172,21 +172,6 @@ export interface DocumentoAnexoVersion {
   created_at: string;
 }
 
-export type DocumentoInput = Omit<
-  Documento,
-  | "id"
-  | "created_at"
-  | "updated_at"
-  | "categoria"
-  | "tipo_entidad"
-  | "entidad"
-  | "tipo_categoria"
-  | "estado"
-  | "archivador"
-  | "tipo_movimiento"
-  | "tipo_operacion"
->;
-
 export interface DocumentoFilters {
   search?: string;
   categoriaId?: string;

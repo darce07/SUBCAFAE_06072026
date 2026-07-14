@@ -8,7 +8,6 @@ import type {
   DocumentAuditRecord,
   Documento,
   DocumentoFilters,
-  DocumentoInput,
   PaginatedResult,
   UpdateDocumentoCommand,
 } from "../types";
@@ -215,26 +214,68 @@ export async function getMontoTotal(filters: DocumentoFilters = {}): Promise<num
   return total;
 }
 
+interface DocumentoMovimientoLigero {
+  id: string;
+  codigo_documento: string;
+  fecha_documento: string;
+  titulo: string;
+  monto: number;
+  tipo_movimiento_nombre: string | null;
+  tipo_operacion_nombre: string | null;
+  entidad_nombre: string | null;
+  categoria_nombre: string | null;
+}
+
 /**
- * Trae TODOS los documentos con movimiento económico que calzan con los filtros,
- * ordenados cronológicamente ascendente. El libro contable necesita el set completo
- * (no una página) porque el saldo mostrado es acumulativo desde el primer asiento.
+ * Trae TODOS los documentos con movimiento económico ordenados cronológicamente
+ * (el saldo del libro contable es acumulativo desde el primer asiento) en una
+ * sola llamada a una función SQL, sin los joins completos ni el enriquecimiento
+ * de usuario/última acción que el libro contable no usa.
  */
-export async function getAllDocumentosMovimiento(
+export async function getAllDocumentosMovimientoLigero(
   filters: Omit<DocumentoFilters, "page" | "pageSize" | "orderBy" | "orderDirection"> = {},
 ): Promise<Documento[]> {
   if (!supabase) {
     return sortDocumentos(filterMockDocumentos(filters), { orderBy: "fecha_documento", orderDirection: "asc" });
   }
 
-  const pageSize = 100;
-  const all: Documento[] = [];
-  for (let page = 1; page <= 100; page += 1) {
-    const result = await getDocumentos({ ...filters, page, pageSize, orderBy: "fecha_documento", orderDirection: "asc" });
-    all.push(...result.data);
-    if (all.length >= result.count || result.data.length < pageSize) break;
-  }
-  return all;
+  const { data, error } = await supabase.rpc("obtener_documentos_movimiento_ligero", {
+    p_categoria_id: filters.categoriaId ?? null,
+    p_estado_id: filters.estadoId ?? null,
+    p_entidad_id: filters.entidadId ?? null,
+    p_anio: filters.anio ?? null,
+    p_tipo_movimiento_nombre: filters.tipoMovimientoNombre ?? null,
+    p_search: filters.search ? sanitizeSearchTerm(filters.search) : null,
+  });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo cargar el libro contable."));
+
+  return ((data ?? []) as DocumentoMovimientoLigero[]).map((row) => ({
+    id: row.id,
+    codigo_documento: row.codigo_documento,
+    fecha_documento: row.fecha_documento,
+    titulo: row.titulo,
+    monto: row.monto,
+    categoria_id: "",
+    anio: 0,
+    mes: 0,
+    dia: 0,
+    tipo_entidad_id: null,
+    entidad_id: null,
+    tipo_categoria_id: null,
+    estado_id: "",
+    descripcion: null,
+    ruta_historica: null,
+    archivador_id: null,
+    archivo_url: null,
+    archivo_path: null,
+    extension: null,
+    tipo_movimiento_id: null,
+    tipo_operacion_id: null,
+    categoria: row.categoria_nombre ? { id: "", nombre: row.categoria_nombre } : null,
+    entidad: row.entidad_nombre ? { id: "", nombre: row.entidad_nombre } : null,
+    tipo_movimiento: row.tipo_movimiento_nombre ? { id: "", nombre: row.tipo_movimiento_nombre } : null,
+    tipo_operacion: row.tipo_operacion_nombre ? { id: "", nombre: row.tipo_operacion_nombre } : null,
+  }) as unknown as Documento);
 }
 
 export async function getDocumentoById(id: string): Promise<Documento | null> {
@@ -251,23 +292,19 @@ export async function getDocumentoById(id: string): Promise<Documento | null> {
   return documento;
 }
 
-export async function updateDocumento(id: string, data: Partial<DocumentoInput>): Promise<Documento> {
+export async function cambiarEstadoDocumento(id: string, estadoId: string): Promise<Documento> {
   if (!supabase) {
     const current = mockDocumentos.find((documento) => documento.id === id);
     if (!current) throw new Error("Documento no encontrado.");
-    return { ...current, ...data };
+    return { ...current, estado_id: estadoId };
   }
-  const safeData = { ...data };
-  delete safeData.created_by;
-  const { data: updated, error } = await supabase
-    .from("documentos")
-    .update(safeData)
-    .eq("id", id)
-    .eq("activo", true)
-    .select(documentoSelect)
-    .single();
-  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo actualizar el documento."));
-  return updated as unknown as Documento;
+  const { data, error } = await supabase.rpc("cambiar_estado_documento_seguro", {
+    p_documento_id: id,
+    p_estado_id: estadoId,
+  });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo actualizar el estado del documento."));
+  const [documento] = await enrichDocumentos([data as unknown as Documento]);
+  return documento;
 }
 
 export async function deleteDocumento(id: string): Promise<void> {

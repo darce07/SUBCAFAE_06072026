@@ -33,3 +33,9 @@ export async function getMyUserContext(): Promise<UserContext | null> {
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo cargar tu perfil y permisos."));
   return data as UserContext | null;
 }
+
+export async function updateMyPassword(newPassword: string) {
+  if (!supabase) throw new Error("La conexión institucional no está configurada.");
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo actualizar la contraseña."));
+}

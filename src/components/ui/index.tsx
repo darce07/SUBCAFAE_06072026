@@ -124,7 +124,7 @@ export function PageHeader({
     <div className="flex min-w-0 flex-col justify-between gap-4 sm:flex-row sm:items-end">
       <div className="min-w-0">
         {eyebrow && <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-teal-700 dark:text-teal-400">{eyebrow}</p>}
-        <h1 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-3xl">{title}</h1>
+        <h1 className="font-serif text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-3xl">{title}</h1>
         <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">{description}</p>
       </div>
       {action && <div className="w-full min-w-0 sm:w-auto sm:shrink-0">{action}</div>}

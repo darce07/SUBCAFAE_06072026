@@ -174,7 +174,7 @@ export async function downloadDocumentoFile(path: string, filename: string, wate
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  URL.revokeObjectURL(objectUrl);
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
 export async function removeDocumentoFile(path: string) {
