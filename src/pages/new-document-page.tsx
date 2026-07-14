@@ -20,7 +20,6 @@ import { uploadDocumentoAnexoFile } from "../services/storage.service";
 import type { PendingDocumentoAnexo } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
 import { findMatchingEntity, validateEntityDocument } from "../lib/entity-document";
-import type { ExtractedDocumentText } from "../lib/document-intelligence";
 
 const minDocumentYear = 2000;
 const maxDocumentYear = new Date().getFullYear() + 1;
@@ -260,7 +259,7 @@ function documentEntityName(evidence: string) {
   return "";
 }
 
-function descriptionSuggestion(evidence: string, extractedText: string) {
+function descriptionSuggestion(evidence: string) {
   const code = documentCodeFromEvidence(evidence);
   const date = dateFromEvidence(evidence);
   const dateLabel = date ? formatIsoDateForDescription(date) : "";
@@ -274,8 +273,6 @@ function descriptionSuggestion(evidence: string, extractedText: string) {
     const suffix = dateLabel ? `, emitida el ${dateLabel}${topicText}.` : `${topicText}.`;
     return `${code || "Resolución Directoral"}${suffix}`;
   }
-  const detectedDescription = descriptionFromText(extractedText);
-  if (detectedDescription) return detectedDescription;
   if (matchesAny(evidence, ["oficio"])) return `${code || "Oficio"} para trámite administrativo.`;
   if (shouldUseAmount(evidence)) return "Documento de sustento económico sujeto a revisión de monto y operación.";
   return "";
@@ -294,41 +291,6 @@ function matchesAny(value: string, keywords: string[]) {
   return keywords.some((keyword) => normalized.includes(normalizeText(keyword)));
 }
 
-function readableSource(source: ExtractedDocumentText["source"]) {
-  if (source === "ocr") return "OCR";
-  if (source === "pdf-text") return "texto del PDF";
-  if (source === "docx") return "Word";
-  return "archivo";
-}
-
-function descriptionFromText(text: string) {
-  if (!isReliableOcrText(text)) return "";
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter((line) => {
-      if (line.length < 18) return false;
-      if (line.includes("http") || /[{}[\]|<>_=~]/.test(line)) return false;
-      const letters = line.match(/[a-záéíóúñ]/gi)?.length ?? 0;
-      const spaces = line.match(/\s/g)?.length ?? 0;
-      return letters / line.length > 0.6 && spaces >= 3;
-    });
-  const cleaned = lines.join(" ").trim();
-  if (!cleaned) return "";
-  const resolution = cleaned.match(/resoluci[oó]n\s+directoral[^.]{0,180}/i)?.[0];
-  const oficio = cleaned.match(/oficio[^.]{0,180}/i)?.[0];
-  const factura = cleaned.match(/factura[^.]{0,180}/i)?.[0];
-  const recibo = cleaned.match(/recibo[^.]{0,180}/i)?.[0];
-  return (resolution || oficio || factura || recibo || cleaned).slice(0, 260).trim();
-}
-
-function isReliableOcrText(text: string) {
-  const letters = text.match(/[a-záéíóúñ]/gi)?.length ?? 0;
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  const suspicious = (text.match(/[{}[\]|<>_=~]/g)?.length ?? 0) + (text.match(/https?:\/\//gi)?.length ?? 0) * 5;
-  return letters > 35 && words.length >= 6 && suspicious < 4;
-}
-
 export function NewDocumentPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -336,10 +298,7 @@ export function NewDocumentPage() {
   const [entityDraft, setEntityDraft] = useState<EntityDraft>({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
   const [pendingAnexos, setPendingAnexos] = useState<PendingDocumentoAnexo[]>([]);
   const [savingAnexos, setSavingAnexos] = useState(false);
-  const [extractingText, setExtractingText] = useState(false);
-  const [extractionSource, setExtractionSource] = useState<ExtractedDocumentText["source"] | null>(null);
   const submissionInFlight = useRef(false);
-  const extractionRequest = useRef(0);
   const catalogos = useCatalogos({ includeEntidades: false });
   const { upload, uploading, progress } = useUploadDocumento();
   const { session } = useAuth();
@@ -434,9 +393,9 @@ export function NewDocumentPage() {
     }
   }, [isNoAplica, selectedMovement?.nombre, setValue]);
 
-  const applyFileSuggestions = (file: File, extractedText = "", source?: ExtractedDocumentText["source"], notify = true) => {
+  const applyFileSuggestions = (file: File, notify = true) => {
     const fileTitle = titleFromFileName(file.name);
-    const evidence = `${fileTitle}\n${extractedText}`;
+    const evidence = fileTitle;
     const useAmount = shouldUseAmount(evidence);
     const suggestions: string[] = [];
 
@@ -545,35 +504,25 @@ export function NewDocumentPage() {
       suggestions.push("archivador");
     }
 
-    const detectedDescription = descriptionSuggestion(evidence, extractedText);
+    const detectedDescription = descriptionSuggestion(evidence);
     if (detectedDescription) {
       setValue("descripcion", detectedDescription, { shouldDirty: true });
       suggestions.push("descripción");
     }
 
     if (notify && suggestions.length) {
-      const prefix = source ? `Se detectó ${readableSource(source)} y se autocompletó` : "Se autocompletó";
-      toast.success(`${prefix}: ${Array.from(new Set(suggestions)).join(", ")}.`);
-    }
-    if (notify && source && !inferredDate) {
-      toast.warning("No se detectó una fecha confiable en el documento. Revísala manualmente antes de guardar.");
+      toast.success(`Se autocompletó: ${Array.from(new Set(suggestions)).join(", ")}.`);
     }
   };
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
-    const requestId = extractionRequest.current + 1;
-    extractionRequest.current = requestId;
     setValue("archivo", file, { shouldValidate: true });
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     const nextPreviewUrl = file.type.startsWith("image/") || file.type === "application/pdf" ? URL.createObjectURL(file) : null;
     setPreviewUrl(nextPreviewUrl);
     setPreviewOpen(false);
-    applyFileSuggestions(file, "", undefined, false);
-
-    setExtractionSource(null);
-    // Autocompletado por OCR/lectura de texto deshabilitado temporalmente: el personal
-    // asumía que lo detectado era 100% correcto y no lo revisaba antes de guardar.
+    applyFileSuggestions(file, false);
   };
 
   const clearForm = () => {
@@ -581,8 +530,6 @@ export function NewDocumentPage() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setPreviewOpen(false);
-    setExtractionSource(null);
-    setExtractingText(false);
     setEntityDraft({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
     setPendingAnexos([]);
   };
@@ -870,7 +817,7 @@ export function NewDocumentPage() {
                 <div>
                   <Eye className="mx-auto mb-3 size-8 text-teal-600" />
                   <span className="block break-words text-sm font-semibold">{selectedFile.name}</span>
-                  <span className="mt-1 block text-xs text-slate-500">{extractingText ? "Extrayendo texto..." : "Click para previsualizar"}</span>
+                  <span className="mt-1 block text-xs text-slate-500">Click para previsualizar</span>
                 </div>
               </button>
               <div className="mt-3 flex flex-wrap justify-center gap-2">
@@ -889,7 +836,7 @@ export function NewDocumentPage() {
           )}
           {errors.archivo && <span className="mt-2 block text-xs text-rose-600">{errors.archivo.message}</span>}
           {uploading && <div className="mt-4"><div className="mb-1 flex justify-between text-xs"><span>Subiendo archivo</span><strong>{progress}%</strong></div><div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-teal-600 transition-all" style={{ width: `${progress}%` }} /></div></div>}
-          {selectedFile && <div className="mt-3 rounded-xl bg-slate-100 p-3 text-xs dark:bg-slate-800"><strong>{selectedFile.type || "Archivo"}</strong><span className="ml-2 text-slate-500">{(selectedFile.size / 1024).toFixed(1)} KB</span>{extractionSource && <span className="mt-1 block text-teal-700 dark:text-teal-300">Texto detectado por {readableSource(extractionSource)}.</span>}</div>}
+          {selectedFile && <div className="mt-3 rounded-xl bg-slate-100 p-3 text-xs dark:bg-slate-800"><strong>{selectedFile.type || "Archivo"}</strong><span className="ml-2 text-slate-500">{(selectedFile.size / 1024).toFixed(1)} KB</span></div>}
           {previewUrl && <button type="button" onClick={() => setPreviewOpen(true)} className="mt-4 block w-full overflow-hidden rounded-xl border border-slate-200 text-left transition hover:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 dark:border-slate-700">{selectedFile?.type.startsWith("image/") ? <img src={previewUrl} alt="Vista previa" className="h-56 w-full object-contain" /> : <iframe src={previewUrl} title="Vista previa PDF" className="pointer-events-none h-72 w-full" />}</button>}
         </Card>
       </form>
