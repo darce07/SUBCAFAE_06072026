@@ -40,6 +40,27 @@ export const formatDate = (value: string) => dateFormatter.format(parseDateValue
 
 export const formatDateTime = (value: string) => dateTimeFormatter.format(new Date(value));
 
+const relativeTimeFormatter = new Intl.RelativeTimeFormat("es-PE", { numeric: "auto" });
+
+const relativeTimeUnits: { unit: Intl.RelativeTimeFormatUnit; seconds: number }[] = [
+  { unit: "year", seconds: 31536000 },
+  { unit: "month", seconds: 2592000 },
+  { unit: "week", seconds: 604800 },
+  { unit: "day", seconds: 86400 },
+  { unit: "hour", seconds: 3600 },
+  { unit: "minute", seconds: 60 },
+];
+
+export const formatRelativeTime = (value: string) => {
+  const diffSeconds = (new Date(value).getTime() - Date.now()) / 1000;
+  for (const { unit, seconds } of relativeTimeUnits) {
+    if (Math.abs(diffSeconds) >= seconds) {
+      return relativeTimeFormatter.format(Math.round(diffSeconds / seconds), unit);
+    }
+  }
+  return relativeTimeFormatter.format(Math.round(diffSeconds), "second");
+};
+
 export type StatusTone = "green" | "amber" | "orange" | "red" | "slate";
 
 /**

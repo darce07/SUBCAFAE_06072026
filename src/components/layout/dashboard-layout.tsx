@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sun,
+  Trash2,
   UserRoundCog,
   WalletCards,
   X,
@@ -52,6 +53,7 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
       { label: "Nuevo documento", href: "/documentos/nuevo", icon: FilePlus2, permission: ["documentos", "crear"] },
       { label: "Verificación", href: "/verificacion", icon: ClipboardCheck, permission: ["documentos", "ver"] },
       { label: "Archivo físico", href: "/archivo-fisico", icon: Archive, permission: ["documentos", "ver"] },
+      { label: "Papelera", href: "/documentos/papelera", icon: Trash2, permission: ["documentos", "eliminar"] },
     ],
   },
   {
@@ -79,6 +81,7 @@ const pageNames: Record<string, string> = {
   dashboard: "Dashboard",
   documentos: "Documentos",
   historico: "Explorador histórico",
+  papelera: "Papelera",
   nuevo: "Nuevo documento",
   editar: "Editar documento",
   verificacion: "Verificación físico-digital",

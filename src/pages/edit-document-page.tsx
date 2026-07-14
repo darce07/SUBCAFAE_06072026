@@ -62,7 +62,8 @@ export function EditDocumentPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const catalogos = useCatalogos({ includeEntidades: false });
-  const { session } = useAuth();
+  const { session, userContext } = useAuth();
+  const watermarkUsuario = userContext?.nombreCompleto ?? userContext?.email ?? "usuario del sistema";
   const { can, canEdit } = usePermissions();
   const canChangeDate = can("documentos", "cambiar_fecha");
   const { upload, uploading } = useUploadDocumento();
@@ -312,7 +313,10 @@ export function EditDocumentPage() {
 
   const downloadAnexo = async (anexo: DocumentoAnexo) => {
     try {
-      await downloadDocumentoFile(anexo.archivo_path, anexo.nombre_archivo);
+      await downloadDocumentoFile(anexo.archivo_path, anexo.nombre_archivo, {
+        codigo: anexo.nombre_archivo,
+        usuario: watermarkUsuario,
+      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo descargar el anexo.");
     }

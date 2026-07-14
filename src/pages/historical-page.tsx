@@ -23,8 +23,9 @@ import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
 import { useDocumentos } from "../hooks/use-documentos";
 import { usePermissions } from "../hooks/use-permissions";
+import { useAuth } from "../features/auth/auth-context";
 import { formatCurrency, formatDate } from "../lib/utils";
-import { getSignedUrl } from "../services/storage.service";
+import { downloadDocumentoFile, getSignedUrl } from "../services/storage.service";
 import type { Documento } from "../types";
 
 interface TreeNode {
@@ -39,6 +40,8 @@ const OPEN_FOLDERS_KEY = "sigdaf:historical-open-folders";
 export function HistoricalPage() {
   const navigate = useNavigate();
   const { canEdit } = usePermissions();
+  const { userContext } = useAuth();
+  const watermarkUsuario = userContext?.nombreCompleto ?? userContext?.email ?? "usuario del sistema";
   const catalogos = useCatalogos();
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -95,6 +98,19 @@ export function HistoricalPage() {
     }
   };
 
+  const downloadFile = async (documento: Documento) => {
+    if (!documento.archivo_path) return;
+    try {
+      await downloadDocumentoFile(
+        documento.archivo_path,
+        `${documento.codigo_documento}.${documento.extension ?? "archivo"}`,
+        { codigo: documento.codigo_documento, usuario: watermarkUsuario },
+      );
+    } catch (downloadError) {
+      toast.error(downloadError instanceof Error ? downloadError.message : "No se pudo descargar el archivo.");
+    }
+  };
+
   return <div className="space-y-6">
     <PageHeader eyebrow="Gestión documental" title="Explorador histórico" description="Navega por la organización histórica de los documentos registrados." />
     {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
@@ -128,7 +144,7 @@ export function HistoricalPage() {
             </div>
             <div className="mt-6 grid gap-2">
               <Button disabled={!selected.archivo_path} onClick={() => void openFile(selected)}><ExternalLink className="size-4" />Abrir documento</Button>
-              <Button variant="secondary" disabled={!selected.archivo_path} onClick={() => void openFile(selected)}><Download className="size-4" />Descargar</Button>
+              <Button variant="secondary" disabled={!selected.archivo_path} onClick={() => void downloadFile(selected)}><Download className="size-4" />Descargar</Button>
               {canEdit("documentos") && <Button variant="secondary" onClick={() => navigate(`/documentos/${selected.id}/editar`)}><Pencil className="size-4" />Editar metadatos</Button>}
             </div>
           </motion.div> : <EmptyState icon={<FileText />} title="Selecciona un archivo" description="El panel mostrará sus metadatos y acciones disponibles." />}

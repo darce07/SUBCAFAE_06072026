@@ -13,12 +13,15 @@ import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview } from "../services/storage.service";
 import { usePermissions } from "../hooks/use-permissions";
 import { useCatalogos } from "../hooks/use-catalogos";
+import { useAuth } from "../features/auth/auth-context";
 
 export function DocumentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const catalogos = useCatalogos();
   const { canDelete, canEdit, can } = usePermissions();
+  const { userContext } = useAuth();
+  const watermarkUsuario = userContext?.nombreCompleto ?? userContext?.email ?? "usuario del sistema";
   const [documento, setDocumento] = useState<Documento | null>(null);
   const [anexos, setAnexos] = useState<DocumentoAnexo[]>([]);
   const [history, setHistory] = useState<DocumentAuditRecord[]>([]);
@@ -62,7 +65,11 @@ export function DocumentDetailPage() {
   const downloadMainFile = async () => {
     if (!documento.archivo_path) return;
     try {
-      await downloadDocumentoFile(documento.archivo_path, `${documento.codigo_documento}.${documento.extension ?? "archivo"}`);
+      await downloadDocumentoFile(
+        documento.archivo_path,
+        `${documento.codigo_documento}.${documento.extension ?? "archivo"}`,
+        { codigo: documento.codigo_documento, usuario: watermarkUsuario },
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo descargar el archivo.");
     }
@@ -79,7 +86,10 @@ export function DocumentDetailPage() {
 
   const downloadAnexo = async (anexo: DocumentoAnexo) => {
     try {
-      await downloadDocumentoFile(anexo.archivo_path, anexo.nombre_archivo);
+      await downloadDocumentoFile(anexo.archivo_path, anexo.nombre_archivo, {
+        codigo: documento?.codigo_documento ?? anexo.nombre_archivo,
+        usuario: watermarkUsuario,
+      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo descargar el anexo.");
     }
@@ -155,7 +165,7 @@ export function DocumentDetailPage() {
               <Info label="Extensión" value={documento.extension?.toUpperCase()} />
               <Info label="Fecha del documento" value={formatDate(documento.fecha_documento)} />
               <Info label="Fecha de registro" value={documento.created_at ? formatDate(documento.created_at) : null} />
-              <Info label="Usuario responsable" value={documento.created_by ? "Usuario registrado" : "Dato no disponible"} />
+              <Info label="Subido por" value={documento.usuario?.nombre_completo ?? documento.usuario?.email ?? "Dato no disponible"} />
             </div>
             {documento.descripcion && (
               <div className="border-t border-slate-100 pt-6 dark:border-slate-800">
@@ -167,11 +177,11 @@ export function DocumentDetailPage() {
           <div className="space-y-4">
             <Card className="p-5">
               <h3 className="font-bold">Archivo principal</h3>
-              <p className="mt-2 text-xs text-slate-500">{documento.archivo_path ? "Disponible para consulta y descarga." : "No existe un archivo digital asociado."}</p>
-              <div className="mt-4 grid gap-2">
-                <Button variant="secondary" disabled={!documento.archivo_path} onClick={() => void viewMainFile()}><ExternalLink className="size-4" />Ver archivo</Button>
-                <Button disabled={!documento.archivo_path} onClick={() => void downloadMainFile()}><Download className="size-4" />Descargar archivo</Button>
-              </div>
+              <p className="mt-2 text-xs text-slate-500">
+                {documento.archivo_path
+                  ? "Disponible para consulta y descarga. Usa los botones \"Ver\" y \"Descargar\" de la parte superior."
+                  : "No existe un archivo digital asociado."}
+              </p>
             </Card>
             <Card className="p-5">
               <div className="mb-4 flex items-center gap-2"><MapPin className="size-5 text-orange-600" /><h3 className="font-bold">Ubicación física</h3></div>

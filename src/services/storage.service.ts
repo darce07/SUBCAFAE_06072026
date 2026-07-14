@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { getSupabaseErrorMessage } from "../lib/supabase-error";
+import { isWatermarkableMime, watermarkImageBlob, watermarkPdfBlob, type WatermarkInfo } from "../lib/watermark";
 
 const BUCKET = "documentos";
 export const MAX_DOCUMENT_FILE_SIZE = 20 * 1024 * 1024;
@@ -152,12 +153,20 @@ export function releaseDocumentoPreview(objectUrl: string) {
   if (objectUrl.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
 }
 
-export async function downloadDocumentoFile(path: string, filename: string) {
+export async function downloadDocumentoFile(path: string, filename: string, watermark?: Omit<WatermarkInfo, "fecha">) {
   const signedUrl = await getSignedUrl(path, 120);
   if (!signedUrl) return;
   const response = await fetch(signedUrl);
   if (!response.ok) throw new Error("No se pudo descargar el archivo.");
-  const blob = await response.blob();
+  let blob = await response.blob();
+
+  if (watermark && isWatermarkableMime(blob.type)) {
+    const info: WatermarkInfo = { ...watermark, fecha: new Date().toLocaleString("es-PE") };
+    blob = blob.type === "application/pdf"
+      ? await watermarkPdfBlob(blob, info)
+      : await watermarkImageBlob(blob, info, blob.type);
+  }
+
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = objectUrl;

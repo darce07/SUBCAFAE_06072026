@@ -98,8 +98,8 @@ export async function getDocumentos(filters: DocumentoFilters = {}): Promise<Pag
   let query = supabase
     .from("documentos")
     .select(select, { count: "exact" })
-    .eq("activo", true)
-    .order(filters.orderBy ?? "fecha_documento", { ascending: (filters.orderDirection ?? "desc") === "asc" })
+    .eq("activo", !filters.soloEliminados)
+    .order(filters.orderBy ?? (filters.soloEliminados ? "eliminado_at" : "fecha_documento"), { ascending: (filters.orderDirection ?? "desc") === "asc" })
     .range((page - 1) * pageSize, page * pageSize - 1);
 
   if (filters.search) {
@@ -126,7 +126,38 @@ export async function getDocumentos(filters: DocumentoFilters = {}): Promise<Pag
 
   const { data, error, count } = await query;
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron cargar los documentos."));
-  return { data: (data ?? []) as unknown as Documento[], count: count ?? 0, page, pageSize };
+  const documentos = await enrichDocumentos((data ?? []) as unknown as Documento[]);
+  return { data: documentos, count: count ?? 0, page, pageSize };
+}
+
+type PerfilBasico = { id: string; nombre_completo: string | null; email: string | null };
+type UltimaAccion = { documento_id: string; accion: "creado" | "editado" | "eliminado" | "recuperado"; actor_nombre: string | null; actor_email: string | null; fecha: string };
+
+async function enrichDocumentos(documentos: Documento[]): Promise<Documento[]> {
+  if (!supabase || !documentos.length) return documentos;
+
+  const perfilIds = [...new Set(
+    documentos.flatMap((d) => [d.created_by, d.eliminado_por]).filter((id): id is string => Boolean(id)),
+  )];
+  const documentoIds = documentos.map((d) => d.id);
+
+  const [perfilesResult, accionesResult] = await Promise.all([
+    perfilIds.length ? supabase.rpc("obtener_perfiles_basico", { p_ids: perfilIds }) : Promise.resolve({ data: [] as PerfilBasico[], error: null }),
+    supabase.rpc("obtener_ultima_accion_documentos", { p_ids: documentoIds }),
+  ]);
+
+  const perfiles = new Map((perfilesResult.data as PerfilBasico[] ?? []).map((p) => [p.id, p]));
+  const acciones = new Map((accionesResult.data as UltimaAccion[] ?? []).map((a) => [a.documento_id, a]));
+
+  return documentos.map((documento) => {
+    const accion = acciones.get(documento.id);
+    return {
+      ...documento,
+      usuario: documento.created_by ? perfiles.get(documento.created_by) ?? null : null,
+      eliminado_por_usuario: documento.eliminado_por ? perfiles.get(documento.eliminado_por) ?? null : null,
+      ultima_accion: accion ? { tipo: accion.accion, actorNombre: accion.actor_nombre ?? accion.actor_email, fecha: accion.fecha } : null,
+    };
+  });
 }
 
 /**
@@ -215,7 +246,9 @@ export async function getDocumentoById(id: string): Promise<Documento | null> {
     .eq("activo", true)
     .maybeSingle();
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo cargar el documento."));
-  return data as unknown as Documento | null;
+  if (!data) return null;
+  const [documento] = await enrichDocumentos([data as unknown as Documento]);
+  return documento;
 }
 
 export async function updateDocumento(id: string, data: Partial<DocumentoInput>): Promise<Documento> {
@@ -245,6 +278,14 @@ export async function deleteDocumento(id: string): Promise<void> {
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo eliminar el documento."));
 }
 
+export async function restaurarDocumento(id: string): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.rpc("restaurar_documento_seguro", {
+    p_documento_id: id,
+  });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo restaurar el documento."));
+}
+
 export async function getDashboardResumen(filters: DashboardFilters = {}): Promise<DashboardResumen> {
   if (!supabase) return buildMockDashboard(filters);
   const { data, error } = await supabase.rpc("obtener_dashboard_resumen_filtrado", {
@@ -256,6 +297,7 @@ export async function getDashboardResumen(filters: DashboardFilters = {}): Promi
 }
 
 function filterMockDocumentos(filters: DocumentoFilters) {
+  if (filters.soloEliminados) return [];
   const search = filters.search?.toLocaleLowerCase("es") ?? "";
   return mockDocumentos.filter((documento) => {
     const matchesSearch = !search || [

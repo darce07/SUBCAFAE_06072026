@@ -13,11 +13,12 @@ import type { Documento } from "../types";
 import { Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useCatalogos } from "../hooks/use-catalogos";
-import { formatCurrency, formatDate, formatDateTime, getStatusTone } from "../lib/utils";
+import { formatCurrency, formatDate, formatDateTime, formatRelativeTime, getStatusTone } from "../lib/utils";
 import { deleteDocumento, updateDocumento } from "../services/documentos.service";
 import { useDebounce } from "../hooks/use-debounce";
-import { getSignedUrl } from "../services/storage.service";
+import { downloadDocumentoFile, getSignedUrl } from "../services/storage.service";
 import { usePermissions } from "../hooks/use-permissions";
+import { useAuth } from "../features/auth/auth-context";
 import { ConfirmDialog } from "../components/confirm-dialog";
 
 const columnAutoSizeLimits: Record<string, { min: number; max: number }> = {
@@ -25,6 +26,7 @@ const columnAutoSizeLimits: Record<string, { min: number; max: number }> = {
   categoria: { min: 150, max: 280 },
   fecha_documento: { min: 120, max: 160 },
   created_at: { min: 160, max: 210 },
+  usuario: { min: 160, max: 260 },
   tipo_entidad: { min: 150, max: 250 },
   entidad: { min: 180, max: 520 },
   tipo_categoria: { min: 170, max: 360 },
@@ -40,6 +42,14 @@ const columnAutoSizeLimits: Record<string, { min: number; max: number }> = {
   actions: { min: 260, max: 340 },
 };
 
+function actionLabel(tipo: NonNullable<Documento["ultima_accion"]>["tipo"]) {
+  return { creado: "Subido", editado: "Editado", eliminado: "Eliminado", recuperado: "Recuperado" }[tipo];
+}
+
+function actionTone(tipo: NonNullable<Documento["ultima_accion"]>["tipo"]) {
+  return { creado: "blue", editado: "amber", eliminado: "red", recuperado: "green" }[tipo] as "blue" | "amber" | "red" | "green";
+}
+
 function clampColumnSize(columnId: string, size: number) {
   const limits = columnAutoSizeLimits[columnId] ?? { min: 120, max: 420 };
   return Math.min(Math.max(size, limits.min), limits.max);
@@ -51,6 +61,7 @@ function getColumnText(documento: Documento, columnId: string) {
     categoria: documento.categoria?.nombre ?? "Sin categoría",
     fecha_documento: formatDate(documento.fecha_documento),
     created_at: documento.created_at ? formatDateTime(documento.created_at) : "",
+    usuario: documento.usuario?.nombre_completo ?? documento.usuario?.email ?? "",
     tipo_entidad: documento.tipo_entidad?.nombre ?? "",
     entidad: documento.entidad?.nombre ?? "",
     tipo_categoria: documento.tipo_categoria?.nombre ?? "",
@@ -95,6 +106,8 @@ export function DocumentsPage() {
   });
   const catalogos = useCatalogos();
   const { canCreate, canDelete, canEdit } = usePermissions();
+  const { userContext } = useAuth();
+  const watermarkUsuario = userContext?.nombreCompleto ?? userContext?.email ?? "usuario del sistema";
   const totalPages = Math.max(Math.ceil(count / pageSize), 1);
 
   const toggleAutoFitColumn = useCallback((columnId: string, headerText: string, defaultSize: number) => {
@@ -126,6 +139,19 @@ export function DocumentsPage() {
       window.open(await getSignedUrl(path), "_blank", "noopener,noreferrer");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo abrir el archivo.");
+    }
+  };
+
+  const downloadFile = async (documento: Documento) => {
+    if (!documento.archivo_path) return;
+    try {
+      await downloadDocumentoFile(
+        documento.archivo_path,
+        `${documento.codigo_documento}.${documento.extension ?? "archivo"}`,
+        { codigo: documento.codigo_documento, usuario: watermarkUsuario },
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo descargar el archivo.");
     }
   };
 
@@ -172,6 +198,37 @@ export function DocumentsPage() {
       { id: "categoria", accessorFn: (row) => row.categoria?.nombre ?? "", header: "Categoría", size: 170, minSize: 140, maxSize: 300, cell: ({ row }) => <Badge tone="blue">{row.original.categoria?.nombre ?? "Sin categoría"}</Badge> },
       { accessorKey: "fecha_documento", header: "Fecha", size: 130, minSize: 115, maxSize: 170, cell: ({ getValue }) => <span className="whitespace-nowrap">{formatDate(String(getValue()))}</span> },
       { accessorKey: "created_at", header: "Registrado", size: 170, minSize: 145, maxSize: 220, cell: ({ getValue }) => getValue() ? <span className="whitespace-nowrap">{formatDateTime(String(getValue()))}</span> : "—" },
+      {
+        id: "usuario",
+        accessorFn: (row) => row.usuario?.nombre_completo ?? row.usuario?.email ?? "",
+        header: "Subido por",
+        size: 190,
+        minSize: 160,
+        maxSize: 260,
+        cell: ({ row }) => {
+          const usuario = row.original.usuario;
+          const nombre = usuario?.nombre_completo ?? usuario?.email ?? "—";
+          const ultimaAccion = row.original.ultima_accion;
+          return (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <span className="truncate">{nombre}</span>
+                {ultimaAccion && <Badge tone={actionTone(ultimaAccion.tipo)}>{actionLabel(ultimaAccion.tipo)}</Badge>}
+              </div>
+              {ultimaAccion ? (
+                <span className="text-xs text-slate-400" title={formatDateTime(ultimaAccion.fecha)}>
+                  {ultimaAccion.actorNombre && ultimaAccion.tipo !== "creado" ? `${ultimaAccion.actorNombre} · ` : ""}
+                  {formatRelativeTime(ultimaAccion.fecha)}
+                </span>
+              ) : row.original.created_at ? (
+                <span className="text-xs text-slate-400" title={formatDateTime(row.original.created_at)}>
+                  {formatRelativeTime(row.original.created_at)}
+                </span>
+              ) : null}
+            </div>
+          );
+        },
+      },
       { id: "tipo_entidad", accessorFn: (row) => row.tipo_entidad?.nombre ?? "", header: "Tipo entidad", size: 160, minSize: 140, maxSize: 270, cell: ({ row }) => row.original.tipo_entidad?.nombre ?? "—" },
       { id: "entidad", accessorFn: (row) => row.entidad?.nombre ?? "", header: "Entidad", size: 230, minSize: 160, maxSize: 560, cell: ({ row }) => row.original.entidad?.nombre ?? "—" },
       { id: "tipo_categoria", accessorFn: (row) => row.tipo_categoria?.nombre ?? "", header: "Tipo categoría", size: 190, minSize: 150, maxSize: 380, cell: ({ row }) => row.original.tipo_categoria?.nombre ?? "—" },
@@ -210,7 +267,7 @@ export function DocumentsPage() {
             {canEdit("documentos") && <Button variant="ghost" size="icon" title="Editar" onClick={() => navigate(`/documentos/${row.original.id}/editar`)}><Pencil className="size-4" /></Button>}
             <Button variant="ghost" size="icon" title="Copiar ruta histórica" disabled={!row.original.ruta_historica} onClick={() => { void navigator.clipboard.writeText(row.original.ruta_historica ?? ""); toast.success("Ruta copiada."); }}><Clipboard className="size-4" /></Button>
             <Button variant="ghost" size="icon" title="Ver archivo" disabled={!row.original.archivo_path} onClick={() => void openFile(row.original.archivo_path)}><ExternalLink className="size-4" /></Button>
-            <Button variant="ghost" size="icon" title="Descargar archivo" disabled={!row.original.archivo_path} onClick={() => void openFile(row.original.archivo_path)}><Download className="size-4" /></Button>
+            <Button variant="ghost" size="icon" title="Descargar archivo" disabled={!row.original.archivo_path} onClick={() => void downloadFile(row.original)}><Download className="size-4" /></Button>
             {canEdit("documentos") && <Button variant="ghost" size="icon" title="Marcar observado" onClick={() => void markObserved(row.original)}><TriangleAlert className="size-4" /></Button>}
             {canDelete("documentos") && <Button variant="ghost" size="icon" loading={deletingId === row.original.id} title="Eliminar documento" onClick={() => setPendingDelete(row.original)}><Trash2 className="size-4 text-rose-600" /></Button>}
           </div>

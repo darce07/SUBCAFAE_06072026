@@ -79,6 +79,13 @@ export interface Documento {
   created_at?: string;
   updated_at?: string;
   created_by?: string | null;
+  usuario?: { id: string; nombre_completo: string | null; email: string | null } | null;
+  eliminado_por_usuario?: { id: string; nombre_completo: string | null; email: string | null } | null;
+  ultima_accion?: {
+    tipo: "creado" | "editado" | "eliminado" | "recuperado";
+    actorNombre: string | null;
+    fecha: string;
+  } | null;
   categoria?: CatalogItem | null;
   tipo_entidad?: CatalogItem | null;
   entidad?: Entidad | null;
@@ -189,7 +196,8 @@ export interface DocumentoFilters {
   tipoMovimientoId?: string;
   tipoMovimientoNombre?: "Ingreso" | "Egreso" | "No aplica";
   hasHistoricalPath?: boolean;
-  orderBy?: "fecha_documento" | "created_at";
+  soloEliminados?: boolean;
+  orderBy?: "fecha_documento" | "created_at" | "eliminado_at";
   orderDirection?: "asc" | "desc";
   page?: number;
   pageSize?: number;
