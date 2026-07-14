@@ -39,3 +39,19 @@ export const parseDateValue = (value: string) => {
 export const formatDate = (value: string) => dateFormatter.format(parseDateValue(value));
 
 export const formatDateTime = (value: string) => dateTimeFormatter.format(new Date(value));
+
+export type StatusTone = "green" | "amber" | "orange" | "red" | "slate";
+
+/**
+ * Única fuente de verdad para el color de un estado de documento. Antes cada página
+ * mapeaba "Observado" a un color distinto (naranja, rojo, ámbar) — con esto el mismo
+ * estado siempre se ve igual en todo el sistema.
+ */
+export const getStatusTone = (status?: string): StatusTone => {
+  const normalized = status?.toLocaleLowerCase("es") ?? "";
+  if (normalized.includes("verific")) return "green";
+  if (normalized.includes("pend")) return "amber";
+  if (normalized.includes("observ")) return "orange";
+  if (normalized.includes("no encontr")) return "red";
+  return "slate";
+};

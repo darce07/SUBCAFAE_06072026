@@ -1,16 +1,18 @@
 import { Download, FileSpreadsheet, LoaderCircle, Search } from "lucide-react";
 import { useState } from "react";
-import { useDocumentos } from "../hooks/use-documentos";
+import { useLibroContable } from "../hooks/use-libro-contable";
 import { useDebounce } from "../hooks/use-debounce";
-import { formatCurrency, formatDate } from "../lib/utils";
+import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
 import { Badge, Button, Card, Input, PageHeader } from "../components/ui";
 import type { Documento } from "../types";
 
 export function AccountingBookPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search);
-  const { documentos, loading, error } = useDocumentos({ search: debouncedSearch, page: 1, pageSize: 100 });
-  const movements = documentos.filter((item) => item.tipo_movimiento?.nombre === "Ingreso" || item.tipo_movimiento?.nombre === "Egreso");
+  // useLibroContable trae TODOS los asientos (no una página) ordenados cronológicamente
+  // ascendente — el saldo corrido es acumulativo y solo es correcto sobre el set completo.
+  const { movimientos, loading, error } = useLibroContable({ search: debouncedSearch });
+  const movements = movimientos.filter((item) => item.tipo_movimiento?.nombre === "Ingreso" || item.tipo_movimiento?.nombre === "Egreso");
 
   return (
     <div className="space-y-6">
@@ -28,7 +30,14 @@ export function AccountingBookPage() {
             <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Buscar documento o descripción..." />
           </div>
         </div>
-        {loading ? <div className="grid min-h-56 place-items-center"><LoaderCircle className="size-7 animate-spin text-teal-600" /></div> : <AccountingRows movements={movements} />}
+        {loading ? (
+          <div className="grid min-h-56 place-items-center"><LoaderCircle className="size-7 animate-spin text-teal-600" /></div>
+        ) : (
+          <>
+            <AccountingRows movements={movements} />
+            <p className="border-t border-slate-200 p-3 text-xs text-slate-500 dark:border-slate-800 sm:p-4">{movements.length} asientos · saldo acumulado desde el primer registro</p>
+          </>
+        )}
       </Card>
     </div>
   );
@@ -51,7 +60,7 @@ function AccountingRows({ movements }: { movements: Documento[] }) {
                   <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-slate-950 dark:text-white">{movement.titulo}</h2>
                   <p className="mt-1 break-words text-xs text-slate-500">{movement.codigo_documento}</p>
                 </div>
-                <Badge tone={movement.estado?.nombre === "Verificado" ? "green" : "amber"}>{movement.estado?.nombre ?? "Pendiente"}</Badge>
+                <Badge tone={getStatusTone(movement.estado?.nombre)}>{movement.estado?.nombre ?? "Pendiente"}</Badge>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
                 <span className="text-slate-500">{formatDate(movement.fecha_documento)}</span>
@@ -81,7 +90,7 @@ function AccountingRows({ movements }: { movements: Documento[] }) {
                   <td className="px-4 py-3 text-emerald-600">{income ? formatCurrency(movement.monto) : "—"}</td>
                   <td className="px-4 py-3 text-rose-600">{!income ? formatCurrency(movement.monto) : "—"}</td>
                   <td className="px-4 py-3 font-bold">{formatCurrency(tableBalance)}</td>
-                  <td className="px-4 py-3"><Badge tone={movement.estado?.nombre === "Verificado" ? "green" : "amber"}>{movement.estado?.nombre ?? "Pendiente"}</Badge></td>
+                  <td className="px-4 py-3"><Badge tone={getStatusTone(movement.estado?.nombre)}>{movement.estado?.nombre ?? "Pendiente"}</Badge></td>
                 </tr>
               );
             })}

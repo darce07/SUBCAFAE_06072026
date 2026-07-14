@@ -12,6 +12,7 @@ import { useAuth } from "../features/auth/auth-context";
 import { isSupabaseConfigured } from "../lib/supabase";
 import { usePermissions } from "../hooks/use-permissions";
 import { EntityCombobox, type EntityDraft } from "../components/entity-combobox";
+import { Field, SectionTitle } from "../components/form-field";
 import { createOrGetEntidad } from "../services/catalogos.service";
 import { DocumentAttachmentsSection } from "../components/document-attachments-section";
 import { createDocumentoAnexo } from "../services/anexos.service";
@@ -330,22 +331,10 @@ function descriptionFromText(text: string) {
 }
 
 function isReliableOcrText(text: string) {
-  const normalized = normalizeText(text);
-  const meaningful = [
-    "resolucion",
-    "directoral",
-    "considerando",
-    "visto",
-    "oficio",
-    "memorandum",
-    "ugel",
-    "subcafae",
-    "factura",
-    "recibo",
-  ].some((word) => normalized.includes(word));
   const letters = text.match(/[a-záéíóúñ]/gi)?.length ?? 0;
+  const words = text.trim().split(/\s+/).filter(Boolean);
   const suspicious = (text.match(/[{}[\]|<>_=~]/g)?.length ?? 0) + (text.match(/https?:\/\//gi)?.length ?? 0) * 5;
-  return meaningful && letters > 35 && suspicious < 4;
+  return letters > 35 && words.length >= 6 && suspicious < 4;
 }
 
 export function NewDocumentPage() {
@@ -963,12 +952,4 @@ function LocalFileViewer({ title, url, mimeType, onClose }: { title: string; url
       </div>
     </div>
   );
-}
-
-function SectionTitle({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
-  return <div className="mb-5 flex items-center gap-3"><div className="rounded-xl bg-teal-50 p-2.5 text-teal-700 dark:bg-teal-950">{icon}</div><div><h2 className="font-bold">{title}</h2><p className="text-xs text-slate-500">{description}</p></div></div>;
-}
-
-function Field({ label, error, children, className = "" }: { label: string; error?: string; children: React.ReactNode; className?: string }) {
-  return <label className={className}><span className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>{children}{error && <span className="mt-1 block text-xs text-rose-600">{error}</span>}</label>;
 }

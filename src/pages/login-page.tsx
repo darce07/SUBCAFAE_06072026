@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Archive, Eye, EyeOff, FileCheck2, Landmark, LockKeyhole, Mail } from "lucide-react";
+import { Archive, Eye, EyeOff, FileCheck2, Landmark, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../features/auth/auth-context";
 import { isSupabaseConfigured } from "../lib/supabase";
@@ -45,34 +45,32 @@ export function LoginPage() {
 
   return (
     <div className="grid min-h-screen bg-slate-950 lg:grid-cols-[1.15fr_0.85fr]">
-      <section className="relative hidden overflow-hidden p-12 lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(20,184,166,0.25),transparent_32%),radial-gradient(circle_at_80%_80%,rgba(59,130,246,0.18),transparent_35%)]" />
-        <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(255,255,255,.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.5)_1px,transparent_1px)] [background-size:42px_42px]" />
-        <div className="relative">
+      <section className="hidden flex-col justify-between bg-slate-950 p-12 lg:flex">
+        <div>
           <div className="mb-10 flex items-center gap-4">
-            <div className="grid size-14 place-items-center rounded-2xl bg-teal-500 text-2xl font-black text-white shadow-2xl shadow-teal-950">S</div>
+            <div className="grid size-14 place-items-center rounded-xl bg-teal-600 text-2xl font-black text-white">S</div>
             <div>
               <p className="text-2xl font-black tracking-wide text-white">SIGDAF</p>
-              <p className="text-xs uppercase tracking-[0.18em] text-teal-300">Plataforma institucional</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-teal-400">Plataforma institucional</p>
             </div>
           </div>
-          <h1 className="max-w-2xl text-5xl font-black leading-tight tracking-tight text-white">
+          <h1 className="max-w-2xl text-4xl font-black leading-tight tracking-tight text-white">
             Documentos, archivo y finanzas en una sola visión.
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-8 text-slate-300">
+          <p className="mt-5 max-w-xl text-base leading-7 text-slate-400">
             Control integral, trazabilidad verificable y decisiones financieras respaldadas por información confiable.
           </p>
         </div>
-        <div className="relative grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-3 border-t border-slate-800 pt-8">
           {[
-            { icon: FileCheck2, value: "1,248", label: "Documentos" },
-            { icon: Archive, value: "94%", label: "Verificados" },
-            { icon: Landmark, value: "S/ 196K", label: "Balance" },
-          ].map(({ icon: Icon, value, label }) => (
-            <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-              <Icon className="mb-4 size-5 text-teal-300" />
-              <p className="text-xl font-bold text-white">{value}</p>
-              <p className="text-xs text-slate-400">{label}</p>
+            { icon: FileCheck2, label: "Gestión documental" },
+            { icon: Archive, label: "Archivo físico" },
+            { icon: Landmark, label: "Gestión financiera" },
+            { icon: ShieldCheck, label: "Auditoría y permisos" },
+          ].map(({ icon: Icon, label }) => (
+            <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4">
+              <Icon className="size-5 shrink-0 text-teal-400" />
+              <p className="text-sm font-semibold text-slate-200">{label}</p>
             </div>
           ))}
         </div>

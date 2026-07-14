@@ -129,6 +129,83 @@ export async function getDocumentos(filters: DocumentoFilters = {}): Promise<Pag
   return { data: (data ?? []) as unknown as Documento[], count: count ?? 0, page, pageSize };
 }
 
+/**
+ * Suma el monto de TODOS los documentos que calzan con los filtros, sin el límite
+ * de página de getDocumentos. Usa una consulta liviana (solo `monto`) y avanza en
+ * bloques de 1000 filas para no traer los joins completos solo para sumar.
+ */
+export async function getMontoTotal(filters: DocumentoFilters = {}): Promise<number> {
+  if (!supabase) {
+    return filterMockDocumentos(filters).reduce((sum, documento) => sum + Number(documento.monto || 0), 0);
+  }
+
+  const select = filters.tipoMovimientoNombre
+    ? "monto, tipo_movimiento:catalogo_tipo_movimiento!inner(nombre)"
+    : "monto";
+  const term = filters.search ? sanitizeSearchTerm(filters.search) : "";
+  const entityIds = term ? await getEntityIdsForDocumentSearch(term) : [];
+
+  const chunkSize = 1000;
+  let total = 0;
+  let from = 0;
+  for (let iterations = 0; iterations < 50; iterations += 1) {
+    let query = supabase
+      .from("documentos")
+      .select(select)
+      .eq("activo", true)
+      .range(from, from + chunkSize - 1);
+
+    if (term) {
+      const searchParts = [
+        `codigo_documento.ilike.%${term}%`,
+        `titulo.ilike.%${term}%`,
+        `descripcion.ilike.%${term}%`,
+        `ruta_historica.ilike.%${term}%`,
+        ...(entityIds.length ? [`entidad_id.in.(${entityIds.join(",")})`] : []),
+      ];
+      query = query.or(searchParts.join(","));
+    }
+    if (filters.categoriaId) query = query.eq("categoria_id", filters.categoriaId);
+    if (filters.estadoId) query = query.eq("estado_id", filters.estadoId);
+    if (filters.entidadId) query = query.eq("entidad_id", filters.entidadId);
+    if (filters.anio) query = query.eq("anio", filters.anio);
+    if (filters.tipoMovimientoId) query = query.eq("tipo_movimiento_id", filters.tipoMovimientoId);
+    if (filters.tipoMovimientoNombre) query = query.eq("tipo_movimiento.nombre", filters.tipoMovimientoNombre);
+    if (filters.hasHistoricalPath) query = query.not("ruta_historica", "is", null).neq("ruta_historica", "");
+
+    const { data, error } = await query;
+    if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo calcular el total."));
+    const rows = (data ?? []) as unknown as { monto: number }[];
+    total += rows.reduce((sum, row) => sum + Number(row.monto || 0), 0);
+    if (rows.length < chunkSize) break;
+    from += chunkSize;
+  }
+
+  return total;
+}
+
+/**
+ * Trae TODOS los documentos con movimiento económico que calzan con los filtros,
+ * ordenados cronológicamente ascendente. El libro contable necesita el set completo
+ * (no una página) porque el saldo mostrado es acumulativo desde el primer asiento.
+ */
+export async function getAllDocumentosMovimiento(
+  filters: Omit<DocumentoFilters, "page" | "pageSize" | "orderBy" | "orderDirection"> = {},
+): Promise<Documento[]> {
+  if (!supabase) {
+    return sortDocumentos(filterMockDocumentos(filters), { orderBy: "fecha_documento", orderDirection: "asc" });
+  }
+
+  const pageSize = 100;
+  const all: Documento[] = [];
+  for (let page = 1; page <= 100; page += 1) {
+    const result = await getDocumentos({ ...filters, page, pageSize, orderBy: "fecha_documento", orderDirection: "asc" });
+    all.push(...result.data);
+    if (all.length >= result.count || result.data.length < pageSize) break;
+  }
+  return all;
+}
+
 export async function getDocumentoById(id: string): Promise<Documento | null> {
   if (!supabase) return mockDocumentos.find((documento) => documento.id === id) ?? null;
   const { data, error } = await supabase

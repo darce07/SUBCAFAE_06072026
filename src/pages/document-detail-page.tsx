@@ -6,21 +6,13 @@ import { toast } from "sonner";
 import type { DocumentAuditRecord, Documento, DocumentoAnexo, PendingDocumentoAnexo } from "../types";
 import { Badge, Button, Card, EmptyState, PageHeader } from "../components/ui";
 import { DocumentAttachmentsSection } from "../components/document-attachments-section";
+import { ConfirmDialog } from "../components/confirm-dialog";
 import { deleteDocumento, getDocumentoById, getDocumentoHistory } from "../services/documentos.service";
 import { deleteDocumentoAnexo, getDocumentoAnexos } from "../services/anexos.service";
-import { formatCurrency, formatDate } from "../lib/utils";
+import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview } from "../services/storage.service";
 import { usePermissions } from "../hooks/use-permissions";
 import { useCatalogos } from "../hooks/use-catalogos";
-
-const toneForStatus = (status?: string): "green" | "amber" | "orange" | "red" | "slate" => {
-  const value = status?.toLocaleLowerCase("es") ?? "";
-  if (value.includes("verific")) return "green";
-  if (value.includes("pend")) return "amber";
-  if (value.includes("observ")) return "orange";
-  if (value.includes("no encontr")) return "red";
-  return "slate";
-};
 
 export function DocumentDetailPage() {
   const { id } = useParams();
@@ -33,6 +25,8 @@ export function DocumentDetailPage() {
   const [viewer, setViewer] = useState<{ title: string; objectUrl: string; signedUrl: string; mimeType: string | null } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [pendingRemoveAnexo, setPendingRemoveAnexo] = useState<DocumentoAnexo | null>(null);
+  const [pendingRemoveDocument, setPendingRemoveDocument] = useState(false);
   const canManageAnexos = can("anexos", "editar") || canEdit("documentos");
 
   useEffect(() => () => {
@@ -92,21 +86,19 @@ export function DocumentDetailPage() {
   };
 
   const removeAnexo = async (anexo: DocumentoAnexo) => {
-    const confirmed = window.confirm(`¿Eliminar el anexo ${anexo.titulo}?`);
-    if (!confirmed) return;
     try {
       await deleteDocumentoAnexo(anexo.id);
       setAnexos((current) => current.filter((item) => item.id !== anexo.id));
       toast.success("Anexo eliminado correctamente.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo eliminar el anexo.");
+    } finally {
+      setPendingRemoveAnexo(null);
     }
   };
 
   const removeDocument = async () => {
     if (deleting) return;
-    const confirmed = window.confirm(`¿Eliminar el documento ${documento.codigo_documento}? La baja quedará registrada en auditoría.`);
-    if (!confirmed) return;
     setDeleting(true);
     try {
       await deleteDocumento(documento.id);
@@ -116,6 +108,7 @@ export function DocumentDetailPage() {
       toast.error(removeError instanceof Error ? removeError.message : "No se pudo eliminar el documento.");
     } finally {
       setDeleting(false);
+      setPendingRemoveDocument(false);
     }
   };
 
@@ -130,7 +123,7 @@ export function DocumentDetailPage() {
             {canEdit("documentos") && <Button variant="secondary" onClick={() => navigate(`/documentos/${documento.id}/editar`)}><Pencil className="size-4" />Editar</Button>}
             <Button variant="secondary" disabled={!documento.archivo_path} onClick={() => void viewMainFile()}><ExternalLink className="size-4" />Ver</Button>
             <Button disabled={!documento.archivo_path} onClick={() => void downloadMainFile()}><Download className="size-4" />Descargar</Button>
-            {canDelete("documentos") && <Button variant="danger" loading={deleting} onClick={() => void removeDocument()}><Trash2 className="size-4" />Eliminar</Button>}
+            {canDelete("documentos") && <Button variant="danger" loading={deleting} onClick={() => setPendingRemoveDocument(true)}><Trash2 className="size-4" />Eliminar</Button>}
           </div>
         )}
       />
@@ -145,7 +138,7 @@ export function DocumentDetailPage() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Estado actual</p>
-                <div className="mt-2"><Badge tone={toneForStatus(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Sin estado"}</Badge></div>
+                <div className="mt-2"><Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Sin estado"}</Badge></div>
               </div>
               <div className="text-right">
                 <p className="text-xs uppercase text-slate-400">Monto</p>
@@ -204,7 +197,7 @@ export function DocumentDetailPage() {
         onViewExisting={viewAnexo}
         onDownloadExisting={downloadAnexo}
         onEditExisting={() => navigate(`/documentos/${documento.id}/editar`)}
-        onDeleteExisting={removeAnexo}
+        onDeleteExisting={setPendingRemoveAnexo}
       />
 
       <Card className="p-6">
@@ -216,6 +209,24 @@ export function DocumentDetailPage() {
       </Card>
 
       {viewer && <FileViewerModal preview={viewer} onClose={() => setViewer(null)} />}
+
+      <ConfirmDialog
+        open={pendingRemoveAnexo !== null}
+        onOpenChange={(nextOpen) => { if (!nextOpen) setPendingRemoveAnexo(null); }}
+        title="Eliminar anexo"
+        description={pendingRemoveAnexo ? `¿Eliminar el anexo ${pendingRemoveAnexo.titulo}?` : ""}
+        confirmLabel="Eliminar"
+        onConfirm={() => { if (pendingRemoveAnexo) void removeAnexo(pendingRemoveAnexo); }}
+      />
+      <ConfirmDialog
+        open={pendingRemoveDocument}
+        onOpenChange={setPendingRemoveDocument}
+        title="Eliminar documento"
+        description={`¿Eliminar el documento ${documento.codigo_documento}? La baja quedará registrada en auditoría.`}
+        confirmLabel="Eliminar"
+        loading={deleting}
+        onConfirm={() => void removeDocument()}
+      />
     </div>
   );
 }

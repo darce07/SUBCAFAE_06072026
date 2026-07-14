@@ -20,16 +20,16 @@ export function useUploadDocumento() {
     setUploading(true);
     setProgress(15);
     setError(null);
+    const interval = window.setInterval(() => setProgress((value) => Math.min(value + 12, 88)), 180);
     try {
-      const interval = window.setInterval(() => setProgress((value) => Math.min(value + 12, 88)), 180);
       const result = await uploadDocumentoFile(file, metadata);
-      window.clearInterval(interval);
       setProgress(100);
       return result;
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "No se pudo subir el archivo.");
       throw uploadError;
     } finally {
+      window.clearInterval(interval);
       setUploading(false);
     }
   };

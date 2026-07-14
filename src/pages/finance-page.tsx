@@ -1,30 +1,42 @@
-import { useMemo, useState } from "react";
-import { ArrowDownCircle, ArrowUpCircle, FilePlus2, LoaderCircle, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowDownCircle, ArrowUpCircle, ChevronLeft, ChevronRight, FilePlus2, LoaderCircle, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDocumentos } from "../hooks/use-documentos";
+import { useMontoTotal } from "../hooks/use-monto-total";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
-import { formatCurrency, formatDate } from "../lib/utils";
+import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
 import { Badge, Button, Card, Input, PageHeader } from "../components/ui";
 import type { Documento } from "../types";
+
+const PAGE_SIZE = 20;
 
 export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(search);
   const { canCreate } = usePermissions();
   const { documentos, count, loading, error } = useDocumentos({
     search: debouncedSearch,
     tipoMovimientoNombre: kind,
-    page: 1,
-    pageSize: 50,
+    page,
+    pageSize: PAGE_SIZE,
   });
+  // El total general se calcula sobre TODOS los registros que calzan con el filtro,
+  // no solo los de la página visible — antes se sumaba `rows` y el monto mostrado
+  // quedaba silenciosamente incompleto pasados 50 documentos.
+  const { total } = useMontoTotal({ search: debouncedSearch, tipoMovimientoNombre: kind });
   const rows = useMemo(
     () => documentos.filter((documento) => documento.tipo_movimiento?.nombre === kind),
     [documentos, kind],
   );
-  const total = useMemo(() => rows.reduce((sum, row) => sum + Number(row.monto || 0), 0), [rows]);
   const isIncome = kind === "Ingreso";
+  const totalPages = Math.max(Math.ceil(count / PAGE_SIZE), 1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, kind]);
 
   return (
     <div className="space-y-6">
@@ -44,7 +56,7 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
             </div>
             <div className="min-w-0">
               <p className="break-words text-2xl font-black">{formatCurrency(total)}</p>
-              <p className="text-xs text-slate-500">Total mostrado</p>
+              <p className="text-xs text-slate-500">Total general</p>
             </div>
           </div>
         </Card>
@@ -81,12 +93,23 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
                       <td className="px-4 py-3">{row.entidad?.nombre ?? "—"}</td>
                       <td className="max-w-64 truncate px-4 py-3">{row.titulo}</td>
                       <td className="px-4 py-3">{row.tipo_operacion?.nombre ?? "—"}</td>
-                      <td className="px-4 py-3"><Badge tone={row.estado?.nombre === "Verificado" ? "green" : row.estado?.nombre === "Observado" ? "red" : "amber"}>{row.estado?.nombre ?? "Sin estado"}</Badge></td>
+                      <td className="px-4 py-3"><Badge tone={getStatusTone(row.estado?.nombre)}>{row.estado?.nombre ?? "Sin estado"}</Badge></td>
                       <td className={`whitespace-nowrap px-4 py-3 text-right font-black ${isIncome ? "text-emerald-600" : "text-rose-600"}`}>{isIncome ? "+" : "-"} {formatCurrency(row.monto)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-slate-200 p-3 text-sm dark:border-slate-800 sm:p-4">
+              <p className="text-xs text-slate-500">Página {page} de {totalPages} · {count} documentos</p>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((current) => Math.max(current - 1, 1))}>
+                  <ChevronLeft className="size-4" />Anterior
+                </Button>
+                <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(current + 1, totalPages))}>
+                  Siguiente<ChevronRight className="size-4" />
+                </Button>
+              </div>
             </div>
           </>
         )}
@@ -103,7 +126,7 @@ function FinanceMobileCard({ row, isIncome }: { row: Documento; isIncome: boolea
           <p className="break-words text-sm font-black text-teal-700 dark:text-teal-400">{row.codigo_documento}</p>
           <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-slate-950 dark:text-white">{row.titulo}</h2>
         </div>
-        <Badge tone={row.estado?.nombre === "Verificado" ? "green" : row.estado?.nombre === "Observado" ? "red" : "amber"}>{row.estado?.nombre ?? "Sin estado"}</Badge>
+        <Badge tone={getStatusTone(row.estado?.nombre)}>{row.estado?.nombre ?? "Sin estado"}</Badge>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
         <span className="text-slate-500">{formatDate(row.fecha_documento)}</span>

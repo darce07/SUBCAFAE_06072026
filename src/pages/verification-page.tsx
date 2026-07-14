@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, ClipboardCheck, FileQuestion, LoaderCircle
 import * as Progress from "@radix-ui/react-progress";
 import { useNavigate } from "react-router-dom";
 import { useDocumentos } from "../hooks/use-documentos";
+import { getStatusTone } from "../lib/utils";
 import { Badge, Button, Card, PageHeader, Select } from "../components/ui";
 import type { Documento } from "../types";
 
@@ -79,7 +80,7 @@ function VerificationMobileCard({ documento, onReview }: { documento: Documento;
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><p className="break-words text-sm font-black text-teal-700">{documento.codigo_documento}</p><h2 className="mt-1 line-clamp-2 text-sm font-semibold">{documento.titulo}</h2></div>
-        <Badge tone={documento.estado?.nombre === "Verificado" ? "green" : documento.estado?.nombre === "Observado" ? "orange" : "amber"}>{documento.estado?.nombre ?? "Sin estado"}</Badge>
+        <Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Sin estado"}</Badge>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         <Badge tone={documento.archivo_path ? "green" : "red"}>{documento.archivo_path ? "Con archivo" : "Sin archivo"}</Badge>

@@ -102,7 +102,7 @@ export function DashboardLayout() {
   const navigate = useNavigate();
   const { signOut, session, userContext, contextError } = useAuth();
   const { can } = usePermissions();
-  const { theme, toggleTheme, sidebarCollapsed, toggleSidebar, fontSize, accent } = useAppStore();
+  const { theme, toggleTheme, sidebarCollapsed, toggleSidebar, fontSize, accent, density } = useAppStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const displayName = userContext?.nombreCompleto || session?.user.email?.split("@")[0] || "Usuario";
@@ -112,8 +112,9 @@ export function DashboardLayout() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     document.documentElement.dataset.fontSize = fontSize;
+    document.documentElement.dataset.density = density;
     document.documentElement.style.setProperty("--brand", accent);
-  }, [accent, fontSize, theme]);
+  }, [accent, density, fontSize, theme]);
 
   useEffect(() => setMobileOpen(false), [location.pathname]);
 
@@ -139,7 +140,7 @@ export function DashboardLayout() {
       >
         <div className="flex h-20 items-center gap-3 border-b border-slate-800 px-5">
           <Link to="/dashboard" className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-teal-400 to-teal-700 font-black text-white shadow-lg shadow-teal-950/40">S</div>
+            <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[var(--brand)] font-black text-white">S</div>
             {!sidebarCollapsed && (
               <div className="min-w-0">
                 <p className="text-lg font-black tracking-wide text-white">SIGDAF</p>
@@ -165,7 +166,7 @@ export function DashboardLayout() {
                     className={({ isActive }) =>
                       cn(
                         "group flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition",
-                        isActive ? "bg-teal-600 text-white shadow-md shadow-teal-950/30" : "text-slate-400 hover:bg-slate-900 hover:text-white",
+                        isActive ? "bg-[var(--brand)] text-white shadow-md shadow-black/30" : "text-slate-400 hover:bg-slate-900 hover:text-white",
                         sidebarCollapsed && "justify-center px-0",
                       )
                     }

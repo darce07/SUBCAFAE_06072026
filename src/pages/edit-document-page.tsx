@@ -13,6 +13,7 @@ import { usePermissions } from "../hooks/use-permissions";
 import { useUploadDocumento } from "../hooks/use-upload-documento";
 import { editDocumento, getDocumentoById } from "../services/documentos.service";
 import { EntityCombobox, type EntityDraft } from "../components/entity-combobox";
+import { Field, SectionTitle } from "../components/form-field";
 import { createOrGetEntidad } from "../services/catalogos.service";
 import { DocumentAttachmentsSection } from "../components/document-attachments-section";
 import { createDocumentoAnexo, deleteDocumentoAnexo, getDocumentoAnexos, updateDocumentoAnexo } from "../services/anexos.service";
@@ -400,7 +401,7 @@ export function EditDocumentPage() {
       />
       <form onSubmit={handleSubmit(setConfirmValues)} className="space-y-6">
         <Card className="p-5 sm:p-6">
-          <div className="mb-5 flex items-center gap-3"><div className="rounded-xl bg-teal-50 p-2.5 text-teal-700 dark:bg-teal-950"><FilePenLine /></div><div><h2 className="font-bold">Datos editables</h2><p className="text-xs text-slate-500">La información de control del registro permanece protegida.</p></div></div>
+          <SectionTitle icon={<FilePenLine />} title="Datos editables" description="La información de control del registro permanece protegida." />
           <div className="grid gap-5 md:grid-cols-2">
             <Field label="Fecha del documento *" error={errors.fecha_documento?.message}>
               <div className="relative">
@@ -566,10 +567,6 @@ function FileViewerModal({ preview, onClose }: { preview: { title: string; objec
       </div>
     </div>
   );
-}
-
-function Field({ label, error, children, className = "" }: { label: string; error?: string; children: React.ReactNode; className?: string }) {
-  return <label className={className}><span className="mb-2 block text-sm font-semibold">{label}</span>{children}{error && <span className="mt-1 block text-xs text-rose-600">{error}</span>}</label>;
 }
 
 function DocumentFormSkeleton() {

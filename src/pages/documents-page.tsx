@@ -13,20 +13,12 @@ import type { Documento } from "../types";
 import { Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useCatalogos } from "../hooks/use-catalogos";
-import { formatCurrency, formatDate, formatDateTime } from "../lib/utils";
+import { formatCurrency, formatDate, formatDateTime, getStatusTone } from "../lib/utils";
 import { deleteDocumento, updateDocumento } from "../services/documentos.service";
 import { useDebounce } from "../hooks/use-debounce";
 import { getSignedUrl } from "../services/storage.service";
 import { usePermissions } from "../hooks/use-permissions";
-
-const toneForStatus = (status?: string): "green" | "amber" | "orange" | "red" | "slate" => {
-  const normalized = status?.toLocaleLowerCase("es") ?? "";
-  if (normalized.includes("verific")) return "green";
-  if (normalized.includes("pend")) return "amber";
-  if (normalized.includes("observ")) return "orange";
-  if (normalized.includes("no encontr")) return "red";
-  return "slate";
-};
+import { ConfirmDialog } from "../components/confirm-dialog";
 
 const columnAutoSizeLimits: Record<string, { min: number; max: number }> = {
   codigo_documento: { min: 150, max: 230 },
@@ -87,6 +79,7 @@ export function DocumentsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Documento | null>(null);
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
   const [autoFitColumns, setAutoFitColumns] = useState<Record<string, boolean>>({});
   const debouncedSearch = useDebounce(globalFilter, 400);
@@ -153,8 +146,6 @@ export function DocumentsPage() {
 
   const removeDocument = async (documento: Documento) => {
     if (deletingId) return;
-    const confirmed = window.confirm(`¿Eliminar el documento ${documento.codigo_documento}? Se ocultará del sistema, pero conservará su auditoría.`);
-    if (!confirmed) return;
     setDeletingId(documento.id);
     try {
       await deleteDocumento(documento.id);
@@ -164,6 +155,7 @@ export function DocumentsPage() {
       toast.error(removeError instanceof Error ? removeError.message : "No se pudo eliminar el documento.");
     } finally {
       setDeletingId(null);
+      setPendingDelete(null);
     }
   };
 
@@ -183,7 +175,7 @@ export function DocumentsPage() {
       { id: "tipo_entidad", accessorFn: (row) => row.tipo_entidad?.nombre ?? "", header: "Tipo entidad", size: 160, minSize: 140, maxSize: 270, cell: ({ row }) => row.original.tipo_entidad?.nombre ?? "—" },
       { id: "entidad", accessorFn: (row) => row.entidad?.nombre ?? "", header: "Entidad", size: 230, minSize: 160, maxSize: 560, cell: ({ row }) => row.original.entidad?.nombre ?? "—" },
       { id: "tipo_categoria", accessorFn: (row) => row.tipo_categoria?.nombre ?? "", header: "Tipo categoría", size: 190, minSize: 150, maxSize: 380, cell: ({ row }) => row.original.tipo_categoria?.nombre ?? "—" },
-      { id: "estado", accessorFn: (row) => row.estado?.nombre ?? "", header: "Estado", size: 130, minSize: 115, maxSize: 180, cell: ({ row }) => <Badge tone={toneForStatus(row.original.estado?.nombre)}>{row.original.estado?.nombre ?? "Sin estado"}</Badge> },
+      { id: "estado", accessorFn: (row) => row.estado?.nombre ?? "", header: "Estado", size: 130, minSize: 115, maxSize: 180, cell: ({ row }) => <Badge tone={getStatusTone(row.original.estado?.nombre)}>{row.original.estado?.nombre ?? "Sin estado"}</Badge> },
       { accessorKey: "monto", header: "Monto", size: 130, minSize: 115, maxSize: 180, cell: ({ getValue }) => <strong>{formatCurrency(Number(getValue()))}</strong> },
       { id: "movimiento", accessorFn: (row) => row.tipo_movimiento?.nombre ?? "", header: "Ingreso / Egreso", size: 170, minSize: 145, maxSize: 260, cell: ({ row }) => <Badge tone={row.original.tipo_movimiento?.nombre === "Ingreso" ? "green" : row.original.tipo_movimiento?.nombre === "Egreso" ? "red" : "slate"}>{row.original.tipo_movimiento?.nombre ?? "No aplica"}</Badge> },
       { id: "operacion", accessorFn: (row) => row.tipo_operacion?.nombre ?? "", header: "Tipo operación", size: 170, minSize: 145, maxSize: 320, cell: ({ row }) => row.original.tipo_operacion?.nombre ?? "—" },
@@ -220,7 +212,7 @@ export function DocumentsPage() {
             <Button variant="ghost" size="icon" title="Ver archivo" disabled={!row.original.archivo_path} onClick={() => void openFile(row.original.archivo_path)}><ExternalLink className="size-4" /></Button>
             <Button variant="ghost" size="icon" title="Descargar archivo" disabled={!row.original.archivo_path} onClick={() => void openFile(row.original.archivo_path)}><Download className="size-4" /></Button>
             {canEdit("documentos") && <Button variant="ghost" size="icon" title="Marcar observado" onClick={() => void markObserved(row.original)}><TriangleAlert className="size-4" /></Button>}
-            {canDelete("documentos") && <Button variant="ghost" size="icon" loading={deletingId === row.original.id} title="Eliminar documento" onClick={() => void removeDocument(row.original)}><Trash2 className="size-4 text-rose-600" /></Button>}
+            {canDelete("documentos") && <Button variant="ghost" size="icon" loading={deletingId === row.original.id} title="Eliminar documento" onClick={() => setPendingDelete(row.original)}><Trash2 className="size-4 text-rose-600" /></Button>}
           </div>
         ),
       },
@@ -278,7 +270,7 @@ export function DocumentsPage() {
                   onEdit={() => navigate(`/documentos/${documento.id}/editar`)}
                   onOpenFile={() => void openFile(documento.archivo_path)}
                   onMarkObserved={() => void markObserved(documento)}
-                  onDelete={() => void removeDocument(documento)}
+                  onDelete={() => setPendingDelete(documento)}
                 />
               ))}
             </div>
@@ -342,6 +334,15 @@ export function DocumentsPage() {
           <div className="flex gap-2"><Button variant="secondary" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((value) => value - 1)}>Anterior</Button><Button variant="secondary" size="sm" disabled={page >= totalPages || loading} onClick={() => setPage((value) => value + 1)}>Siguiente</Button></div>
         </div>
       </Card>
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(nextOpen) => { if (!nextOpen) setPendingDelete(null); }}
+        title="Eliminar documento"
+        description={pendingDelete ? `¿Eliminar el documento ${pendingDelete.codigo_documento}? Se ocultará del sistema, pero conservará su auditoría.` : ""}
+        confirmLabel="Eliminar"
+        loading={pendingDelete ? deletingId === pendingDelete.id : false}
+        onConfirm={() => { if (pendingDelete) void removeDocument(pendingDelete); }}
+      />
     </div>
   );
 }
@@ -374,7 +375,7 @@ function DocumentMobileCard({
           <p className="break-words text-sm font-black text-teal-700 dark:text-teal-400">{documento.codigo_documento}</p>
           <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-slate-950 dark:text-white">{documento.titulo}</h2>
         </button>
-        <Badge tone={toneForStatus(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Sin estado"}</Badge>
+        <Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Sin estado"}</Badge>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
         <MiniInfo label="Fecha" value={formatDate(documento.fecha_documento)} />

@@ -4,7 +4,7 @@ import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
 import { useArchivoFisicoDocumentos, useArchivoFisicoResumen } from "../hooks/use-archivo-fisico-documentos";
 import { Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
-import { formatDate } from "../lib/utils";
+import { formatDate, getStatusTone } from "../lib/utils";
 import type { Documento } from "../types";
 
 export function PhysicalArchivePage() {
@@ -204,7 +204,7 @@ function ArchiveDocumentList({ documentos }: { documentos: Documento[] }) {
                 <td className="px-5 py-4">{documento.categoria?.nombre ?? "Sin categoría"}</td>
                 <td className="px-5 py-4">{documento.entidad?.nombre ?? "—"}</td>
                 <td className="max-w-md px-5 py-4">{documento.titulo}</td>
-                <td className="px-5 py-4"><Badge tone={documento.estado?.nombre === "Observado" ? "amber" : "green"}>{documento.estado?.nombre ?? "Pendiente"}</Badge></td>
+                <td className="px-5 py-4"><Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Pendiente"}</Badge></td>
                 <td className="px-5 py-4 text-slate-500">{documento.ruta_historica || "Sin ruta registrada"}</td>
               </tr>
             ))}
@@ -223,7 +223,7 @@ function ArchiveDocumentCard({ documento }: { documento: Documento }) {
           <p className="break-words font-bold text-teal-700">{documento.codigo_documento}</p>
           <p className="mt-1 break-words text-sm font-semibold text-slate-900 dark:text-white">{documento.titulo}</p>
         </div>
-        <Badge tone={documento.estado?.nombre === "Observado" ? "amber" : "green"}>{documento.estado?.nombre ?? "Pendiente"}</Badge>
+        <Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Pendiente"}</Badge>
       </div>
       <div className="mt-4 grid gap-3 text-sm text-slate-600 dark:text-slate-300">
         <ArchiveInfo label="Fecha" value={formatDate(documento.fecha_documento)} />

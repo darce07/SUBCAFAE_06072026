@@ -3,6 +3,7 @@ import { Boxes, Pencil, Plus, Power, RotateCcw, Search, SlidersHorizontal, Trash
 import { toast } from "sonner";
 import { Button, Card, Input, PageHeader, Select, Badge } from "../components/ui";
 import { useCatalogos } from "../hooks/use-catalogos";
+import { ConfirmDialog } from "../components/confirm-dialog";
 import type { CatalogItem, CatalogTable, CatalogosData, Entidad, EntityDocumentType } from "../types";
 import { usePermissions } from "../hooks/use-permissions";
 
@@ -44,6 +45,7 @@ export function CatalogsPage() {
   const [entityTypeId, setEntityTypeId] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<CatalogItem | null>(null);
   const selectedDefinition = definitions.find((item) => item.table === selectedTable)!;
   const selectedItems = catalogos[selectedDefinition.key] as CatalogItem[];
   const activeFilterCount = [
@@ -129,8 +131,6 @@ export function CatalogsPage() {
 
   const removeItem = async (item: CatalogItem) => {
     if (deletingId) return;
-    const confirmed = window.confirm(`¿Eliminar "${item.nombre}"? Esta acción no se puede deshacer.`);
-    if (!confirmed) return;
     try {
       setDeletingId(item.id);
       await catalogos.remove(selectedTable, item);
@@ -139,6 +139,7 @@ export function CatalogsPage() {
       toast.error(error instanceof Error ? error.message : "No se pudo eliminar el valor.");
     } finally {
       setDeletingId(null);
+      setPendingRemove(null);
     }
   };
 
@@ -230,7 +231,7 @@ export function CatalogsPage() {
                         <Power className={`size-4 ${item.activo ? "text-rose-600" : "text-emerald-600"}`} />
                         {item.activo ? "Desactivar" : "Activar"}
                       </Button>
-                      <Button variant="danger" loading={deletingId === item.id} onClick={() => void removeItem(item)}>
+                      <Button variant="danger" loading={deletingId === item.id} onClick={() => setPendingRemove(item)}>
                         <Trash2 className="size-4" />Eliminar
                       </Button>
                     </div>
@@ -274,6 +275,15 @@ export function CatalogsPage() {
           </Card>
         </div>
       )}
+      <ConfirmDialog
+        open={pendingRemove !== null}
+        onOpenChange={(nextOpen) => { if (!nextOpen) setPendingRemove(null); }}
+        title="Eliminar valor de catálogo"
+        description={pendingRemove ? `¿Eliminar "${pendingRemove.nombre}"? Esta acción no se puede deshacer.` : ""}
+        confirmLabel="Eliminar"
+        loading={pendingRemove ? deletingId === pendingRemove.id : false}
+        onConfirm={() => { if (pendingRemove) void removeItem(pendingRemove); }}
+      />
     </div>
   );
 }

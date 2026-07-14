@@ -44,8 +44,10 @@ Orden recomendado:
 6. Ejecuta `supabase/migrations/005_document_date_and_soft_delete.sql`.
 7. Ejecuta `supabase/migrations/006_document_delete_permission_repair.sql`.
 8. Ejecuta `supabase/migrations/007_document_soft_delete_trigger_repair.sql`.
-9. Configura `.env` con URL y clave anon.
-10. Cierra sesión, vuelve a ingresar y ejecuta `npm run build`.
+9. Ejecuta en orden las migraciones `008` a `014` (filtros de dashboard, adjuntos, versionado, paginación de auditoría, reparaciones de validación y catálogos).
+10. Ejecuta `supabase/migrations/015_document_permission_and_audit_search_repair.sql`.
+11. Configura `.env` con URL y clave anon.
+12. Cierra sesión, vuelve a ingresar y ejecuta `npm run build`.
 
 La migración crea tablas, catálogos iniciales, roles, permisos, RLS, auditoría, índices, bucket privado, políticas Storage, RPC idempotente y resumen optimizado del dashboard.
 
@@ -58,6 +60,8 @@ La migración `005` agrega cambio de fecha controlado por permiso y eliminación
 La migración `006` repara instalaciones que todavía tenían el permiso histórico `documentos:desactivar`, migrándolo al permiso vigente `documentos:eliminar`.
 
 La migración `007` corrige la validación de la baja lógica para que solo la RPC autorizada pueda eliminar, sin rechazar cambios automáticos realizados por triggers.
+
+La migración `015` repara un permiso muerto: un rol con solo `documentos:cambiar_fecha` (sin `editar`) pasaba la política RLS pero el trigger `validate_documento()` exigía `editar` para cualquier actualización, incluida una fecha aislada. También agrega índices GIN trigram en `auditoria.tabla` y `profiles.nombre_completo/email` para que la búsqueda libre del panel de auditoría no dependa de un escaneo secuencial.
 
 ### Usuario autenticado sin permisos
 

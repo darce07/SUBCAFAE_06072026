@@ -15,7 +15,7 @@ export function Button({
   loading?: boolean;
 }) {
   const variants = {
-    primary: "bg-teal-700 text-white shadow-sm hover:bg-teal-800",
+    primary: "bg-[var(--brand)] text-white shadow-sm hover:brightness-90",
     secondary: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200",
     ghost: "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
     danger: "bg-rose-600 text-white hover:bg-rose-700",
