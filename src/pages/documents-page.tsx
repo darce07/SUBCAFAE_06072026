@@ -451,14 +451,24 @@ function DocumentMobileCard({
         </button>
         <Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Sin estado"}</Badge>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+      <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 text-xs">
         <MiniInfo label="Fecha" value={formatDate(documento.fecha_documento)} />
         <MiniInfo label="Registro" value={documento.created_at ? formatDateTime(documento.created_at) : "Sin fecha"} alignRight />
-        <MiniInfo label="Monto" value={formatCurrency(Number(documento.monto || 0))} />
         <MiniInfo label="Categoría" value={documento.categoria?.nombre ?? "Sin categoría"} />
         <MiniInfo label="Entidad" value={documento.entidad?.nombre ?? "Sin entidad"} alignRight />
         <MiniInfo label="Archivador" value={documento.archivador?.nombre ?? "Sin archivador"} />
-        <MiniInfo label="Movimiento" value={documento.tipo_movimiento?.nombre ?? "No aplica"} alignRight />
+        <MiniInfo
+          label="Movimiento"
+          value={documento.tipo_movimiento?.nombre ?? "No aplica"}
+          alignRight
+          muted={!documento.tipo_movimiento?.nombre || documento.tipo_movimiento.nombre === "No aplica"}
+        />
+      </div>
+      <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Monto</span>
+        <strong className={Number(documento.monto) ? "text-sm text-slate-950 dark:text-white" : "text-sm font-medium text-slate-400"}>
+          {formatCurrency(Number(documento.monto || 0))}
+        </strong>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
         <Button size="sm" variant="secondary" onClick={onView}><Eye className="size-4" />Ver</Button>
@@ -477,11 +487,11 @@ function DocumentMobileCard({
   );
 }
 
-function MiniInfo({ label, value, alignRight = false }: { label: string; value: string; alignRight?: boolean }) {
+function MiniInfo({ label, value, alignRight = false, muted = false }: { label: string; value: string; alignRight?: boolean; muted?: boolean }) {
   return (
     <div className={`min-w-0 ${alignRight ? "text-right" : ""}`}>
       <p className="font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-1 break-words font-medium text-slate-700 dark:text-slate-200">{value}</p>
+      <p className={`mt-1 break-words font-medium ${muted ? "text-slate-400 dark:text-slate-500" : "text-slate-700 dark:text-slate-200"}`}>{value}</p>
     </div>
   );
 }
