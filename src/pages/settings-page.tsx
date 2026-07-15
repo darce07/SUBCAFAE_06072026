@@ -96,7 +96,7 @@ export function SettingsPage() {
           <SettingRow label="Color principal">
             <div className="flex gap-2">
               {["#0f766e", "#1d4ed8", "#6d28d9", "#be123c", "#334155"].map((color) => (
-                <button key={color} className={`size-8 rounded-full ring-offset-2 ${accent === color ? "ring-2 ring-slate-500" : ""}`} style={{ backgroundColor: color }} onClick={() => setAccent(color)} />
+                <button key={color} type="button" aria-label={`Color principal ${color}`} aria-pressed={accent === color} title={color} className={`size-8 rounded-full ring-offset-2 ${accent === color ? "ring-2 ring-slate-500" : ""}`} style={{ backgroundColor: color }} onClick={() => setAccent(color)} />
               ))}
             </div>
           </SettingRow>

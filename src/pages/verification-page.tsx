@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, ClipboardCheck, FileQuestion, LoaderCircle } from "lucide-react";
+import { motion } from "framer-motion";
+import { AlertTriangle, CheckCircle2, ClipboardCheck, FileQuestion } from "lucide-react";
 import * as Progress from "@radix-ui/react-progress";
 import { useNavigate } from "react-router-dom";
 import { useDocumentos } from "../hooks/use-documentos";
 import { getStatusTone } from "../lib/utils";
-import { Alert, Badge, Button, Card, PageHeader, Select } from "../components/ui";
+import { Alert, Badge, Button, Card, PageHeader, Select, Skeleton } from "../components/ui";
 import type { Documento } from "../types";
 
 export function VerificationPage() {
@@ -21,10 +22,10 @@ export function VerificationPage() {
   };
   const progress = documentos.length ? Math.round((totals.Verificado / documentos.length) * 100) : 0;
   const stats = [
-    { label: "Verificados", value: totals.Verificado, icon: CheckCircle2, tone: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50" },
-    { label: "Pendientes", value: totals.Pendiente, icon: ClipboardCheck, tone: "text-amber-600 bg-amber-50 dark:bg-amber-950/50" },
-    { label: "Observados", value: totals.Observado, icon: AlertTriangle, tone: "text-orange-600 bg-orange-50 dark:bg-orange-950/50" },
-    { label: "No encontrados", value: totals["No encontrado"], icon: FileQuestion, tone: "text-rose-600 bg-rose-50 dark:bg-rose-950/50" },
+    { label: "Verificados", value: totals.Verificado, icon: CheckCircle2, tone: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 ring-emerald-600/10" },
+    { label: "Pendientes", value: totals.Pendiente, icon: ClipboardCheck, tone: "text-amber-600 bg-amber-50 dark:bg-amber-950/50 ring-amber-600/10" },
+    { label: "Observados", value: totals.Observado, icon: AlertTriangle, tone: "text-orange-600 bg-orange-50 dark:bg-orange-950/50 ring-orange-600/10" },
+    { label: "No encontrados", value: totals["No encontrado"], icon: FileQuestion, tone: "text-rose-600 bg-rose-50 dark:bg-rose-950/50 ring-rose-600/10" },
   ];
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export function VerificationPage() {
         </div>
         <Progress.Root value={progress} className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100"><Progress.Indicator className="h-full rounded-full bg-teal-600" style={{ width: `${progress}%` }} /></Progress.Root>
       </Card>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{stats.map(({ label, value, icon: Icon, tone }) => <Card key={label} className="flex items-center gap-4 p-5"><div className={`grid size-12 place-items-center rounded-xl ${tone}`}><Icon className="size-5" /></div><div><p className="text-2xl font-black">{value}</p><p className="text-xs text-slate-500">{label} en esta página</p></div></Card>)}</div>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">{stats.map(({ label, value, icon: Icon, tone }, index) => <motion.div key={label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}><Card className="flex items-center gap-3 p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:gap-4 sm:p-5"><div className={`grid size-10 shrink-0 place-items-center rounded-2xl ring-1 ring-inset sm:size-12 ${tone}`}><Icon className="size-4 sm:size-5" /></div><div className="min-w-0"><p className="text-lg font-black sm:text-2xl">{value}</p><p className="truncate text-xs text-slate-500">{label} en esta página</p></div></Card></motion.div>)}</div>
       <Card>
         <div className="flex flex-col gap-3 border-b border-slate-200 p-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
           <div><h2 className="font-bold">Documentos por verificar</h2><p className="text-xs text-slate-500">Resultados paginados desde el servidor.</p></div>
@@ -50,7 +51,19 @@ export function VerificationPage() {
             {[10, 20, 50].map((size) => <option key={size} value={size}>{size} por página</option>)}
           </Select>
         </div>
-        {loading ? <div className="grid min-h-56 place-items-center"><LoaderCircle className="size-7 animate-spin text-teal-600" /></div> : (
+        {loading ? (
+          <div className="space-y-3 p-4">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={index} className="flex items-center gap-4">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+            ))}
+          </div>
+        ) : (
           <>
             <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">
               {documentos.map((documento) => <VerificationMobileCard key={documento.id} documento={documento} onReview={() => navigate(`/documentos/${documento.id}`)} />)}

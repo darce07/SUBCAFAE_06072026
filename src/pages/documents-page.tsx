@@ -7,10 +7,10 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Clipboard, Download, Eye, ExternalLink, FilePlus2, LoaderCircle, Pencil, Search, SlidersHorizontal, Trash2, TriangleAlert } from "lucide-react";
+import { Clipboard, Download, Eye, ExternalLink, FilePlus2, Pencil, Search, SlidersHorizontal, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import type { Documento } from "../types";
-import { Alert, Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
+import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { formatCurrency, formatDate, formatDateTime, formatRelativeTime, getStatusTone } from "../lib/utils";
@@ -330,7 +330,20 @@ export function DocumentsPage() {
             <Select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value={10}>10 filas</option><option value={20}>20 filas</option><option value={50}>50 filas</option></Select>
           </div>
         </div>
-        {loading ? <div className="grid min-h-72 place-items-center"><LoaderCircle className="size-7 animate-spin text-teal-600" /></div> : (
+        {loading ? (
+          <div className="space-y-3 p-4">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={index} className="flex items-center gap-4">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
+          </div>
+        ) : (
           <>
             <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">
               {documentos.map((documento) => (
@@ -386,7 +399,7 @@ export function DocumentsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
+                  <tr key={row.id} className="transition-colors duration-200 ease-out hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}

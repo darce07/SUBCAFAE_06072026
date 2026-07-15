@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, LoaderCircle, Search, ShieldCheck } from "lucide-react";
+import { motion } from "framer-motion";
+import { CalendarDays, Search, ShieldCheck } from "lucide-react";
 import { getAuditRecords } from "../services/admin.service";
 import type { AuditRecord } from "../types";
-import { Alert, Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
+import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import { useDebounce } from "../hooks/use-debounce";
 
 const moduleLabels: Record<string, string> = {
@@ -99,10 +100,16 @@ export function AuditPage() {
     <div className="space-y-6">
       <PageHeader eyebrow="Trazabilidad" title="Auditoría" description="Seguimiento paginado de las operaciones relevantes realizadas en el sistema." />
       {error && <Alert>{error}</Alert>}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="p-5"><ShieldCheck className="mb-3 size-5 text-teal-600" /><p className="text-2xl font-black">{count}</p><p className="text-xs text-slate-500">Eventos encontrados</p></Card>
-        <Card className="p-5"><p className="text-2xl font-black">{records.filter((item) => auditDateKey(item.created_at) === today).length}</p><p className="text-xs text-slate-500">Eventos de hoy en esta página</p></Card>
-        <Card className="p-5"><p className="text-2xl font-black">{records.filter((item) => item.accion === "UPDATE").length}</p><p className="text-xs text-slate-500">Actualizaciones en esta página</p></Card>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
+        <motion.div className="col-span-2 sm:col-span-1" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
+          <Card className="p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"><ShieldCheck className="mb-2 size-5 text-teal-600 sm:mb-3" /><p className="text-lg font-black sm:text-2xl">{count}</p><p className="text-xs text-slate-500">Eventos encontrados</p></Card>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
+          <Card className="p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"><p className="text-lg font-black sm:text-2xl">{records.filter((item) => auditDateKey(item.created_at) === today).length}</p><p className="text-xs text-slate-500">Eventos de hoy en esta página</p></Card>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          <Card className="p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"><p className="text-lg font-black sm:text-2xl">{records.filter((item) => item.accion === "UPDATE").length}</p><p className="text-xs text-slate-500">Actualizaciones en esta página</p></Card>
+        </motion.div>
       </div>
       <Card>
         <div className="border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4">
@@ -122,7 +129,19 @@ export function AuditPage() {
             <Button variant="secondary" onClick={resetFilters}>Limpiar</Button>
           </div>
         </div>
-        {loading ? <div className="grid min-h-56 place-items-center"><LoaderCircle className="size-7 animate-spin text-teal-600" /></div> : records.length === 0 ? (
+        {loading ? (
+          <div className="space-y-3 p-4">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={index} className="flex items-center gap-4">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 flex-1" />
+              </div>
+            ))}
+          </div>
+        ) : records.length === 0 ? (
           <div className="p-6 text-center text-sm text-slate-500">No se encontraron eventos para los filtros seleccionados.</div>
         ) : (
           <>

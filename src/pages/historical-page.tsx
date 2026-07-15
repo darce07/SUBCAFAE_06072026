@@ -11,14 +11,13 @@ import {
   FileText,
   Folder,
   FolderOpen,
-  LoaderCircle,
   Pencil,
   Search,
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "../components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
 import { useDocumentos } from "../hooks/use-documentos";
@@ -128,7 +127,7 @@ export function HistoricalPage() {
         </div>
         <aside className="relative bg-slate-50/70 p-5 dark:bg-slate-950/40">
           {selected ? <motion.div key={selected.id} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }}>
-            <button onClick={() => setSelected(null)} className="absolute right-4 top-4 rounded-lg p-2 hover:bg-slate-200 dark:hover:bg-slate-800"><X className="size-4" /></button>
+            <button aria-label="Cerrar" onClick={() => setSelected(null)} className="absolute right-4 top-4 rounded-lg p-2 hover:bg-slate-200 dark:hover:bg-slate-800"><X className="size-4" /></button>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Detalle documental</p>
             <div className="mt-5 grid size-16 place-items-center rounded-2xl bg-teal-50 text-teal-700 dark:bg-teal-950"><DocumentIcon extension={selected.extension} className="size-8" /></div>
             <h2 className="mt-4 pr-8 text-lg font-bold">{selected.titulo}</h2>
@@ -233,5 +232,5 @@ function Info({ label, value, mono = false }: { label: string; value?: string | 
 }
 
 function TreeSkeleton() {
-  return <div className="space-y-3">{Array.from({ length: 9 }, (_, index) => <div key={index} className="h-9 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" style={{ width: `${85 - (index % 3) * 10}%` }} />)}<LoaderCircle className="mx-auto mt-6 size-6 animate-spin text-teal-600" /></div>;
+  return <div className="space-y-3">{Array.from({ length: 9 }, (_, index) => <Skeleton key={index} className="h-9 rounded-xl" style={{ width: `${85 - (index % 3) * 10}%` }} />)}</div>;
 }

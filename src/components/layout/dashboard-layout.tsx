@@ -151,7 +151,7 @@ export function DashboardLayout() {
               </div>
             )}
           </Link>
-          <button className="text-slate-400 lg:hidden" onClick={() => setMobileOpen(false)}><X className="size-5" /></button>
+          <button aria-label="Cerrar menú" className="text-slate-400 lg:hidden" onClick={() => setMobileOpen(false)}><X className="size-5" /></button>
         </div>
         <nav className="scrollbar-thin flex-1 space-y-6 overflow-y-auto px-3 py-5">
           {navGroups.map((group) => {
@@ -185,6 +185,8 @@ export function DashboardLayout() {
         <div className="border-t border-slate-800 p-3">
           <button
             onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? "Expandir menú" : "Contraer menú"}
+            title={sidebarCollapsed ? "Expandir menú" : "Contraer menú"}
             className="hidden h-10 w-full items-center justify-center gap-2 rounded-xl text-sm text-slate-400 transition hover:bg-slate-900 hover:text-white lg:flex"
           >
             {sidebarCollapsed ? <PanelLeftOpen className="size-5" /> : <><PanelLeftClose className="size-5" /><span>Contraer menú</span></>}
@@ -194,7 +196,7 @@ export function DashboardLayout() {
 
       <div className={cn("min-h-screen min-w-0 transition-all duration-300", sidebarCollapsed ? "lg:pl-[84px]" : "lg:pl-[272px]")}>
         <header className="safe-top sticky top-0 z-30 flex h-20 items-center border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/85 sm:px-6">
-          <button className="mr-3 rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
+          <button aria-label="Abrir menú" className="mr-3 rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
           <form onSubmit={submitSearch} className="relative hidden w-full max-w-md md:block">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input value={search} onChange={(event) => setSearch(event.target.value)} className="border-transparent bg-slate-100 pl-9 dark:bg-slate-900" placeholder="Buscar documento, descripción o ruta..." />

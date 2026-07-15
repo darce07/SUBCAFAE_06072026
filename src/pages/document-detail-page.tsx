@@ -38,15 +38,22 @@ export function DocumentDetailPage() {
 
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
     setLoading(true);
     void Promise.all([getDocumentoById(id), getDocumentoHistory(id), getDocumentoAnexos(id)])
       .then(([documentRow, historyRows, anexosRows]) => {
+        if (cancelled) return;
         setDocumento(documentRow);
         setHistory(historyRows);
         setAnexos(anexosRows);
       })
-      .catch((error) => toast.error(error instanceof Error ? error.message : "No se pudo cargar el documento."))
-      .finally(() => setLoading(false));
+      .catch((error) => {
+        if (!cancelled) toast.error(error instanceof Error ? error.message : "No se pudo cargar el documento.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [id]);
 
   if (loading) return <div className="grid min-h-96 place-items-center"><LoaderCircle className="size-8 animate-spin text-teal-600" /></div>;
@@ -155,7 +162,7 @@ export function DocumentDetailPage() {
                 <p className="text-xl font-black">{formatCurrency(Number(documento.monto || 0))}</p>
               </div>
             </div>
-            <div className="grid gap-5 border-t border-slate-100 pt-6 sm:grid-cols-2 dark:border-slate-800">
+            <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-6 sm:gap-5 dark:border-slate-800">
               <Info label="Categoría" value={documento.categoria?.nombre} />
               <Info label="Tipo de categoría" value={documento.tipo_categoria?.nombre} />
               <Info label="Tipo de entidad" value={documento.tipo_entidad?.nombre} />

@@ -99,9 +99,11 @@ export function EditDocumentPage() {
 
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
     setLoading(true);
     void getDocumentoById(id)
       .then((documento) => {
+        if (cancelled) return;
         if (!documento) throw new Error("Documento no encontrado.");
         reset({
           fecha_documento: documento.fecha_documento,
@@ -126,8 +128,13 @@ export function EditDocumentPage() {
           numeroDocumento: documento.entidad?.numero_documento ?? "",
         });
       })
-      .catch((error) => setLoadError(error instanceof Error ? error.message : "No se pudo cargar el documento."))
-      .finally(() => setLoading(false));
+      .catch((error) => {
+        if (!cancelled) setLoadError(error instanceof Error ? error.message : "No se pudo cargar el documento.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [id, reset]);
 
   useEffect(() => {
@@ -502,7 +509,7 @@ export function EditDocumentPage() {
                 <h2 className="text-lg font-bold">Editar anexo</h2>
                 <p className="mt-1 text-sm text-slate-500">Actualiza metadatos o reemplaza el archivo complementario.</p>
               </div>
-              <button onClick={() => { setEditingAnexo(null); setEditAnexoFile(null); }}><X className="size-5" /></button>
+              <button aria-label="Cerrar" onClick={() => { setEditingAnexo(null); setEditAnexoFile(null); }}><X className="size-5" /></button>
             </div>
             <div className="mt-5 grid gap-4">
               <label>

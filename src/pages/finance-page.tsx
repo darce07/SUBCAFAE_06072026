@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownCircle, ArrowUpCircle, ChevronLeft, ChevronRight, FilePlus2, LoaderCircle, Search } from "lucide-react";
+import { motion } from "framer-motion";
+import { ArrowDownCircle, ArrowUpCircle, ChevronLeft, ChevronRight, FilePlus2, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useMontoTotal } from "../hooks/use-monto-total";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
-import { Alert, Badge, Button, Card, Input, PageHeader } from "../components/ui";
+import { Alert, Badge, Button, Card, Input, PageHeader, Skeleton } from "../components/ui";
 import type { Documento } from "../types";
 
 const PAGE_SIZE = 20;
@@ -48,20 +49,26 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
       />
       {error && <Alert>{error}</Alert>}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="p-5">
-          <div className="flex items-center gap-4">
-            <div className={`grid size-12 place-items-center rounded-xl ${isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50" : "bg-rose-50 text-rose-600 dark:bg-rose-950/50"}`}>
-              {isIncome ? <ArrowUpCircle /> : <ArrowDownCircle />}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
+        <motion.div className="col-span-2 sm:col-span-1" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
+          <Card className="p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className={`grid size-10 shrink-0 place-items-center rounded-2xl ring-1 ring-inset sm:size-12 ${isIncome ? "bg-emerald-50 text-emerald-600 ring-emerald-600/10 dark:bg-emerald-950/50" : "bg-rose-50 text-rose-600 ring-rose-600/10 dark:bg-rose-950/50"}`}>
+                {isIncome ? <ArrowUpCircle /> : <ArrowDownCircle />}
+              </div>
+              <div className="min-w-0">
+                <p className="break-words text-lg font-black sm:text-2xl">{formatCurrency(total)}</p>
+                <p className="text-xs text-slate-500">Total general</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="break-words text-2xl font-black">{formatCurrency(total)}</p>
-              <p className="text-xs text-slate-500">Total general</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-5"><p className="text-2xl font-black">{count}</p><p className="text-xs text-slate-500">Documentos registrados</p></Card>
-        <Card className="p-5"><p className="text-2xl font-black">{rows.filter((row) => row.estado?.nombre === "Observado").length}</p><p className="text-xs text-slate-500">Observados en esta página</p></Card>
+          </Card>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
+          <Card className="p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"><p className="text-lg font-black sm:text-2xl">{count}</p><p className="text-xs text-slate-500">Documentos registrados</p></Card>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          <Card className="p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"><p className="text-lg font-black sm:text-2xl">{rows.filter((row) => row.estado?.nombre === "Observado").length}</p><p className="text-xs text-slate-500">Observados en esta página</p></Card>
+        </motion.div>
       </div>
 
       <Card>
@@ -73,7 +80,17 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
         </div>
 
         {loading ? (
-          <div className="grid min-h-56 place-items-center"><LoaderCircle className="size-7 animate-spin text-teal-600" /></div>
+          <div className="space-y-3 p-4">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={index} className="flex items-center gap-4">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
+          </div>
         ) : (
           <>
             <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">

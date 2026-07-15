@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { AlertCircle, ArrowDownRight, ArrowUpRight, Scale } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, Tooltip, XAxis, YAxis } from "recharts";
 import { formatCurrency } from "../lib/utils";
@@ -36,18 +37,20 @@ export function BalancePage() {
       />
       {error && <Alert>{error}</Alert>}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {[
-          { label: "Total ingresos", value: summary.totalIngresos, icon: ArrowUpRight, tone: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50" },
-          { label: "Total egresos", value: summary.totalEgresos, icon: ArrowDownRight, tone: "text-rose-600 bg-rose-50 dark:bg-rose-950/50" },
-          { label: "Balance general", value: summary.balanceGeneral, icon: Scale, tone: "text-teal-600 bg-teal-50 dark:bg-teal-950/50" },
-          { label: "Sin archivo", value: summary.sinArchivo, icon: AlertCircle, tone: "text-amber-600 bg-amber-50 dark:bg-amber-950/50", count: true },
-        ].map(({ label, value, icon: Icon, tone, count }) => (
-          <Card key={label} className="p-5">
-            <div className={`mb-4 grid size-10 place-items-center rounded-xl ${tone}`}><Icon className="size-5" /></div>
-            <p className="text-2xl font-black">{count ? value : formatCurrency(value)}</p>
-            <p className="mt-1 text-xs text-slate-500">{label}</p>
-          </Card>
+          { label: "Total ingresos", value: summary.totalIngresos, icon: ArrowUpRight, tone: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 ring-emerald-600/10" },
+          { label: "Total egresos", value: summary.totalEgresos, icon: ArrowDownRight, tone: "text-rose-600 bg-rose-50 dark:bg-rose-950/50 ring-rose-600/10" },
+          { label: "Balance general", value: summary.balanceGeneral, icon: Scale, tone: "text-teal-600 bg-teal-50 dark:bg-teal-950/50 ring-teal-600/10" },
+          { label: "Sin archivo", value: summary.sinArchivo, icon: AlertCircle, tone: "text-amber-600 bg-amber-50 dark:bg-amber-950/50 ring-amber-600/10", count: true },
+        ].map(({ label, value, icon: Icon, tone, count }, index) => (
+          <motion.div key={label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
+            <Card className="p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5">
+              <div className={`mb-3 grid size-9 place-items-center rounded-2xl ring-1 ring-inset sm:mb-4 sm:size-10 ${tone}`}><Icon className="size-4 sm:size-5" /></div>
+              <p className="break-words text-lg font-black sm:text-2xl">{count ? value : formatCurrency(value)}</p>
+              <p className="mt-1 text-xs text-slate-500">{label}</p>
+            </Card>
+          </motion.div>
         ))}
       </div>
 

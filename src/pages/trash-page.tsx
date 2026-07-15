@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { RotateCcw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader } from "../components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Skeleton } from "../components/ui";
 import { ConfirmDialog } from "../components/confirm-dialog";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useDebounce } from "../hooks/use-debounce";
@@ -66,7 +66,13 @@ export function TrashPage() {
         {loading ? (
           <div className="space-y-3 p-4">
             {Array.from({ length: 6 }, (_, index) => (
-              <div key={index} className="h-14 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+              <div key={index} className="flex items-center gap-4">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-8 w-24 rounded-xl" />
+              </div>
             ))}
           </div>
         ) : documentos.length === 0 ? (

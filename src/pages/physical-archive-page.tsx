@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Archive, FileQuestion, FolderArchive, LoaderCircle, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useCatalogos } from "../hooks/use-catalogos";
@@ -45,22 +46,28 @@ export function PhysicalArchivePage() {
       />
       {(catalogos.error || resumenError || error) && <Alert>{catalogos.error || resumenError || error}</Alert>}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="p-5">
-          <Archive className="mb-3 size-5 text-teal-600" />
-          <p className="text-2xl font-black">{activeArchives.length}</p>
-          <p className="text-xs text-slate-500">Archivadores activos</p>
-        </Card>
-        <Card className="p-5">
-          <FolderArchive className="mb-3 size-5 text-blue-600" />
-          <p className="text-2xl font-black">{loadingResumen ? "..." : resumen.asignados}</p>
-          <p className="text-xs text-slate-500">Documentos asignados</p>
-        </Card>
-        <Card className="p-5">
-          <FileQuestion className="mb-3 size-5 text-amber-600" />
-          <p className="text-2xl font-black">{loadingResumen ? "..." : resumen.sinArchivador}</p>
-          <p className="text-xs text-slate-500">Pendientes de ubicación</p>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
+        <motion.div className="col-span-2 sm:col-span-1" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
+          <Card className="p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5">
+            <Archive className="mb-2 size-5 text-teal-600 sm:mb-3" />
+            <p className="text-lg font-black sm:text-2xl">{activeArchives.length}</p>
+            <p className="text-xs text-slate-500">Archivadores activos</p>
+          </Card>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
+          <Card className="p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5">
+            <FolderArchive className="mb-2 size-5 text-blue-600 sm:mb-3" />
+            <p className="text-lg font-black sm:text-2xl">{loadingResumen ? "..." : resumen.asignados}</p>
+            <p className="text-xs text-slate-500">Documentos asignados</p>
+          </Card>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          <Card className="p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5">
+            <FileQuestion className="mb-2 size-5 text-amber-600 sm:mb-3" />
+            <p className="text-lg font-black sm:text-2xl">{loadingResumen ? "..." : resumen.sinArchivador}</p>
+            <p className="text-xs text-slate-500">Pendientes de ubicación</p>
+          </Card>
+        </motion.div>
       </div>
 
       <Card className="p-5">

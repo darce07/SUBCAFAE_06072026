@@ -1,9 +1,9 @@
-import { Download, FileSpreadsheet, LoaderCircle, Search } from "lucide-react";
+import { Download, FileSpreadsheet, Search } from "lucide-react";
 import { useState } from "react";
 import { useLibroContable } from "../hooks/use-libro-contable";
 import { useDebounce } from "../hooks/use-debounce";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
-import { Alert, Badge, Button, Card, Input, PageHeader } from "../components/ui";
+import { Alert, Badge, Button, Card, Input, PageHeader, Skeleton } from "../components/ui";
 import type { Documento } from "../types";
 
 export function AccountingBookPage() {
@@ -31,7 +31,18 @@ export function AccountingBookPage() {
           </div>
         </div>
         {loading ? (
-          <div className="grid min-h-56 place-items-center"><LoaderCircle className="size-7 animate-spin text-teal-600" /></div>
+          <div className="space-y-3 p-4">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={index} className="flex items-center gap-4">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+            ))}
+          </div>
         ) : (
           <>
             <AccountingRows movements={movements} />

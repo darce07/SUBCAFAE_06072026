@@ -130,7 +130,7 @@ export function LoginPage() {
                   {...register("password")}
                   onKeyUp={(event) => setCapsLockOn(event.getModifierState("CapsLock"))}
                 />
-                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 overflow-hidden text-slate-400" onClick={() => setShowPassword((value) => !value)}>
+                <button type="button" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} className="absolute right-3 top-1/2 -translate-y-1/2 overflow-hidden text-slate-400" onClick={() => setShowPassword((value) => !value)}>
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.span
                       key={showPassword ? "hide" : "show"}

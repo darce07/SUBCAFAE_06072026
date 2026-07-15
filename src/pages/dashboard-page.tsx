@@ -62,14 +62,14 @@ export function DashboardPage() {
   ].filter(Boolean).join(" de ");
 
   const metrics = [
-    { label: "Total documentos", value: summary.totalDocumentos.toLocaleString("es-PE"), icon: Files, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/50" },
-    { label: "Total ingresos", value: formatCurrency(summary.totalIngresos), icon: Landmark, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/50" },
-    { label: "Total egresos", value: formatCurrency(summary.totalEgresos), icon: Wallet, color: "text-rose-600", bg: "bg-rose-50 dark:bg-rose-950/50" },
-    { label: "Balance general", value: formatCurrency(summary.balanceGeneral), icon: Scale, color: "text-violet-600", bg: "bg-violet-50 dark:bg-violet-950/50" },
-    { label: "Sin archivo digital", value: String(summary.sinArchivo), icon: FileQuestion, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/50" },
-    { label: "Sin archivador", value: String(summary.sinArchivador), icon: ArchiveX, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/50" },
-    { label: "Sin ruta histórica", value: String(summary.sinRutaHistorica), icon: FolderX, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/50" },
-    { label: "Estados configurados", value: String(summary.porEstado.length), icon: AlertTriangle, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950/50" },
+    { label: "Total documentos", value: summary.totalDocumentos.toLocaleString("es-PE"), icon: Files, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/50", ring: "ring-blue-600/10" },
+    { label: "Total ingresos", value: formatCurrency(summary.totalIngresos), icon: Landmark, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/50", ring: "ring-emerald-600/10" },
+    { label: "Total egresos", value: formatCurrency(summary.totalEgresos), icon: Wallet, color: "text-rose-600", bg: "bg-rose-50 dark:bg-rose-950/50", ring: "ring-rose-600/10" },
+    { label: "Balance general", value: formatCurrency(summary.balanceGeneral), icon: Scale, color: "text-violet-600", bg: "bg-violet-50 dark:bg-violet-950/50", ring: "ring-violet-600/10" },
+    { label: "Sin archivo digital", value: String(summary.sinArchivo), icon: FileQuestion, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/50", ring: "ring-red-600/10" },
+    { label: "Sin archivador", value: String(summary.sinArchivador), icon: ArchiveX, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/50", ring: "ring-amber-600/10" },
+    { label: "Sin ruta histórica", value: String(summary.sinRutaHistorica), icon: FolderX, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/50", ring: "ring-orange-600/10" },
+    { label: "Estados configurados", value: String(summary.porEstado.length), icon: AlertTriangle, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950/50", ring: "ring-teal-600/10" },
   ];
 
   return (
@@ -123,13 +123,13 @@ export function DashboardPage() {
           description="Prueba con otro mes o año, o restablece el filtro para consultar todos los periodos."
         />
       )}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map(({ label, value, icon: Icon, color, bg }, index) => (
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        {metrics.map(({ label, value, icon: Icon, color, bg, ring }, index) => (
           <motion.div key={label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
-            <Card className="group p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
-              <div className={`grid size-11 place-items-center rounded-xl ${bg} ${color}`}><Icon className="size-5" /></div>
-              <p className="mt-5 text-2xl font-black tracking-tight text-slate-950 dark:text-white">{value}</p>
-              <p className="mt-1 text-sm text-slate-500">{label}</p>
+            <Card className="group p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5">
+              <div className={`grid size-9 place-items-center rounded-2xl ring-1 ring-inset sm:size-11 ${bg} ${color} ${ring}`}><Icon className="size-4 sm:size-5" /></div>
+              <p className="mt-3 break-words text-lg font-black tracking-tight text-slate-950 dark:text-white sm:mt-5 sm:text-2xl">{value}</p>
+              <p className="mt-1 text-xs text-slate-500 sm:text-sm">{label}</p>
             </Card>
           </motion.div>
         ))}

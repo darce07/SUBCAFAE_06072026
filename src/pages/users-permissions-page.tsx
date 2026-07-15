@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { LoaderCircle, Search, UserRoundCog } from "lucide-react";
+import { Search, UserRoundCog } from "lucide-react";
 import { toast } from "sonner";
 import { assignUserRole, getAdminUsers, getRoles } from "../services/admin.service";
 import type { AdminUser, CatalogItem } from "../types";
-import { Alert, Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
 
@@ -58,7 +58,20 @@ export function UsersPermissionsPage() {
     {error && <Alert>{error}</Alert>}
     <Card>
       <div className="relative border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4"><Search className="absolute left-6 top-1/2 size-4 -translate-y-1/2 text-slate-400 sm:left-7" /><Input value={search} onChange={(event) => setSearch(event.target.value)} className="max-w-md pl-9" placeholder="Buscar usuario..." /></div>
-      {loading ? <div className="grid min-h-56 place-items-center"><LoaderCircle className="size-7 animate-spin text-teal-600" /></div> : <div className="grid divide-y divide-slate-100 dark:divide-slate-800">{filtered.map((user) => {
+      {loading ? (
+        <div className="space-y-4 p-4">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div key={index} className="flex items-center gap-4">
+              <Skeleton className="size-11 shrink-0 rounded-xl" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+              <Skeleton className="h-9 w-36 rounded-xl" />
+            </div>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? <EmptyState icon={<UserRoundCog />} title="Sin usuarios" description={debouncedSearch ? "No se encontraron usuarios para la búsqueda actual." : "Aún no hay cuentas registradas."} /> : <div className="grid divide-y divide-slate-100 dark:divide-slate-800">{filtered.map((user) => {
         const name = user.nombre_completo || user.email?.split("@")[0] || "Usuario";
         const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
         return <div key={user.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-teal-100 font-bold text-teal-800">{initials}</div><div className="min-w-0 flex-1"><p className="break-words font-semibold">{name}</p><p className="truncate text-xs text-slate-500">{user.email}</p></div><Select className="w-full sm:w-auto" value={user.role_id ?? ""} disabled={savingId === user.id} onChange={(event) => void assign(user.id, event.target.value)}><option value="">Sin rol asignado</option>{roles.map((role) => <option key={role.id} value={role.id}>{role.nombre}</option>)}</Select><Badge tone={user.role_id ? "green" : "amber"}>{user.role_nombre ?? "Sin acceso"}</Badge><Button className="w-full sm:w-auto" variant="secondary" size="sm" disabled><UserRoundCog className="size-4" />Acceso protegido</Button></div>;

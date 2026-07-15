@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, KeyRound, LoaderCircle, Search, ShieldCheck, UsersRound } from "lucide-react";
 import { toast } from "sonner";
-import { Alert, Badge, Card, EmptyState, Input, PageHeader } from "../components/ui";
+import { Alert, Badge, Card, EmptyState, Input, PageHeader, Skeleton } from "../components/ui";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
 import { getRolePermissions, setRolePermission } from "../services/admin.service";
@@ -83,16 +83,25 @@ export function RolesPermissionsPage() {
 
   return <div className="space-y-6">
     <PageHeader eyebrow="Administración" title="Roles y permisos" description="Configura las acciones disponibles para cada rol del sistema." />
-    <div className="grid gap-4 sm:grid-cols-3">
-      <Stat icon={<ShieldCheck />} label="Roles activos" value={roles.length} />
-      <Stat icon={<KeyRound />} label="Permisos definidos" value={new Set(rows.map((row) => row.permission_id)).size} />
-      <Stat icon={<CheckCircle2 />} label="Asignaciones activas" value={rows.filter((row) => row.asignado).length} />
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
+      <Stat icon={<ShieldCheck />} label="Roles activos" value={roles.length} wide delay={0} />
+      <Stat icon={<KeyRound />} label="Permisos definidos" value={new Set(rows.map((row) => row.permission_id)).size} delay={0.04} />
+      <Stat icon={<CheckCircle2 />} label="Asignaciones activas" value={rows.filter((row) => row.asignado).length} delay={0.08} />
     </div>
     {error && <Alert>{error}</Alert>}
     <Card className="grid min-h-[580px] min-w-0 overflow-hidden lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
       <aside className="border-b border-slate-200 dark:border-slate-800 lg:border-b-0 lg:border-r">
         <div className="relative border-b border-slate-200 p-4 dark:border-slate-800"><Search className="absolute left-7 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Buscar rol..." /></div>
-        {loading ? <div className="grid min-h-56 place-items-center"><LoaderCircle className="size-6 animate-spin text-teal-600" /></div> : <div className="p-2">{roles.map((role) => {
+        {loading ? (
+          <div className="space-y-2 p-2">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={index} className="rounded-xl p-3">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="mt-2 h-3 w-full" />
+              </div>
+            ))}
+          </div>
+        ) : <div className="p-2">{roles.map((role) => {
           const assigned = rows.filter((row) => row.role_id === role.id && row.asignado).length;
           return <button key={role.id} onClick={() => setSelectedRoleId(role.id)} className={`mb-1 w-full rounded-xl p-3 text-left transition ${selectedRoleId === role.id ? "bg-teal-50 ring-1 ring-teal-200 dark:bg-teal-950/40 dark:ring-teal-800" : "hover:bg-slate-50 dark:hover:bg-slate-800"}`}><div className="flex items-center justify-between gap-2"><span className="font-semibold">{role.nombre}</span><Badge tone="blue">{assigned}</Badge></div><p className="mt-1 line-clamp-2 text-xs text-slate-500">{role.descripcion}</p></button>;
         })}</div>}
@@ -114,6 +123,13 @@ export function RolesPermissionsPage() {
   </div>;
 }
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
-  return <Card className="flex items-center gap-4 p-5"><div className="rounded-xl bg-teal-50 p-3 text-teal-700 dark:bg-teal-950">{icon}</div><div><p className="text-2xl font-black">{value}</p><p className="text-xs text-slate-500">{label}</p></div></Card>;
+function Stat({ icon, label, value, wide = false, delay = 0 }: { icon: React.ReactNode; label: string; value: number; wide?: boolean; delay?: number }) {
+  return (
+    <motion.div className={wide ? "col-span-2 sm:col-span-1" : ""} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
+      <Card className="flex items-center gap-3 p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:gap-4 sm:p-5">
+        <div className="shrink-0 rounded-2xl bg-teal-50 p-2.5 text-teal-700 ring-1 ring-inset ring-teal-600/10 dark:bg-teal-950 sm:p-3">{icon}</div>
+        <div className="min-w-0"><p className="text-lg font-black sm:text-2xl">{value}</p><p className="truncate text-xs text-slate-500">{label}</p></div>
+      </Card>
+    </motion.div>
+  );
 }
