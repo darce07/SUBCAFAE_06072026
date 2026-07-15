@@ -7,7 +7,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Clipboard, Download, Eye, ExternalLink, FilePlus2, LoaderCircle, Pencil, Search, Trash2, TriangleAlert } from "lucide-react";
+import { Clipboard, Download, Eye, ExternalLink, FilePlus2, LoaderCircle, Pencil, Search, SlidersHorizontal, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import type { Documento } from "../types";
 import { Alert, Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
@@ -93,6 +93,7 @@ export function DocumentsPage() {
   const [pendingDelete, setPendingDelete] = useState<Documento | null>(null);
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
   const [autoFitColumns, setAutoFitColumns] = useState<Record<string, boolean>>({});
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const debouncedSearch = useDebounce(globalFilter, 400);
   const { documentos, count, loading, error, usingFallback, refresh } = useDocumentos({
     search: debouncedSearch,
@@ -305,11 +306,23 @@ export function DocumentsPage() {
       {error && <Alert>{error}</Alert>}
       <Card>
         <div className="flex flex-col gap-3 border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4 xl:flex-row xl:items-center">
-          <div className="relative w-full flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-            <Input value={globalFilter} onChange={(event) => { setGlobalFilter(event.target.value); setPage(1); }} className="pl-9" placeholder="Buscar código, título o descripción..." />
+          <div className="flex gap-2">
+            <div className="relative w-full flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+              <Input value={globalFilter} onChange={(event) => { setGlobalFilter(event.target.value); setPage(1); }} className="pl-9" placeholder="Buscar código, título o descripción..." />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              className="shrink-0 sm:hidden"
+              onClick={() => setMobileFiltersOpen((value) => !value)}
+              aria-expanded={mobileFiltersOpen}
+            >
+              <SlidersHorizontal className="size-4" />Filtros
+            </Button>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex">
+          <div className={`grid-cols-1 gap-2 sm:grid sm:grid-cols-2 xl:flex ${mobileFiltersOpen ? "grid" : "hidden sm:grid"}`}>
             <Select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(1); }}><option value="">Todas las categorías</option>{catalogos.categorias.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={statusId} onChange={(event) => { setStatusId(event.target.value); setPage(1); }}><option value="">Todos los estados</option>{catalogos.estadosDocumento.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={year} onChange={(event) => { setYear(event.target.value); setPage(1); }}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
@@ -447,13 +460,19 @@ function DocumentMobileCard({
         <MiniInfo label="Archivador" value={documento.archivador?.nombre ?? "Sin archivador"} />
         <MiniInfo label="Movimiento" value={documento.tipo_movimiento?.nombre ?? "No aplica"} alignRight />
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2">
         <Button size="sm" variant="secondary" onClick={onView}><Eye className="size-4" />Ver</Button>
         {canEdit && <Button size="sm" variant="secondary" onClick={onEdit}><Pencil className="size-4" />Editar</Button>}
         <Button size="sm" variant="secondary" disabled={!documento.archivo_path} onClick={onOpenFile}><ExternalLink className="size-4" />Archivo</Button>
         {canEdit && <Button size="sm" variant="secondary" onClick={onMarkObserved}><TriangleAlert className="size-4" />Observar</Button>}
-        {canDelete && <Button size="sm" variant="danger" loading={deleting} onClick={onDelete}><Trash2 className="size-4" />Eliminar</Button>}
       </div>
+      {canDelete && (
+        <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+          <Button size="sm" variant="danger" loading={deleting} onClick={onDelete} className="w-full">
+            <Trash2 className="size-4" />Eliminar
+          </Button>
+        </div>
+      )}
     </article>
   );
 }
