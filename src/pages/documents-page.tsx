@@ -7,7 +7,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Clipboard, Download, Eye, ExternalLink, FilePlus2, Pencil, Search, SlidersHorizontal, Trash2, TriangleAlert } from "lucide-react";
+import { ChevronDown, ChevronsLeft, ChevronsRight, Clipboard, Download, Eye, ExternalLink, FilePlus2, Pencil, Search, SlidersHorizontal, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import type { Documento } from "../types";
 import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
@@ -88,7 +88,7 @@ export function DocumentsPage() {
   const [year, setYear] = useState("");
   const [orderMode, setOrderMode] = useState<"registro_desc" | "registro_asc">("registro_desc");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(() => (typeof window !== "undefined" && window.innerWidth < 640 ? 5 : 10));
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Documento | null>(null);
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
@@ -327,7 +327,7 @@ export function DocumentsPage() {
             <Select value={statusId} onChange={(event) => { setStatusId(event.target.value); setPage(1); }}><option value="">Todos los estados</option>{catalogos.estadosDocumento.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={year} onChange={(event) => { setYear(event.target.value); setPage(1); }}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
             <Select value={orderMode} onChange={(event) => { setOrderMode(event.target.value as "registro_desc" | "registro_asc"); setPage(1); }}><option value="registro_desc">Registro: recientes primero</option><option value="registro_asc">Registro: antiguos primero</option></Select>
-            <Select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value={10}>10 filas</option><option value={20}>20 filas</option><option value={50}>50 filas</option></Select>
+            <Select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value={5}>5 filas</option><option value={10}>10 filas</option><option value={20}>20 filas</option><option value={50}>50 filas</option></Select>
           </div>
         </div>
         {loading ? (
@@ -418,7 +418,12 @@ export function DocumentsPage() {
         )}
         <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-200 p-4 text-sm text-slate-500 dark:border-slate-800 sm:flex-row">
           <span>Página {page} de {totalPages} · {count} documentos</span>
-          <div className="flex gap-2"><Button variant="secondary" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((value) => value - 1)}>Anterior</Button><Button variant="secondary" size="sm" disabled={page >= totalPages || loading} onClick={() => setPage((value) => value + 1)}>Siguiente</Button></div>
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" disabled={page <= 1 || loading} onClick={() => setPage(1)} title="Primera página"><ChevronsLeft className="size-4" /></Button>
+            <Button variant="secondary" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((value) => value - 1)}>Anterior</Button>
+            <Button variant="secondary" size="sm" disabled={page >= totalPages || loading} onClick={() => setPage((value) => value + 1)}>Siguiente</Button>
+            <Button variant="secondary" size="sm" disabled={page >= totalPages || loading} onClick={() => setPage(totalPages)} title="Última página"><ChevronsRight className="size-4" /></Button>
+          </div>
         </div>
       </Card>
       <ConfirmDialog
@@ -455,46 +460,51 @@ function DocumentMobileCard({
   onMarkObserved: () => void;
   onDelete: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex items-start justify-between gap-3">
-        <button onClick={onView} className="min-w-0 text-left">
-          <p className="break-words text-sm font-black text-teal-700 dark:text-teal-400">{documento.codigo_documento}</p>
-          <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-slate-950 dark:text-white">{documento.titulo}</h2>
-        </button>
-        <Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Sin estado"}</Badge>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 text-xs">
-        <MiniInfo label="Fecha" value={formatDate(documento.fecha_documento)} />
-        <MiniInfo label="Registro" value={documento.created_at ? formatDateTime(documento.created_at) : "Sin fecha"} alignRight />
-        <MiniInfo label="Categoría" value={documento.categoria?.nombre ?? "Sin categoría"} />
-        <MiniInfo label="Entidad" value={documento.entidad?.nombre ?? "Sin entidad"} alignRight />
-        <MiniInfo label="Archivador" value={documento.archivador?.nombre ?? "Sin archivador"} />
-        <MiniInfo
-          label="Movimiento"
-          value={documento.tipo_movimiento?.nombre ?? "No aplica"}
-          alignRight
-          muted={!documento.tipo_movimiento?.nombre || documento.tipo_movimiento.nombre === "No aplica"}
-        />
-      </div>
-      <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Monto</span>
-        <strong className={Number(documento.monto) ? "text-sm text-slate-950 dark:text-white" : "text-sm font-medium text-slate-400"}>
-          {formatCurrency(Number(documento.monto || 0))}
-        </strong>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Button size="sm" variant="secondary" onClick={onView}><Eye className="size-4" />Ver</Button>
-        {canEdit && <Button size="sm" variant="secondary" onClick={onEdit}><Pencil className="size-4" />Editar</Button>}
-        <Button size="sm" variant="secondary" disabled={!documento.archivo_path} onClick={onOpenFile}><ExternalLink className="size-4" />Archivo</Button>
-        {canEdit && <Button size="sm" variant="secondary" onClick={onMarkObserved}><TriangleAlert className="size-4" />Observar</Button>}
-      </div>
-      {canDelete && (
-        <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
-          <Button size="sm" variant="danger" loading={deleting} onClick={onDelete} className="w-full">
-            <Trash2 className="size-4" />Eliminar
-          </Button>
+    <article className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <button type="button" onClick={() => setExpanded((value) => !value)} className="flex w-full items-start justify-between gap-3 text-left" aria-expanded={expanded}>
+        <div className="min-w-0">
+          <p className="break-words text-xs font-black text-teal-700 dark:text-teal-400">{documento.codigo_documento}</p>
+          <h2 className="mt-0.5 line-clamp-1 text-sm font-semibold text-slate-950 dark:text-white">{documento.titulo}</h2>
+          <strong className={`text-xs ${Number(documento.monto) ? "text-slate-700 dark:text-slate-200" : "font-medium text-slate-400"}`}>
+            {formatCurrency(Number(documento.monto || 0))}
+          </strong>
         </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Sin estado"}</Badge>
+          <ChevronDown className={`size-4 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </div>
+      </button>
+      {expanded && (
+        <>
+          <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 text-xs">
+            <MiniInfo label="Fecha" value={formatDate(documento.fecha_documento)} />
+            <MiniInfo label="Registro" value={documento.created_at ? formatDateTime(documento.created_at) : "Sin fecha"} alignRight />
+            <MiniInfo label="Categoría" value={documento.categoria?.nombre ?? "Sin categoría"} />
+            <MiniInfo label="Entidad" value={documento.entidad?.nombre ?? "Sin entidad"} alignRight />
+            <MiniInfo label="Archivador" value={documento.archivador?.nombre ?? "Sin archivador"} />
+            <MiniInfo
+              label="Movimiento"
+              value={documento.tipo_movimiento?.nombre ?? "No aplica"}
+              alignRight
+              muted={!documento.tipo_movimiento?.nombre || documento.tipo_movimiento.nombre === "No aplica"}
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Button size="sm" variant="secondary" onClick={onView}><Eye className="size-4" />Ver</Button>
+            {canEdit && <Button size="sm" variant="secondary" onClick={onEdit}><Pencil className="size-4" />Editar</Button>}
+            <Button size="sm" variant="secondary" disabled={!documento.archivo_path} onClick={onOpenFile}><ExternalLink className="size-4" />Archivo</Button>
+            {canEdit && <Button size="sm" variant="secondary" onClick={onMarkObserved}><TriangleAlert className="size-4" />Observar</Button>}
+          </div>
+          {canDelete && (
+            <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+              <Button size="sm" variant="danger" loading={deleting} onClick={onDelete} className="w-full">
+                <Trash2 className="size-4" />Eliminar
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </article>
   );
