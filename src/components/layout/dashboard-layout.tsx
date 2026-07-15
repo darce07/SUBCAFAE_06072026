@@ -31,7 +31,7 @@ import { cn } from "../../lib/utils";
 import { useAppStore } from "../../store/use-app-store";
 import { useAuth } from "../../features/auth/auth-context";
 import { usePermissions } from "../../hooks/use-permissions";
-import { Button, Input } from "../ui";
+import { Alert, Button, Input } from "../ui";
 
 interface NavItem {
   label: string;
@@ -136,7 +136,7 @@ export function DashboardLayout() {
       {mobileOpen && <button aria-label="Cerrar menú" className="fixed inset-0 z-40 bg-slate-950/50 lg:hidden" onClick={() => setMobileOpen(false)} />}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-800 bg-slate-950 text-slate-200 transition-all duration-300",
+          "safe-top safe-bottom fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-800 bg-slate-950 text-slate-200 transition-all duration-300",
           sidebarCollapsed ? "w-[84px]" : "w-[272px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
@@ -193,12 +193,15 @@ export function DashboardLayout() {
       </aside>
 
       <div className={cn("min-h-screen min-w-0 transition-all duration-300", sidebarCollapsed ? "lg:pl-[84px]" : "lg:pl-[272px]")}>
-        <header className="sticky top-0 z-30 flex h-20 items-center border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/85 sm:px-6">
+        <header className="safe-top sticky top-0 z-30 flex h-20 items-center border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/85 sm:px-6">
           <button className="mr-3 rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
           <form onSubmit={submitSearch} className="relative hidden w-full max-w-md md:block">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input value={search} onChange={(event) => setSearch(event.target.value)} className="border-transparent bg-slate-100 pl-9 dark:bg-slate-900" placeholder="Buscar documento, descripción o ruta..." />
           </form>
+          <Link to="/documentos" className="ml-1 grid size-10 place-items-center rounded-xl text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden" aria-label="Buscar documentos">
+            <Search className="size-5" />
+          </Link>
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Cambiar tema">
               {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
@@ -218,8 +221,8 @@ export function DashboardLayout() {
         </header>
 
         <main className="min-w-0 overflow-x-hidden px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
-          {contextError && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{contextError}</div>}
-          {!contextError && userContext && userContext.roles.length === 0 && <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Tu cuenta está autenticada, pero todavía no tiene un rol asignado. Un administrador debe habilitar tu acceso.</div>}
+          {contextError && <Alert className="mb-4">{contextError}</Alert>}
+          {!contextError && userContext && userContext.roles.length === 0 && <Alert variant="warning" className="mb-4">Tu cuenta está autenticada, pero todavía no tiene un rol asignado. Un administrador debe habilitar tu acceso.</Alert>}
           <div className="mb-5 flex min-w-0 flex-wrap items-center gap-1 text-xs text-slate-500">
             <Link to="/dashboard" className="hover:text-teal-700">SIGDAF</Link>
             {crumbs.map((crumb, index) => (

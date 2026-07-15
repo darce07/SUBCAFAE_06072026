@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { useAuth } from "../features/auth/auth-context";
 import { isSupabaseConfigured } from "../lib/supabase";
-import { Button, Input } from "../components/ui";
+import { Alert, Button, Input } from "../components/ui";
 
 const today = new Date().toLocaleDateString("es-PE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
@@ -104,9 +104,9 @@ export function LoginPage() {
           <p className="mt-2 text-sm leading-6 text-slate-500">Ingresa con las credenciales asignadas por el administrador del sistema.</p>
 
           {!isSupabaseConfigured && (
-            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+            <Alert variant="warning" className="mt-6 text-xs">
               Modo demostración activo. Configura la conexión institucional para habilitar el acceso de usuarios.
-            </div>
+            </Alert>
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">

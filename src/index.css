@@ -9,10 +9,43 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   --brand: #0f766e;
+  --chart-grid: #e2e8f0;
+  --chart-text: #64748b;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e2e8f0;
+  --chart-tooltip-text: #0f172a;
+}
+
+.dark {
+  --chart-grid: #334155;
+  --chart-text: #94a3b8;
+  --chart-tooltip-bg: #1e293b;
+  --chart-tooltip-border: #334155;
+  --chart-tooltip-text: #f1f5f9;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* iOS Safari abre zoom automático cuando el font-size de un input es menor a
+   16px al enfocarlo. Se fuerza 16px solo por debajo de `sm` (donde Tailwind
+   ya usa text-sm) para no perder la densidad visual en pantallas grandes. */
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Notch / home indicator en iOS (safe-area) */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 *,

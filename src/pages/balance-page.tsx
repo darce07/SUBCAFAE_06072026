@@ -1,9 +1,10 @@
 import { AlertCircle, ArrowDownRight, ArrowUpRight, Scale } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, Tooltip, XAxis, YAxis } from "recharts";
 import { formatCurrency } from "../lib/utils";
-import { Badge, Card, PageHeader } from "../components/ui";
+import { Alert, Badge, Card, PageHeader } from "../components/ui";
 import { ChartFrame } from "../components/chart-frame";
 import { useDashboardResumen } from "../hooks/use-dashboard-resumen";
+import { chartAxisTick, chartGridStroke, chartTooltipLabelStyle, chartTooltipStyle } from "../lib/chart-theme";
 
 const colors = ["#0f766e", "#f97316", "#6366f1", "#e11d48", "#0891b2", "#64748b"];
 
@@ -33,14 +34,14 @@ export function BalancePage() {
         title="Balance económico"
         description="Resumen consolidado de ingresos, egresos y saldo institucional."
       />
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+      {error && <Alert>{error}</Alert>}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Total ingresos", value: summary.totalIngresos, icon: ArrowUpRight, tone: "text-emerald-600 bg-emerald-50" },
-          { label: "Total egresos", value: summary.totalEgresos, icon: ArrowDownRight, tone: "text-rose-600 bg-rose-50" },
-          { label: "Balance general", value: summary.balanceGeneral, icon: Scale, tone: "text-teal-600 bg-teal-50" },
-          { label: "Sin archivo", value: summary.sinArchivo, icon: AlertCircle, tone: "text-amber-600 bg-amber-50", count: true },
+          { label: "Total ingresos", value: summary.totalIngresos, icon: ArrowUpRight, tone: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50" },
+          { label: "Total egresos", value: summary.totalEgresos, icon: ArrowDownRight, tone: "text-rose-600 bg-rose-50 dark:bg-rose-950/50" },
+          { label: "Balance general", value: summary.balanceGeneral, icon: Scale, tone: "text-teal-600 bg-teal-50 dark:bg-teal-950/50" },
+          { label: "Sin archivo", value: summary.sinArchivo, icon: AlertCircle, tone: "text-amber-600 bg-amber-50 dark:bg-amber-950/50", count: true },
         ].map(({ label, value, icon: Icon, tone, count }) => (
           <Card key={label} className="p-5">
             <div className={`mb-4 grid size-10 place-items-center rounded-xl ${tone}`}><Icon className="size-5" /></div>
@@ -57,10 +58,10 @@ export function BalancePage() {
           <ChartFrame height={320} className="mt-5">
             {({ width, height }) => (
               <BarChart width={width} height={height} data={summary.balanceMensual}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={(value) => `${value / 1000}K`} />
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGridStroke} />
+                <XAxis dataKey="month" tick={chartAxisTick} />
+                <YAxis tick={chartAxisTick} tickFormatter={(value) => `${value / 1000}K`} />
+                <Tooltip formatter={(value) => formatCurrency(Number(value))} contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} />
                 <Bar dataKey="ingresos" fill="#0f766e" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="egresos" fill="#f97316" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -77,7 +78,7 @@ export function BalancePage() {
                 <Pie data={categories} dataKey="value" innerRadius={55} outerRadius={88}>
                   {categories.map((item) => <Cell key={item.name} fill={item.color} />)}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} />
               </PieChart>
             )}
           </ChartFrame>
@@ -106,10 +107,10 @@ export function BalancePage() {
         <ChartFrame height={288} className="mt-5">
           {({ width, height }) => (
             <LineChart width={width} height={height} data={balanceLine}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value) => `${value / 1000}K`} />
-              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGridStroke} />
+              <XAxis dataKey="month" tick={chartAxisTick} />
+              <YAxis tick={chartAxisTick} tickFormatter={(value) => `${value / 1000}K`} />
+              <Tooltip formatter={(value) => formatCurrency(Number(value))} contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} />
               <Line type="monotone" dataKey="saldo" stroke="#0f766e" strokeWidth={3} dot={{ r: 4 }} />
             </LineChart>
           )}

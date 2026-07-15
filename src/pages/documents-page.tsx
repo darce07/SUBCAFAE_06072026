@@ -10,7 +10,7 @@ import {
 import { Clipboard, Download, Eye, ExternalLink, FilePlus2, LoaderCircle, Pencil, Search, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import type { Documento } from "../types";
-import { Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
+import { Alert, Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { formatCurrency, formatDate, formatDateTime, formatRelativeTime, getStatusTone } from "../lib/utils";
@@ -301,8 +301,8 @@ export function DocumentsPage() {
         description="Consulta, filtra y administra la documentación institucional."
         action={canCreate("documentos") ? <Button onClick={() => navigate("/documentos/nuevo")}><FilePlus2 className="size-4" />Nuevo documento</Button> : undefined}
       />
-      {usingFallback && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">La conexión institucional no está disponible. Se muestran datos temporales de consulta.</div>}
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+      {usingFallback && <Alert variant="warning">La conexión institucional no está disponible. Se muestran datos temporales de consulta.</Alert>}
+      {error && <Alert>{error}</Alert>}
       <Card>
         <div className="flex flex-col gap-3 border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4 xl:flex-row xl:items-center">
           <div className="relative w-full flex-1">

@@ -6,7 +6,7 @@ import { useMontoTotal } from "../hooks/use-monto-total";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
-import { Badge, Button, Card, Input, PageHeader } from "../components/ui";
+import { Alert, Badge, Button, Card, Input, PageHeader } from "../components/ui";
 import type { Documento } from "../types";
 
 const PAGE_SIZE = 20;
@@ -46,12 +46,12 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
         description={`Documentos clasificados como ${kind.toLowerCase()} en la gestión financiera.`}
         action={canCreate("documentos") ? <Button onClick={() => navigate("/documentos/nuevo")}><FilePlus2 className="size-4" />Registrar documento</Button> : undefined}
       />
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+      {error && <Alert>{error}</Alert>}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="p-5">
           <div className="flex items-center gap-4">
-            <div className={`grid size-12 place-items-center rounded-xl ${isIncome ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
+            <div className={`grid size-12 place-items-center rounded-xl ${isIncome ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50" : "bg-rose-50 text-rose-600 dark:bg-rose-950/50"}`}>
               {isIncome ? <ArrowUpCircle /> : <ArrowDownCircle />}
             </div>
             <div className="min-w-0">

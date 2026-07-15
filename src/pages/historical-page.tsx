@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "../components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "../components/ui";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
 import { useDocumentos } from "../hooks/use-documentos";
@@ -113,7 +113,7 @@ export function HistoricalPage() {
 
   return <div className="space-y-6">
     <PageHeader eyebrow="Gestión documental" title="Explorador histórico" description="Navega por la organización histórica de los documentos registrados." />
-    {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+    {error && <Alert>{error}</Alert>}
     <Card>
       <div className="grid min-w-0 gap-3 border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4 lg:grid-cols-[minmax(0,1fr)_repeat(4,minmax(0,150px))]">
         <div className="relative"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} className="pl-9" placeholder="Buscar ruta, código o título..." /></div>

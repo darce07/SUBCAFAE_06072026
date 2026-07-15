@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
 import { useArchivoFisicoDocumentos, useArchivoFisicoResumen } from "../hooks/use-archivo-fisico-documentos";
-import { Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
+import { Alert, Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
 import { formatDate, getStatusTone } from "../lib/utils";
 import type { Documento } from "../types";
 
@@ -43,11 +43,7 @@ export function PhysicalArchivePage() {
         title="Archivo físico"
         description="Consulta ubicaciones físicas y los documentos asignados a cada archivador."
       />
-      {(catalogos.error || resumenError || error) && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-          {catalogos.error || resumenError || error}
-        </div>
-      )}
+      {(catalogos.error || resumenError || error) && <Alert>{catalogos.error || resumenError || error}</Alert>}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="p-5">

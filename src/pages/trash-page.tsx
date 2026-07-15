@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { RotateCcw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge, Button, Card, EmptyState, Input, PageHeader } from "../components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader } from "../components/ui";
 import { ConfirmDialog } from "../components/confirm-dialog";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useDebounce } from "../hooks/use-debounce";
@@ -50,7 +50,7 @@ export function TrashPage() {
         title="Papelera"
         description="Documentos eliminados. Pueden recuperarse en caso de error o para revisión."
       />
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+      {error && <Alert>{error}</Alert>}
       <Card>
         <div className="border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4">
           <div className="relative max-w-sm">

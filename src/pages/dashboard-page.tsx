@@ -24,10 +24,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Button, Card, EmptyState, PageHeader, Select } from "../components/ui";
+import { Alert, Button, Card, EmptyState, PageHeader, Select } from "../components/ui";
 import { ChartFrame } from "../components/chart-frame";
 import { useDashboardResumen } from "../hooks/use-dashboard-resumen";
 import { formatCurrency } from "../lib/utils";
+import { chartAxisTick, chartGridStroke, chartTooltipLabelStyle, chartTooltipStyle } from "../lib/chart-theme";
 
 const chartColors = ["#0f766e", "#2563eb", "#7c3aed", "#f97316", "#e11d48", "#64748b", "#0891b2"];
 const months = [
@@ -79,7 +80,7 @@ export function DashboardPage() {
         description="Indicadores consolidados para el seguimiento documental y financiero."
         action={<div className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">{loading ? "Actualizando..." : hasPeriodFilter ? periodLabel : "Todos los periodos"}</div>}
       />
-      {error && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{error}</div>}
+      {error && <Alert variant="warning">{error}</Alert>}
       <Card className="p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -141,11 +142,11 @@ export function DashboardPage() {
           <ChartFrame height={310} className="mt-5">
             {({ width, height }) => (
               <BarChart width={width} height={height} data={summary.balanceMensual} barGap={6}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} fontSize={12} />
-                <YAxis axisLine={false} tickLine={false} fontSize={11} tickFormatter={(value) => `${value / 1000}K`} />
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGridStroke} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={chartAxisTick} />
+                <YAxis axisLine={false} tickLine={false} tick={chartAxisTick} tickFormatter={(value) => `${value / 1000}K`} />
+                <Tooltip formatter={(value) => formatCurrency(Number(value))} contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} />
+                <Legend wrapperStyle={{ color: "var(--chart-text)", fontSize: 12 }} />
                 <Bar dataKey="ingresos" name="Ingresos" fill="#0f766e" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="egresos" name="Egresos" fill="#f97316" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -161,7 +162,7 @@ export function DashboardPage() {
                 <Pie data={statusData} dataKey="value" innerRadius={62} outerRadius={92} paddingAngle={3}>
                   {statusData.map((item) => <Cell key={item.name} fill={item.color} />)}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} />
               </PieChart>
             )}
           </ChartFrame>
@@ -177,10 +178,10 @@ export function DashboardPage() {
         <ChartFrame height={288}>
           {({ width, height }) => (
             <BarChart width={width} height={height} data={summary.porCategoria.slice(0, 10)} layout="vertical" margin={{ left: 30 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-              <XAxis type="number" allowDecimals={false} />
-              <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} width={140} fontSize={11} />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={chartGridStroke} />
+              <XAxis type="number" allowDecimals={false} tick={chartAxisTick} />
+              <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} width={140} tick={chartAxisTick} />
+              <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} />
               <Bar dataKey="value" name="Documentos" fill="#0d9488" radius={[0, 8, 8, 0]} barSize={18} />
             </BarChart>
           )}

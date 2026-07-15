@@ -4,7 +4,7 @@ import * as Progress from "@radix-ui/react-progress";
 import { useNavigate } from "react-router-dom";
 import { useDocumentos } from "../hooks/use-documentos";
 import { getStatusTone } from "../lib/utils";
-import { Badge, Button, Card, PageHeader, Select } from "../components/ui";
+import { Alert, Badge, Button, Card, PageHeader, Select } from "../components/ui";
 import type { Documento } from "../types";
 
 export function VerificationPage() {
@@ -21,10 +21,10 @@ export function VerificationPage() {
   };
   const progress = documentos.length ? Math.round((totals.Verificado / documentos.length) * 100) : 0;
   const stats = [
-    { label: "Verificados", value: totals.Verificado, icon: CheckCircle2, tone: "text-emerald-600 bg-emerald-50" },
-    { label: "Pendientes", value: totals.Pendiente, icon: ClipboardCheck, tone: "text-amber-600 bg-amber-50" },
-    { label: "Observados", value: totals.Observado, icon: AlertTriangle, tone: "text-orange-600 bg-orange-50" },
-    { label: "No encontrados", value: totals["No encontrado"], icon: FileQuestion, tone: "text-rose-600 bg-rose-50" },
+    { label: "Verificados", value: totals.Verificado, icon: CheckCircle2, tone: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50" },
+    { label: "Pendientes", value: totals.Pendiente, icon: ClipboardCheck, tone: "text-amber-600 bg-amber-50 dark:bg-amber-950/50" },
+    { label: "Observados", value: totals.Observado, icon: AlertTriangle, tone: "text-orange-600 bg-orange-50 dark:bg-orange-950/50" },
+    { label: "No encontrados", value: totals["No encontrado"], icon: FileQuestion, tone: "text-rose-600 bg-rose-50 dark:bg-rose-950/50" },
   ];
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function VerificationPage() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Control documental" title="Verificación físico-digital" description="Seguimiento del estado físico y digital de los documentos." />
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+      {error && <Alert>{error}</Alert>}
       <Card className="p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div><p className="text-sm font-semibold">Progreso visible de verificación</p><p className="text-xs text-slate-500">{totals.Verificado} verificados en esta página · {count} documentos en total</p></div>

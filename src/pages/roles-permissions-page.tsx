@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, KeyRound, LoaderCircle, Search, ShieldCheck, UsersRound } from "lucide-react";
 import { toast } from "sonner";
-import { Badge, Card, EmptyState, Input, PageHeader } from "../components/ui";
+import { Alert, Badge, Card, EmptyState, Input, PageHeader } from "../components/ui";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
 import { getRolePermissions, setRolePermission } from "../services/admin.service";
@@ -88,7 +88,7 @@ export function RolesPermissionsPage() {
       <Stat icon={<KeyRound />} label="Permisos definidos" value={new Set(rows.map((row) => row.permission_id)).size} />
       <Stat icon={<CheckCircle2 />} label="Asignaciones activas" value={rows.filter((row) => row.asignado).length} />
     </div>
-    {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+    {error && <Alert>{error}</Alert>}
     <Card className="grid min-h-[580px] min-w-0 overflow-hidden lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
       <aside className="border-b border-slate-200 dark:border-slate-800 lg:border-b-0 lg:border-r">
         <div className="relative border-b border-slate-200 p-4 dark:border-slate-800"><Search className="absolute left-7 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Buscar rol..." /></div>

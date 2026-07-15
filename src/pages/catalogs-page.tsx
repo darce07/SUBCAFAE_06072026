@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Boxes, Pencil, Plus, Power, RotateCcw, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Card, Input, PageHeader, Select, Badge } from "../components/ui";
+import { Alert, Button, Card, Input, PageHeader, Select, Badge } from "../components/ui";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { ConfirmDialog } from "../components/confirm-dialog";
 import type { CatalogItem, CatalogTable, CatalogosData, Entidad, EntityDocumentType } from "../types";
@@ -151,8 +151,8 @@ export function CatalogsPage() {
         description="Administra los valores utilizados para clasificar y organizar la información."
         action={canCreate("catalogos") ? <Button onClick={openCreate}><Plus className="size-4" />Nuevo valor</Button> : undefined}
       />
-      {catalogos.usingFallback && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">La conexión institucional no está disponible. Los cambios se mantienen solo durante esta sesión.</div>}
-      {catalogos.error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{catalogos.error}</div>}
+      {catalogos.usingFallback && <Alert variant="warning">La conexión institucional no está disponible. Los cambios se mantienen solo durante esta sesión.</Alert>}
+      {catalogos.error && <Alert>{catalogos.error}</Alert>}
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
         <div className="space-y-2">
           {definitions.map((definition) => {

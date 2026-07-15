@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarDays, ClipboardPaste, ExternalLink, Eye, FileText, Landmark, MapPin, Paperclip, Save, UploadCloud, X } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Card, Input, PageHeader, Select } from "../components/ui";
+import { Alert, Button, Card, Input, PageHeader, Select } from "../components/ui";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useUploadDocumento } from "../hooks/use-upload-documento";
 import { createDocumento } from "../services/documentos.service";
@@ -366,15 +366,11 @@ export function NewDocumentPage() {
         description="Registra la información documental y adjunta su archivo digital."
       />
       {catalogos.usingFallback && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <Alert variant="warning">
           La conexión institucional no está disponible. El formulario está en modo demostración y no guardará información definitiva.
-        </div>
+        </Alert>
       )}
-      {catalogos.error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-          {catalogos.error}
-        </div>
-      )}
+      {catalogos.error && <Alert>{catalogos.error}</Alert>}
       <form onSubmit={handleSubmit(onSubmit)} className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
         <div className="space-y-6">
           <Card className="p-5 sm:p-6">

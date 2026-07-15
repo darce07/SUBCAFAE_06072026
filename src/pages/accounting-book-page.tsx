@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useLibroContable } from "../hooks/use-libro-contable";
 import { useDebounce } from "../hooks/use-debounce";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
-import { Badge, Button, Card, Input, PageHeader } from "../components/ui";
+import { Alert, Badge, Button, Card, Input, PageHeader } from "../components/ui";
 import type { Documento } from "../types";
 
 export function AccountingBookPage() {
@@ -22,7 +22,7 @@ export function AccountingBookPage() {
         description="Vista contable derivada de documentos con movimiento económico."
         action={<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto"><Button variant="secondary" disabled><FileSpreadsheet className="size-4" />Excel</Button><Button variant="secondary" disabled><Download className="size-4" />PDF</Button></div>}
       />
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+      {error && <Alert>{error}</Alert>}
       <Card>
         <div className="border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4">
           <div className="relative max-w-lg">

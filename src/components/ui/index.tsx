@@ -109,6 +109,27 @@ export function Badge({
   );
 }
 
+export function Alert({
+  children,
+  variant = "error",
+  className,
+}: {
+  children: ReactNode;
+  variant?: "error" | "warning" | "info";
+  className?: string;
+}) {
+  const variants = {
+    error: "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300",
+    warning: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300",
+    info: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300",
+  };
+  return (
+    <div className={cn("rounded-xl border p-3 text-sm leading-5", variants[variant], className)}>
+      {children}
+    </div>
+  );
+}
+
 export function PageHeader({
   eyebrow,
   title,

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CalendarDays, LoaderCircle, Search, ShieldCheck } from "lucide-react";
 import { getAuditRecords } from "../services/admin.service";
 import type { AuditRecord } from "../types";
-import { Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
+import { Alert, Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
 import { useDebounce } from "../hooks/use-debounce";
 
 const moduleLabels: Record<string, string> = {
@@ -98,7 +98,7 @@ export function AuditPage() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Trazabilidad" title="Auditoría" description="Seguimiento paginado de las operaciones relevantes realizadas en el sistema." />
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+      {error && <Alert>{error}</Alert>}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="p-5"><ShieldCheck className="mb-3 size-5 text-teal-600" /><p className="text-2xl font-black">{count}</p><p className="text-xs text-slate-500">Eventos encontrados</p></Card>
         <Card className="p-5"><p className="text-2xl font-black">{records.filter((item) => auditDateKey(item.created_at) === today).length}</p><p className="text-xs text-slate-500">Eventos de hoy en esta página</p></Card>

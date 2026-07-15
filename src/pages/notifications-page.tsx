@@ -3,7 +3,7 @@ import { Bell, CheckCheck, FileWarning, LoaderCircle, ReceiptText, ShieldAlert }
 import { toast } from "sonner";
 import { getNotifications, markAllNotificationsRead } from "../services/workspace.service";
 import type { AppNotification } from "../types";
-import { Badge, Button, Card, EmptyState, PageHeader } from "../components/ui";
+import { Alert, Badge, Button, Card, EmptyState, PageHeader } from "../components/ui";
 
 const icons = { documental: FileWarning, financiero: ReceiptText, auditoria: ShieldAlert, seguridad: ShieldAlert };
 
@@ -24,7 +24,7 @@ export function NotificationsPage() {
   };
   return <div className="space-y-6">
     <PageHeader eyebrow="Centro de alertas" title="Notificaciones" description="Alertas reales asociadas a tu usuario." action={<Button variant="secondary" disabled={!notifications.some((item) => !item.leida_at)} onClick={() => void markAll()}><CheckCheck className="size-4" />Marcar todo como leído</Button>} />
-    {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+    {error && <Alert>{error}</Alert>}
     <Card>{loading ? <div className="grid min-h-56 place-items-center"><LoaderCircle className="size-7 animate-spin text-teal-600" /></div> : notifications.length === 0 ? <EmptyState icon={<Bell />} title="Sin notificaciones" description="Las alertas generadas por el sistema aparecerán aquí." /> : <div className="divide-y divide-slate-100 dark:divide-slate-800">{notifications.map((notification) => { const Icon = icons[notification.tipo]; return <div key={notification.id} className={`flex gap-4 p-5 ${!notification.leida_at ? "bg-teal-50/40" : ""}`}><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-teal-700 shadow-sm"><Icon className="size-5" /></div><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><h2 className="font-semibold">{notification.titulo}</h2>{!notification.leida_at && <Badge tone="blue">Nueva</Badge>}</div><p className="mt-1 text-sm text-slate-500">{notification.descripcion}</p><p className="mt-2 text-xs text-slate-400">{new Date(notification.created_at).toLocaleString("es-PE")}</p></div></div>; })}</div>}</Card>
   </div>;
 }
