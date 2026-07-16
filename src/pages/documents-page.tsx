@@ -88,7 +88,7 @@ export function DocumentsPage() {
   const [year, setYear] = useState("");
   const [orderMode, setOrderMode] = useState<"registro_desc" | "registro_asc">("registro_desc");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(() => (typeof window !== "undefined" && window.innerWidth < 640 ? 5 : 10));
+  const [pageSize, setPageSize] = useState(10);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Documento | null>(null);
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});

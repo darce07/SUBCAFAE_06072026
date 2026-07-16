@@ -18,6 +18,7 @@ const moduleLabels: Record<string, string> = {
   anexos: "Anexos",
   usuarios: "Usuarios",
   configuracion: "Configuración",
+  sistema: "Sistema",
 };
 
 export function RolesPermissionsPage() {

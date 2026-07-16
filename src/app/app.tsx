@@ -23,6 +23,7 @@ const UsersPermissionsPage = lazy(() => import("../pages/users-permissions-page"
 const RolesPermissionsPage = lazy(() => import("../pages/roles-permissions-page").then((module) => ({ default: module.RolesPermissionsPage })));
 const SettingsPage = lazy(() => import("../pages/settings-page").then((module) => ({ default: module.SettingsPage })));
 const NotificationsPage = lazy(() => import("../pages/notifications-page").then((module) => ({ default: module.NotificationsPage })));
+const BackupsPage = lazy(() => import("../pages/backups-page").then((module) => ({ default: module.BackupsPage })));
 
 export function App() {
   return (
@@ -53,6 +54,7 @@ export function App() {
             <Route path="/usuarios-permisos" element={<Navigate to="/roles-permisos" replace />} />
             <Route path="/configuracion" element={<SettingsPage />} />
             <Route path="/notificaciones" element={<NotificationsPage />} />
+            <Route path="/respaldos" element={<BackupsPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

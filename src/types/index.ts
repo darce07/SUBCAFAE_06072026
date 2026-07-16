@@ -308,6 +308,21 @@ export interface RolePermissionRow {
   asignado: boolean;
 }
 
+export interface Backup {
+  id: string;
+  usuario_id: string;
+  anio: number;
+  categoria_id: string | null;
+  archivador_id: string | null;
+  estado: "procesando" | "listo" | "error";
+  archivo_path: string | null;
+  tamano_bytes: number | null;
+  total_documentos: number | null;
+  error_mensaje: string | null;
+  created_at: string;
+  completado_at: string | null;
+}
+
 export interface HistoricalRecord {
   id: string;
   nivel_1: string | null;
