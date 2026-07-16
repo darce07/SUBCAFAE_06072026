@@ -30,6 +30,15 @@ export async function requestBackup(filters: { anio: number; categoriaId?: strin
   return row as Backup;
 }
 
+export async function deleteBackup(id: string) {
+  if (!supabase) return;
+  const { data: archivoPath, error } = await supabase.rpc("eliminar_backup_seguro", { p_id: id });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo eliminar el respaldo."));
+  if (archivoPath) {
+    await supabase.storage.from("backups").remove([archivoPath as string]);
+  }
+}
+
 export async function getBackupDownloadUrl(path: string, expiresIn = 300) {
   if (!supabase) return "";
   const { data, error } = await supabase.storage.from("backups").createSignedUrl(path, expiresIn);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { listBackups, requestBackup } from "../services/backups.service";
+import { deleteBackup, listBackups, requestBackup } from "../services/backups.service";
 import type { Backup } from "../types";
 
 const POLL_INTERVAL_MS = 4000;
@@ -41,5 +41,10 @@ export function useBackups() {
     }
   };
 
-  return { backups, loading, generating, error, refresh, generate };
+  const remove = async (id: string) => {
+    await deleteBackup(id);
+    await refresh();
+  };
+
+  return { backups, loading, generating, error, refresh, generate, remove };
 }

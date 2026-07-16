@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { DatabaseBackup, Download, LoaderCircle } from "lucide-react";
+import { DatabaseBackup, Download, LoaderCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, Badge, Button, Card, EmptyState, PageHeader, Select, Skeleton } from "../components/ui";
+import { ConfirmDialog } from "../components/confirm-dialog";
 import { useBackups } from "../hooks/use-backups";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { usePermissions } from "../hooks/use-permissions";
@@ -36,7 +37,7 @@ function formatBytes(bytes: number | null) {
 export function BackupsPage() {
   const { can } = usePermissions();
   const canBackup = can("sistema", "respaldar");
-  const { backups, loading, generating, error, generate } = useBackups();
+  const { backups, loading, generating, error, generate, remove } = useBackups();
   const catalogos = useCatalogos({ includeEntidades: false });
   const years = useMemo(() => {
     const current = new Date().getFullYear();
@@ -46,6 +47,10 @@ export function BackupsPage() {
   const [categoriaId, setCategoriaId] = useState("");
   const [archivadorId, setArchivadorId] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Backup | null>(null);
+  const [clearingErrors, setClearingErrors] = useState(false);
+  const errorBackups = backups.filter((backup) => backup.estado === "error");
 
   if (!canBackup) {
     return <Card className="p-8 text-center"><h1 className="text-xl font-bold">Acceso restringido</h1><p className="mt-2 text-sm text-slate-500">No tienes permiso para generar o consultar respaldos.</p></Card>;
@@ -70,6 +75,31 @@ export function BackupsPage() {
       toast.error(downloadError instanceof Error ? downloadError.message : "No se pudo descargar el respaldo.");
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const onDelete = async (backup: Backup) => {
+    setDeletingId(backup.id);
+    try {
+      await remove(backup.id);
+      toast.success("Respaldo eliminado del historial.");
+    } catch (deleteError) {
+      toast.error(deleteError instanceof Error ? deleteError.message : "No se pudo eliminar el respaldo.");
+    } finally {
+      setDeletingId(null);
+      setPendingDelete(null);
+    }
+  };
+
+  const onClearErrors = async () => {
+    setClearingErrors(true);
+    try {
+      for (const backup of errorBackups) await remove(backup.id);
+      toast.success("Respaldos con error eliminados.");
+    } catch (clearError) {
+      toast.error(clearError instanceof Error ? clearError.message : "No se pudieron eliminar todos los respaldos con error.");
+    } finally {
+      setClearingErrors(false);
     }
   };
 
@@ -102,8 +132,13 @@ export function BackupsPage() {
         <p className="mt-2 text-xs text-slate-500">Sin categoría ni archivador seleccionados, el respaldo incluye todos los documentos del año elegido.</p>
       </Card>
       <Card>
-        <div className="border-b border-slate-200 p-4 dark:border-slate-800">
+        <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800">
           <h2 className="text-sm font-black uppercase tracking-wide text-slate-500">Historial</h2>
+          {errorBackups.length > 0 && (
+            <Button size="sm" variant="secondary" onClick={() => void onClearErrors()} loading={clearingErrors}>
+              <Trash2 className="size-4" />Limpiar errores ({errorBackups.length})
+            </Button>
+          )}
         </div>
         {loading ? (
           <div className="space-y-3 p-4">
@@ -133,16 +168,30 @@ export function BackupsPage() {
                     <p className="mt-1 text-xs text-rose-600">{backup.error_mensaje}</p>
                   )}
                 </div>
-                {backup.estado === "listo" && backup.archivo_path && (
-                  <Button size="sm" variant="secondary" onClick={() => void onDownload(backup)} loading={downloadingId === backup.id}>
-                    {downloadingId === backup.id ? <LoaderCircle className="size-4 animate-spin" /> : <Download className="size-4" />}Descargar
+                <div className="flex shrink-0 gap-2">
+                  {backup.estado === "listo" && backup.archivo_path && (
+                    <Button size="sm" variant="secondary" onClick={() => void onDownload(backup)} loading={downloadingId === backup.id}>
+                      {downloadingId === backup.id ? <LoaderCircle className="size-4 animate-spin" /> : <Download className="size-4" />}Descargar
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" title="Eliminar del historial" onClick={() => setPendingDelete(backup)} loading={deletingId === backup.id}>
+                    <Trash2 className="size-4 text-rose-600" />
                   </Button>
-                )}
+                </div>
               </div>
             ))}
           </div>
         )}
       </Card>
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(nextOpen) => { if (!nextOpen) setPendingDelete(null); }}
+        title="Eliminar respaldo"
+        description={pendingDelete ? `¿Eliminar el respaldo del año ${pendingDelete.anio} del historial? Esta acción no se puede deshacer.` : ""}
+        confirmLabel="Eliminar"
+        loading={pendingDelete ? deletingId === pendingDelete.id : false}
+        onConfirm={() => { if (pendingDelete) void onDelete(pendingDelete); }}
+      />
     </div>
   );
 }

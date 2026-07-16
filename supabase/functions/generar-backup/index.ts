@@ -21,6 +21,25 @@ interface BackupRequest {
   archivadorId?: string | null;
 }
 
+interface DocumentoConRuta {
+  titulo: string;
+  extension: string | null;
+  ruta_historica: string | null;
+  archivo_path: string | null;
+}
+
+// Replica src/pages/historical-page.tsx normalizeDocumentPath(): la ruta
+// histórica separada por '/' o '\' define las carpetas, y si el último
+// segmento no tiene extensión se agrega "titulo.extension" como archivo.
+function rutaHistoricaAZip(documento: DocumentoConRuta) {
+  const segments = (documento.ruta_historica ?? "").split(/[\\/]+/).map((part) => part.trim()).filter(Boolean);
+  const extension = (documento.extension ?? "").replace(/^\./, "") || "archivo";
+  const nombreArchivo = `${documento.titulo}.${extension}`;
+  const last = segments.at(-1) ?? "";
+  if (!last.includes(".")) segments.push(nombreArchivo);
+  return segments.length > 0 ? segments.join("/") : nombreArchivo;
+}
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -93,7 +112,7 @@ Deno.serve(async (request) => {
     console.log(`[backup ${backupId}] consultando documentos anio=${anio} categoria=${categoriaId} archivador=${archivadorId}`);
     let query = adminClient
       .from("documentos")
-      .select("id,codigo_documento,titulo,descripcion,categoria_id,archivador_id,entidad_id,estado_id,fecha_documento,monto,archivo_path,created_at")
+      .select("id,codigo_documento,titulo,descripcion,categoria_id,archivador_id,entidad_id,estado_id,fecha_documento,monto,archivo_path,extension,ruta_historica,created_at")
       .eq("activo", true)
       .eq("anio", anio);
     if (categoriaId) query = query.eq("categoria_id", categoriaId);
@@ -106,16 +125,45 @@ Deno.serve(async (request) => {
     const zip = new JSZip();
     zip.file("datos/documentos.json", JSON.stringify(documentos ?? [], null, 2));
 
-    const archivoPaths = Array.from(new Set((documentos ?? []).map((doc) => doc.archivo_path).filter((path): path is string => Boolean(path))));
+    // Un mismo archivo puede repetirse entre documentos; se descarga una
+    // sola vez pero se coloca en el zip bajo la ruta histórica de cada
+    // documento que lo referencia, igual que el explorador histórico del
+    // frontend (src/pages/historical-page.tsx: ruta_historica separada por
+    // '/' o '\', con el nombre de archivo como último segmento).
+    const porArchivo = new Map<string, string[]>();
+    for (const doc of documentos ?? []) {
+      if (!doc.archivo_path) continue;
+      const zipPath = rutaHistoricaAZip(doc);
+      const existentes = porArchivo.get(doc.archivo_path) ?? [];
+      existentes.push(zipPath);
+      porArchivo.set(doc.archivo_path, existentes);
+    }
+    const archivoPaths = Array.from(porArchivo.keys());
     console.log(`[backup ${backupId}] archivos a descargar: ${archivoPaths.length}`);
-    for (const [index, path] of archivoPaths.entries()) {
-      console.log(`[backup ${backupId}] descargando archivo ${index + 1}/${archivoPaths.length}: ${path}`);
-      const { data: fileBlob, error: downloadError } = await adminClient.storage.from("documentos").download(path);
-      if (downloadError || !fileBlob) {
-        console.log(`[backup ${backupId}] archivo omitido (${path}): ${downloadError?.message ?? "sin datos"}`);
-        continue;
+
+    // Descargar de a uno tardaba minutos con cientos de archivos (cada
+    // download es un round-trip HTTP a Storage). Con lotes de 10 en
+    // paralelo se reduce el tiempo total sin saturar la instancia.
+    const CONCURRENCIA = 10;
+    let descargados = 0;
+    for (let inicio = 0; inicio < archivoPaths.length; inicio += CONCURRENCIA) {
+      const lote = archivoPaths.slice(inicio, inicio + CONCURRENCIA);
+      const resultados = await Promise.all(lote.map(async (path) => {
+        const { data: fileBlob, error: downloadError } = await adminClient.storage.from("documentos").download(path);
+        if (downloadError || !fileBlob) {
+          console.log(`[backup ${backupId}] archivo omitido (${path}): ${downloadError?.message ?? "sin datos"}`);
+          return null;
+        }
+        return { path, buffer: await fileBlob.arrayBuffer() };
+      }));
+      for (const resultado of resultados) {
+        if (!resultado) continue;
+        for (const zipPath of porArchivo.get(resultado.path) ?? []) {
+          zip.file(`archivos/${zipPath}`, resultado.buffer);
+        }
       }
-      zip.file(`archivos/${path}`, await fileBlob.arrayBuffer());
+      descargados += lote.length;
+      console.log(`[backup ${backupId}] descargados ${descargados}/${archivoPaths.length}`);
     }
 
     console.log(`[backup ${backupId}] generando zip`);
@@ -161,7 +209,7 @@ Deno.serve(async (request) => {
 
   const procesarEnSegundoPlano = async () => {
     try {
-      await conTimeout(construirBackup(), 120_000);
+      await conTimeout(construirBackup(), 240_000);
     } catch (error) {
       const mensaje = error instanceof Error ? error.message : "Error desconocido.";
       await adminClient
