@@ -140,6 +140,7 @@ Deno.serve(async (request) => {
     }
     const archivoPaths = Array.from(porArchivo.keys());
     console.log(`[backup ${backupId}] archivos a descargar: ${archivoPaths.length}`);
+    await adminClient.from("backups_generados").update({ total_archivos: archivoPaths.length }).eq("id", backupId);
 
     // Descargar de a uno tardaba minutos con cientos de archivos (cada
     // download es un round-trip HTTP a Storage). Con lotes de 10 en
@@ -164,6 +165,7 @@ Deno.serve(async (request) => {
       }
       descargados += lote.length;
       console.log(`[backup ${backupId}] descargados ${descargados}/${archivoPaths.length}`);
+      await adminClient.from("backups_generados").update({ archivos_procesados: descargados }).eq("id", backupId);
     }
 
     console.log(`[backup ${backupId}] generando zip`);

@@ -159,11 +159,22 @@ export function BackupsPage() {
                   <p className="mt-1 text-xs text-slate-500">
                     {formatDateTime(backup.created_at)} · {backup.total_documentos ?? 0} documentos · {formatBytes(backup.tamano_bytes)}
                   </p>
-                  {backup.estado === "procesando" && (
-                    <div className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                      <div className="h-full w-1/3 animate-pulse rounded-full bg-amber-400" />
-                    </div>
-                  )}
+                  {backup.estado === "procesando" && (() => {
+                    const porcentaje = backup.total_archivos ? Math.min(100, Math.round((backup.archivos_procesados / backup.total_archivos) * 100)) : null;
+                    return (
+                      <div className="mt-2 flex max-w-xs items-center gap-2">
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                          <div
+                            className={`h-full rounded-full bg-amber-400 ${porcentaje === null ? "w-1/3 animate-pulse" : "transition-all"}`}
+                            style={porcentaje === null ? undefined : { width: `${porcentaje}%` }}
+                          />
+                        </div>
+                        <span className="shrink-0 text-xs font-semibold text-amber-600">
+                          {porcentaje === null ? "…" : `${porcentaje}%`}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   {backup.estado === "error" && backup.error_mensaje && (
                     <p className="mt-1 text-xs text-rose-600">{backup.error_mensaje}</p>
                   )}

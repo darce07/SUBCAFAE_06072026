@@ -318,6 +318,8 @@ export interface Backup {
   archivo_path: string | null;
   tamano_bytes: number | null;
   total_documentos: number | null;
+  total_archivos: number | null;
+  archivos_procesados: number;
   error_mensaje: string | null;
   created_at: string;
   completado_at: string | null;
@@ -343,7 +345,7 @@ export interface AppNotification {
   id: number;
   titulo: string;
   descripcion: string;
-  tipo: "documental" | "financiero" | "auditoria" | "seguridad";
+  tipo: "documental" | "financiero" | "auditoria" | "seguridad" | "sistema";
   leida_at: string | null;
   created_at: string;
 }
