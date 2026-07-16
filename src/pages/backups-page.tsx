@@ -115,14 +115,20 @@ export function BackupsPage() {
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {backups.map((backup) => (
               <div key={backup.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">Año {backup.anio}</span>
                     <Badge tone={estadoTone[backup.estado]}>{estadoLabel[backup.estado]}</Badge>
+                    {backup.estado === "procesando" && <LoaderCircle className="size-3.5 animate-spin text-amber-500" />}
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
                     {formatDateTime(backup.created_at)} · {backup.total_documentos ?? 0} documentos · {formatBytes(backup.tamano_bytes)}
                   </p>
+                  {backup.estado === "procesando" && (
+                    <div className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                      <div className="h-full w-1/3 animate-pulse rounded-full bg-amber-400" />
+                    </div>
+                  )}
                   {backup.estado === "error" && backup.error_mensaje && (
                     <p className="mt-1 text-xs text-rose-600">{backup.error_mensaje}</p>
                   )}

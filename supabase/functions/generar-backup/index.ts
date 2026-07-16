@@ -122,12 +122,30 @@ Deno.serve(async (request) => {
       })
       .eq("id", backupId);
 
+    await adminClient.from("notificaciones").insert({
+      user_id: usuarioId,
+      titulo: "Respaldo generado",
+      descripcion: `El respaldo del año ${anio} está listo para descargar (${documentos?.length ?? 0} documentos).`,
+      tipo: "sistema",
+      event_key: `backup_${backupId}`,
+    });
+
     return jsonResponse({ id: backupId, estado: "listo" });
   } catch (error) {
+    const mensaje = error instanceof Error ? error.message : "Error desconocido.";
     await adminClient
       .from("backups_generados")
-      .update({ estado: "error", error_mensaje: error instanceof Error ? error.message : "Error desconocido.", completado_at: new Date().toISOString() })
+      .update({ estado: "error", error_mensaje: mensaje, completado_at: new Date().toISOString() })
       .eq("id", backupId);
+
+    await adminClient.from("notificaciones").insert({
+      user_id: usuarioId,
+      titulo: "Respaldo con error",
+      descripcion: `El respaldo del año ${anio} no se pudo generar: ${mensaje}`,
+      tipo: "sistema",
+      event_key: `backup_${backupId}`,
+    });
+
     return jsonResponse({ error: "No se pudo generar el respaldo." }, 500);
   }
 });
