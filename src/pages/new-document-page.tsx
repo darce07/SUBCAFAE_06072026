@@ -15,6 +15,7 @@ import { EntityCombobox, type EntityDraft } from "../components/entity-combobox"
 import { Field, SectionTitle } from "../components/form-field";
 import { createOrGetEntidad } from "../services/catalogos.service";
 import { DocumentAttachmentsSection } from "../components/document-attachments-section";
+import { TextFilePreview } from "../components/text-file-preview";
 import { createDocumentoAnexo } from "../services/anexos.service";
 import { uploadDocumentoAnexoFile } from "../services/storage.service";
 import type { PendingDocumentoAnexo } from "../types";
@@ -511,6 +512,7 @@ export function NewDocumentPage() {
 function LocalFileViewer({ title, url, mimeType, onClose }: { title: string; url: string; mimeType: string | null; onClose: () => void }) {
   const isImage = mimeType?.startsWith("image/");
   const isPdf = mimeType === "application/pdf";
+  const isText = mimeType?.startsWith("text/");
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-sm">
       <div className="flex h-[92dvh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
@@ -525,7 +527,7 @@ function LocalFileViewer({ title, url, mimeType, onClose }: { title: string; url
           </div>
         </div>
         <div className="grid min-h-0 flex-1 place-items-center bg-slate-100 p-3 dark:bg-slate-950">
-          {isImage ? <img src={url} alt={title} className="max-h-full rounded-xl object-contain" /> : isPdf ? <iframe src={url} title={title} className="h-full w-full rounded-xl bg-white" /> : <div className="max-w-md rounded-2xl bg-white p-6 text-center shadow-sm dark:bg-slate-900"><FileText className="mx-auto mb-3 size-10 text-teal-700" /><h3 className="font-bold">Vista previa no disponible</h3><p className="mt-2 text-sm text-slate-500">Este tipo de archivo puede abrirse con una aplicación compatible.</p></div>}
+          {isImage ? <img src={url} alt={title} className="max-h-full rounded-xl object-contain" /> : isPdf ? <iframe src={url} title={title} className="h-full w-full rounded-xl bg-white" /> : isText ? <TextFilePreview url={url} /> : <div className="max-w-md rounded-2xl bg-white p-6 text-center shadow-sm dark:bg-slate-900"><FileText className="mx-auto mb-3 size-10 text-teal-700" /><h3 className="font-bold">Vista previa no disponible</h3><p className="mt-2 text-sm text-slate-500">Este tipo de archivo puede abrirse con una aplicación compatible.</p></div>}
         </div>
       </div>
     </div>
