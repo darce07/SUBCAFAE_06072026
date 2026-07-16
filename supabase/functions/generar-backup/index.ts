@@ -82,7 +82,15 @@ Deno.serve(async (request) => {
 
   const backupId = backupRow.id as string;
 
-  try {
+  // El armado del zip puede tardar más de lo que un navegador deja abierta
+  // una conexión (se vio en producción: el cliente cortó a los ~75s y la
+  // ejecución murió a medio camino con reason "EarlyDrop", dejando la fila
+  // en 'procesando' para siempre). Por eso el trabajo pesado corre en
+  // segundo plano con waitUntil: la respuesta HTTP sale de inmediato con la
+  // fila ya creada, y el polling del frontend detecta el cambio a
+  // 'listo'/'error' sin depender de que el cliente siga conectado.
+  const construirBackup = async () => {
+    console.log(`[backup ${backupId}] consultando documentos anio=${anio} categoria=${categoriaId} archivador=${archivadorId}`);
     let query = adminClient
       .from("documentos")
       .select("id,codigo_documento,titulo,descripcion,categoria_id,archivador_id,entidad_id,estado_id,fecha_documento,monto,archivo_path,created_at")
@@ -93,24 +101,33 @@ Deno.serve(async (request) => {
 
     const { data: documentos, error: documentosError } = await query;
     if (documentosError) throw new Error(documentosError.message);
+    console.log(`[backup ${backupId}] documentos encontrados: ${documentos?.length ?? 0}`);
 
     const zip = new JSZip();
     zip.file("datos/documentos.json", JSON.stringify(documentos ?? [], null, 2));
 
     const archivoPaths = Array.from(new Set((documentos ?? []).map((doc) => doc.archivo_path).filter((path): path is string => Boolean(path))));
-    for (const path of archivoPaths) {
+    console.log(`[backup ${backupId}] archivos a descargar: ${archivoPaths.length}`);
+    for (const [index, path] of archivoPaths.entries()) {
+      console.log(`[backup ${backupId}] descargando archivo ${index + 1}/${archivoPaths.length}: ${path}`);
       const { data: fileBlob, error: downloadError } = await adminClient.storage.from("documentos").download(path);
-      if (downloadError || !fileBlob) continue;
+      if (downloadError || !fileBlob) {
+        console.log(`[backup ${backupId}] archivo omitido (${path}): ${downloadError?.message ?? "sin datos"}`);
+        continue;
+      }
       zip.file(`archivos/${path}`, await fileBlob.arrayBuffer());
     }
 
+    console.log(`[backup ${backupId}] generando zip`);
     const zipBuffer = await zip.generateAsync({ type: "uint8array" });
     const zipPath = `${usuarioId}/${anio}/${backupId}.zip`;
+    console.log(`[backup ${backupId}] subiendo zip (${zipBuffer.byteLength} bytes) a ${zipPath}`);
     const { error: uploadError } = await adminClient.storage
       .from("backups")
       .upload(zipPath, zipBuffer, { contentType: "application/zip", upsert: false });
     if (uploadError) throw new Error(uploadError.message);
 
+    console.log(`[backup ${backupId}] actualizando fila a estado=listo`);
     await adminClient
       .from("backups_generados")
       .update({
@@ -129,23 +146,41 @@ Deno.serve(async (request) => {
       tipo: "sistema",
       event_key: `backup_${backupId}`,
     });
+    console.log(`[backup ${backupId}] terminado ok`);
+  };
 
-    return jsonResponse({ id: backupId, estado: "listo" });
-  } catch (error) {
-    const mensaje = error instanceof Error ? error.message : "Error desconocido.";
-    await adminClient
-      .from("backups_generados")
-      .update({ estado: "error", error_mensaje: mensaje, completado_at: new Date().toISOString() })
-      .eq("id", backupId);
+  // Timeout duro: si algo se cuelga (red, storage, lo que sea), esto
+  // garantiza que la fila nunca quede en 'procesando' para siempre. Antes
+  // de esto un cuelgue silencioso dejaba la fila huérfana sin forma de
+  // reintentar (pasó en producción, ver commits previos).
+  const conTimeout = <T,>(promise: Promise<T>, ms: number) =>
+    Promise.race([
+      promise,
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Tiempo de espera agotado (${ms / 1000}s).`)), ms)),
+    ]);
 
-    await adminClient.from("notificaciones").insert({
-      user_id: usuarioId,
-      titulo: "Respaldo con error",
-      descripcion: `El respaldo del año ${anio} no se pudo generar: ${mensaje}`,
-      tipo: "sistema",
-      event_key: `backup_${backupId}`,
-    });
+  const procesarEnSegundoPlano = async () => {
+    try {
+      await conTimeout(construirBackup(), 120_000);
+    } catch (error) {
+      const mensaje = error instanceof Error ? error.message : "Error desconocido.";
+      await adminClient
+        .from("backups_generados")
+        .update({ estado: "error", error_mensaje: mensaje, completado_at: new Date().toISOString() })
+        .eq("id", backupId);
 
-    return jsonResponse({ error: "No se pudo generar el respaldo." }, 500);
-  }
+      await adminClient.from("notificaciones").insert({
+        user_id: usuarioId,
+        titulo: "Respaldo con error",
+        descripcion: `El respaldo del año ${anio} no se pudo generar: ${mensaje}`,
+        tipo: "sistema",
+        event_key: `backup_${backupId}`,
+      });
+    }
+  };
+
+  // @ts-expect-error EdgeRuntime es un global inyectado por el runtime de Supabase, no por Deno estándar.
+  EdgeRuntime.waitUntil(procesarEnSegundoPlano());
+
+  return jsonResponse({ id: backupId, estado: "procesando" });
 });
