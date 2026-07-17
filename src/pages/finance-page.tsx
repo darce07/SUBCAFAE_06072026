@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowDownCircle, ArrowUpCircle, ChevronLeft, ChevronRight, FilePlus2, Search } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, ChevronLeft, ChevronRight, FilePlus2, Search, SlidersHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useMontoTotal } from "../hooks/use-monto-total";
+import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
-import { Alert, Badge, Button, Card, Input, PageHeader, Skeleton } from "../components/ui";
+import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import type { Documento } from "../types";
 
 const PAGE_SIZE = 20;
@@ -15,19 +16,30 @@ const PAGE_SIZE = 20;
 export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [statusId, setStatusId] = useState("");
+  const [year, setYear] = useState("");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(search);
   const { canCreate } = usePermissions();
-  const { documentos, count, loading, error } = useDocumentos({
+  const catalogos = useCatalogos({ includeEntidades: false });
+  const years = useMemo(() => {
+    const current = new Date().getFullYear();
+    return Array.from({ length: 15 }, (_, index) => current - index);
+  }, []);
+  const filters = {
     search: debouncedSearch,
     tipoMovimientoNombre: kind,
-    page,
-    pageSize: PAGE_SIZE,
-  });
+    categoriaId: categoryId || undefined,
+    estadoId: statusId || undefined,
+    anio: year ? Number(year) : undefined,
+  };
+  const { documentos, count, loading, error } = useDocumentos({ ...filters, page, pageSize: PAGE_SIZE });
   // El total general se calcula sobre TODOS los registros que calzan con el filtro,
   // no solo los de la página visible — antes se sumaba `rows` y el monto mostrado
   // quedaba silenciosamente incompleto pasados 50 documentos.
-  const { total } = useMontoTotal({ search: debouncedSearch, tipoMovimientoNombre: kind });
+  const { total } = useMontoTotal(filters);
   const rows = useMemo(
     () => documentos.filter((documento) => documento.tipo_movimiento?.nombre === kind),
     [documentos, kind],
@@ -37,7 +49,7 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, kind]);
+  }, [debouncedSearch, kind, categoryId, statusId, year]);
 
   return (
     <div className="space-y-6">
@@ -72,10 +84,20 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
       </div>
 
       <Card>
-        <div className="border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4">
-          <div className="relative max-w-lg">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder={`Buscar ${kind.toLowerCase()}...`} />
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4 xl:flex-row xl:items-center">
+          <div className="flex gap-2">
+            <div className="relative w-full flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder={`Buscar ${kind.toLowerCase()}...`} />
+            </div>
+            <Button type="button" variant="secondary" size="md" className="shrink-0 sm:hidden" onClick={() => setMobileFiltersOpen((value) => !value)} aria-expanded={mobileFiltersOpen}>
+              <SlidersHorizontal className="size-4" />Filtros
+            </Button>
+          </div>
+          <div className={`grid-cols-1 gap-2 sm:grid sm:grid-cols-3 xl:flex ${mobileFiltersOpen ? "grid" : "hidden sm:grid"}`}>
+            <Select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">Todas las categorías</option>{catalogos.categorias.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
+            <Select value={statusId} onChange={(event) => setStatusId(event.target.value)}><option value="">Todos los estados</option>{catalogos.estadosDocumento.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
+            <Select value={year} onChange={(event) => setYear(event.target.value)}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
           </div>
         </div>
 

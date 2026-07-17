@@ -1,18 +1,54 @@
-import { Download, FileSpreadsheet, Search } from "lucide-react";
-import { useState } from "react";
+import { Download, FileSpreadsheet, Search, SlidersHorizontal } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useLibroContable } from "../hooks/use-libro-contable";
+import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
-import { Alert, Badge, Button, Card, Input, PageHeader, Skeleton } from "../components/ui";
+import { exportToExcel, exportToPdf } from "../lib/export";
+import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import type { Documento } from "../types";
 
 export function AccountingBookPage() {
   const [search, setSearch] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [year, setYear] = useState("");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const debouncedSearch = useDebounce(search);
+  const catalogos = useCatalogos({ includeEntidades: false });
+  const years = useMemo(() => {
+    const current = new Date().getFullYear();
+    return Array.from({ length: 15 }, (_, index) => current - index);
+  }, []);
   // useLibroContable trae TODOS los asientos (no una página) ordenados cronológicamente
   // ascendente — el saldo corrido es acumulativo y solo es correcto sobre el set completo.
-  const { movimientos, loading, error } = useLibroContable({ search: debouncedSearch });
+  const { movimientos, loading, error } = useLibroContable({ search: debouncedSearch, categoriaId: categoryId || undefined, anio: year ? Number(year) : undefined });
   const movements = movimientos.filter((item) => item.tipo_movimiento?.nombre === "Ingreso" || item.tipo_movimiento?.nombre === "Egreso");
+
+  const buildExportRows = () => {
+    let saldo = 0;
+    return movements.map((movement, index) => {
+      const income = movement.tipo_movimiento?.nombre === "Ingreso";
+      saldo += income ? movement.monto : -movement.monto;
+      return [
+        `ASI-${String(index + 1).padStart(4, "0")}`,
+        formatDate(movement.fecha_documento),
+        movement.titulo,
+        movement.codigo_documento,
+        income ? formatCurrency(movement.monto) : "",
+        !income ? formatCurrency(movement.monto) : "",
+        formatCurrency(saldo),
+        movement.estado?.nombre ?? "Pendiente",
+      ];
+    });
+  };
+  const exportHeaders = ["Asiento", "Fecha", "Detalle", "Documento", "Debe", "Haber", "Saldo", "Estado"];
+
+  const onExportExcel = () => {
+    exportToExcel(exportHeaders, buildExportRows(), `libro-contable-${new Date().toISOString().slice(0, 10)}`);
+  };
+  const onExportPdf = () => {
+    exportToPdf("Libro contable digital", exportHeaders, buildExportRows(), `libro-contable-${new Date().toISOString().slice(0, 10)}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -20,14 +56,23 @@ export function AccountingBookPage() {
         eyebrow="Contabilidad"
         title="Libro contable digital"
         description="Vista contable derivada de documentos con movimiento económico."
-        action={<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto"><Button variant="secondary" disabled><FileSpreadsheet className="size-4" />Excel</Button><Button variant="secondary" disabled><Download className="size-4" />PDF</Button></div>}
+        action={<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto"><Button variant="secondary" disabled={movements.length === 0} onClick={onExportExcel}><FileSpreadsheet className="size-4" />Excel</Button><Button variant="secondary" disabled={movements.length === 0} onClick={onExportPdf}><Download className="size-4" />PDF</Button></div>}
       />
       {error && <Alert>{error}</Alert>}
       <Card>
-        <div className="border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4">
-          <div className="relative max-w-lg">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Buscar documento o descripción..." />
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4 md:flex-row md:items-center">
+          <div className="flex gap-2">
+            <div className="relative w-full flex-1 md:max-w-lg">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Buscar documento o descripción..." />
+            </div>
+            <Button type="button" variant="secondary" size="md" className="shrink-0 sm:hidden" onClick={() => setMobileFiltersOpen((value) => !value)} aria-expanded={mobileFiltersOpen}>
+              <SlidersHorizontal className="size-4" />Filtros
+            </Button>
+          </div>
+          <div className={`grid-cols-1 gap-2 sm:grid sm:grid-cols-2 md:flex ${mobileFiltersOpen ? "grid" : "hidden sm:grid"}`}>
+            <Select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">Todas las categorías</option>{catalogos.categorias.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
+            <Select value={year} onChange={(event) => setYear(event.target.value)}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
           </div>
         </div>
         {loading ? (
