@@ -72,6 +72,23 @@ type DraftValues = Omit<FormValues, "archivo">;
 
 const DRAFT_STORAGE_KEY = "sigdaf:nuevo-documento:draft";
 
+const blankValues: DraftValues = {
+  categoria_id: "",
+  fecha_documento: "",
+  tipo_entidad_id: "",
+  entidad_id: "",
+  tipo_categoria_id: "",
+  estado_id: "",
+  monto: 0,
+  tipo_movimiento_id: "",
+  tipo_movimiento_nombre: "",
+  tipo_operacion_id: "",
+  titulo: "",
+  descripcion: "",
+  ruta_historica: "",
+  archivador_id: "",
+};
+
 interface StoredDraft {
   values: DraftValues;
   entityDraft: EntityDraft;
@@ -121,20 +138,8 @@ export function NewDocumentPage() {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      categoria_id: initialDraft?.values.categoria_id ?? "",
-      fecha_documento: initialDraft?.values.fecha_documento ?? "",
-      tipo_entidad_id: initialDraft?.values.tipo_entidad_id ?? "",
-      entidad_id: initialDraft?.values.entidad_id ?? "",
-      tipo_categoria_id: initialDraft?.values.tipo_categoria_id ?? "",
-      estado_id: initialDraft?.values.estado_id ?? "",
-      monto: initialDraft?.values.monto ?? 0,
-      tipo_movimiento_id: initialDraft?.values.tipo_movimiento_id ?? "",
-      tipo_movimiento_nombre: initialDraft?.values.tipo_movimiento_nombre ?? "",
-      tipo_operacion_id: initialDraft?.values.tipo_operacion_id ?? "",
-      titulo: initialDraft?.values.titulo ?? "",
-      descripcion: initialDraft?.values.descripcion ?? "",
-      ruta_historica: initialDraft?.values.ruta_historica ?? "",
-      archivador_id: initialDraft?.values.archivador_id ?? "",
+      ...blankValues,
+      ...initialDraft?.values,
     },
   });
 
@@ -262,7 +267,7 @@ export function NewDocumentPage() {
   };
 
   const clearForm = () => {
-    reset();
+    reset(blankValues);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setPreviewOpen(false);
@@ -419,7 +424,7 @@ export function NewDocumentPage() {
         }
       }
       toast.success(isSupabaseConfigured ? "Documento guardado correctamente." : "Documento validado en modo demostración.");
-      reset();
+      reset(blankValues);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
       setPreviewOpen(false);
