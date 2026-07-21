@@ -18,6 +18,7 @@ const FinancePage = lazy(() => import("../pages/finance-page").then((module) => 
 const BalancePage = lazy(() => import("../pages/balance-page").then((module) => ({ default: module.BalancePage })));
 const AccountingBookPage = lazy(() => import("../pages/accounting-book-page").then((module) => ({ default: module.AccountingBookPage })));
 const AuditPage = lazy(() => import("../pages/audit-page").then((module) => ({ default: module.AuditPage })));
+const ControlInternoPage = lazy(() => import("../pages/control-interno-page").then((module) => ({ default: module.ControlInternoPage })));
 const CatalogsPage = lazy(() => import("../pages/catalogs-page").then((module) => ({ default: module.CatalogsPage })));
 const UsersPermissionsPage = lazy(() => import("../pages/users-permissions-page").then((module) => ({ default: module.UsersPermissionsPage })));
 const RolesPermissionsPage = lazy(() => import("../pages/roles-permissions-page").then((module) => ({ default: module.RolesPermissionsPage })));
@@ -48,6 +49,7 @@ export function App() {
             <Route path="/finanzas/balance" element={<BalancePage />} />
             <Route path="/libro-contable" element={<AccountingBookPage />} />
             <Route path="/auditoria" element={<AuditPage />} />
+            <Route path="/control-interno" element={<ControlInternoPage />} />
             <Route path="/catalogos" element={<CatalogsPage />} />
             <Route path="/usuarios" element={<UsersPermissionsPage />} />
             <Route path="/roles-permisos" element={<RolesPermissionsPage />} />

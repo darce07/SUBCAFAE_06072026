@@ -1,6 +1,15 @@
 import { supabase } from "../lib/supabase";
 import { getSupabaseErrorMessage } from "../lib/supabase-error";
-import type { AdminUser, AuditFilters, AuditRecord, CatalogItem, PaginatedResult, RolePermissionRow } from "../types";
+import type {
+  AdminUser,
+  AuditFilters,
+  AuditRecord,
+  CatalogItem,
+  ControlInternoFilters,
+  ControlInternoUsuario,
+  PaginatedResult,
+  RolePermissionRow,
+} from "../types";
 
 export async function getAdminUsers(): Promise<AdminUser[]> {
   if (!supabase) return [];
@@ -63,4 +72,21 @@ export async function setRolePermission(roleId: string, permissionId: string, as
     p_asignado: assigned,
   });
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo actualizar el permiso."));
+}
+
+export async function getControlInternoUsuarios(filters: ControlInternoFilters = {}): Promise<ControlInternoUsuario[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc("obtener_control_interno_usuarios", {
+    p_anio: filters.anio ?? null,
+    p_mes: filters.mes ?? null,
+  });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo cargar el control interno."));
+  return (data ?? []) as ControlInternoUsuario[];
+}
+
+export async function getControlInternoAnios(): Promise<number[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc("obtener_control_interno_anios");
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron cargar los años disponibles."));
+  return (data ?? []) as number[];
 }

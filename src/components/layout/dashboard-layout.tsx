@@ -12,6 +12,7 @@ import {
   FileClock,
   FilePlus2,
   Files,
+  Gauge,
   LayoutDashboard,
   Menu,
   Moon,
@@ -39,6 +40,7 @@ interface NavItem {
   href: string;
   icon: LucideIcon;
   permission?: readonly [string, string];
+  adminOnly?: boolean;
 }
 
 const navGroups: Array<{ label: string; items: NavItem[] }> = [
@@ -70,6 +72,7 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
     label: "Administración",
     items: [
       { label: "Auditoría", href: "/auditoria", icon: ShieldCheck, permission: ["auditoria", "ver"] },
+      { label: "Control interno", href: "/control-interno", icon: Gauge, adminOnly: true },
       { label: "Catálogos", href: "/catalogos", icon: Boxes, permission: ["catalogos", "ver"] },
       { label: "Usuarios", href: "/usuarios", icon: UserRoundCog, permission: ["usuarios", "ver"] },
       { label: "Roles y permisos", href: "/roles-permisos", icon: ShieldCheck, permission: ["usuarios", "editar"] },
@@ -94,6 +97,7 @@ const pageNames: Record<string, string> = {
   balance: "Balance",
   "libro-contable": "Libro contable",
   auditoria: "Auditoría",
+  "control-interno": "Control interno",
   catalogos: "Catálogos",
   configuracion: "Configuración",
   "usuarios-permisos": "Usuarios y permisos",
@@ -106,7 +110,7 @@ export function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, session, userContext, contextError } = useAuth();
-  const { can } = usePermissions();
+  const { can, isAdmin } = usePermissions();
   const { theme, toggleTheme, sidebarCollapsed, toggleSidebar, fontSize, accent, density } = useAppStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -157,7 +161,9 @@ export function DashboardLayout() {
         </div>
         <nav className="scrollbar-thin flex-1 space-y-6 overflow-y-auto px-3 py-5">
           {navGroups.map((group) => {
-            const visibleItems = group.items.filter((item) => !item.permission || can(item.permission[0], item.permission[1]));
+            const visibleItems = group.items.filter((item) =>
+              (!item.permission || can(item.permission[0], item.permission[1])) && (!item.adminOnly || isAdmin),
+            );
             if (visibleItems.length === 0) return null;
             return (
             <div key={group.label}>

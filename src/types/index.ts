@@ -263,6 +263,20 @@ export interface DashboardFilters {
   mes?: number;
 }
 
+export interface ControlInternoUsuario {
+  usuario_id: string;
+  usuario_nombre: string | null;
+  usuario_email: string | null;
+  subidos: number;
+  editados: number;
+  eliminados: number;
+}
+
+export interface ControlInternoFilters {
+  anio?: number;
+  mes?: number;
+}
+
 export interface UserContext {
   id: string;
   email: string | null;
