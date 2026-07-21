@@ -8,6 +8,7 @@ import type {
   DocumentAuditRecord,
   Documento,
   DocumentoFilters,
+  DocumentoHashMatch,
   PaginatedResult,
   UpdateDocumentoCommand,
 } from "../types";
@@ -49,12 +50,14 @@ export async function createDocumento(command: CreateDocumentoCommand): Promise<
       tipo_movimiento_id: command.tipoMovimientoId,
       tipo_operacion_id: command.tipoOperacionId,
       idempotency_key: command.idempotencyKey,
+      archivo_hash: command.archivoHash ?? null,
       activo: true,
     };
   }
 
   const { data, error } = await supabase.rpc("registrar_documento_seguro", {
     p_idempotency_key: command.idempotencyKey,
+    p_archivo_hash: command.archivoHash ?? null,
     p_categoria_id: command.categoriaId,
     p_fecha_documento: command.fechaDocumento,
     p_tipo_entidad_id: command.tipoEntidadId,
@@ -76,6 +79,15 @@ export async function createDocumento(command: CreateDocumentoCommand): Promise<
 
   const created = data as Documento;
   return (await getDocumentoById(created.id)) ?? created;
+}
+
+export async function buscarDocumentosPorHash(archivoHash: string): Promise<DocumentoHashMatch[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc("buscar_documentos_por_hash", {
+    p_archivo_hash: archivoHash,
+  });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo verificar duplicados."));
+  return (data as DocumentoHashMatch[]) ?? [];
 }
 
 export async function getDocumentos(filters: DocumentoFilters = {}): Promise<PaginatedResult<Documento>> {

@@ -7,9 +7,10 @@ import { toast } from "sonner";
 import { Alert, Button, Card, Input, PageHeader, Select } from "../components/ui";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useUploadDocumento } from "../hooks/use-upload-documento";
-import { createDocumento } from "../services/documentos.service";
+import { buscarDocumentosPorHash, createDocumento } from "../services/documentos.service";
 import { useAuth } from "../features/auth/auth-context";
 import { isSupabaseConfigured } from "../lib/supabase";
+import { hashFile } from "../lib/file-hash";
 import { usePermissions } from "../hooks/use-permissions";
 import { EntityCombobox, type EntityDraft } from "../components/entity-combobox";
 import { Field, SectionTitle } from "../components/form-field";
@@ -18,7 +19,7 @@ import { DocumentAttachmentsSection } from "../components/document-attachments-s
 import { TextFilePreview } from "../components/text-file-preview";
 import { createDocumentoAnexo } from "../services/anexos.service";
 import { uploadDocumentoAnexoFile } from "../services/storage.service";
-import type { PendingDocumentoAnexo } from "../types";
+import type { DocumentoHashMatch, PendingDocumentoAnexo } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
 import { findMatchingEntity, validateEntityDocument } from "../lib/entity-document";
 
@@ -67,6 +68,26 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
+type DraftValues = Omit<FormValues, "archivo">;
+
+const DRAFT_STORAGE_KEY = "sigdaf:nuevo-documento:draft";
+
+interface StoredDraft {
+  values: DraftValues;
+  entityDraft: EntityDraft;
+  idempotencyKey: string;
+  savedAt: string;
+}
+
+function readDraft(): StoredDraft | null {
+  try {
+    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as StoredDraft;
+  } catch {
+    return null;
+  }
+}
 
 function localRouteFromFile(file: File) {
   const fileWithPath = file as File & { path?: string };
@@ -76,12 +97,15 @@ function localRouteFromFile(file: File) {
 }
 
 export function NewDocumentPage() {
+  const initialDraft = useMemo(() => readDraft(), []);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
-  const [entityDraft, setEntityDraft] = useState<EntityDraft>({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
+  const [idempotencyKey, setIdempotencyKey] = useState(() => initialDraft?.idempotencyKey ?? crypto.randomUUID());
+  const [entityDraft, setEntityDraft] = useState<EntityDraft>(initialDraft?.entityDraft ?? { nombre: "", tipoDocumento: "", numeroDocumento: "" });
   const [pendingAnexos, setPendingAnexos] = useState<PendingDocumentoAnexo[]>([]);
   const [savingAnexos, setSavingAnexos] = useState(false);
+  const [archivoHash, setArchivoHash] = useState<string | null>(null);
+  const [hashMatches, setHashMatches] = useState<DocumentoHashMatch[]>([]);
   const submissionInFlight = useRef(false);
   const catalogos = useCatalogos({ includeEntidades: false });
   const { upload, uploading, progress } = useUploadDocumento();
@@ -93,24 +117,24 @@ export function NewDocumentPage() {
     watch,
     setValue,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      categoria_id: "",
-      fecha_documento: "",
-      tipo_entidad_id: "",
-      entidad_id: "",
-      tipo_categoria_id: "",
-      estado_id: "",
-      monto: 0,
-      tipo_movimiento_id: "",
-      tipo_movimiento_nombre: "",
-      tipo_operacion_id: "",
-      titulo: "",
-      descripcion: "",
-      ruta_historica: "",
-      archivador_id: "",
+      categoria_id: initialDraft?.values.categoria_id ?? "",
+      fecha_documento: initialDraft?.values.fecha_documento ?? "",
+      tipo_entidad_id: initialDraft?.values.tipo_entidad_id ?? "",
+      entidad_id: initialDraft?.values.entidad_id ?? "",
+      tipo_categoria_id: initialDraft?.values.tipo_categoria_id ?? "",
+      estado_id: initialDraft?.values.estado_id ?? "",
+      monto: initialDraft?.values.monto ?? 0,
+      tipo_movimiento_id: initialDraft?.values.tipo_movimiento_id ?? "",
+      tipo_movimiento_nombre: initialDraft?.values.tipo_movimiento_nombre ?? "",
+      tipo_operacion_id: initialDraft?.values.tipo_operacion_id ?? "",
+      titulo: initialDraft?.values.titulo ?? "",
+      descripcion: initialDraft?.values.descripcion ?? "",
+      ruta_historica: initialDraft?.values.ruta_historica ?? "",
+      archivador_id: initialDraft?.values.archivador_id ?? "",
     },
   });
 
@@ -134,6 +158,43 @@ export function NewDocumentPage() {
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
+
+  useEffect(() => {
+    if (!initialDraft) return;
+    toast.info("Se recuperó un borrador guardado. Vuelve a adjuntar el archivo digital antes de guardar.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const draftSaveTimeout = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    const subscription = watch((values) => {
+      window.clearTimeout(draftSaveTimeout.current);
+      draftSaveTimeout.current = window.setTimeout(() => {
+        const { archivo: _archivo, ...draftValues } = values as FormValues;
+        const draft: StoredDraft = {
+          values: draftValues,
+          entityDraft,
+          idempotencyKey,
+          savedAt: new Date().toISOString(),
+        };
+        window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      }, 500);
+    });
+    return () => {
+      subscription.unsubscribe();
+      window.clearTimeout(draftSaveTimeout.current);
+    };
+  }, [entityDraft, idempotencyKey, watch]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   const refreshEntitySection = async () => {
     if (!selectedEntityType) {
@@ -184,6 +245,20 @@ export function NewDocumentPage() {
     const nextPreviewUrl = file.type.startsWith("image/") || file.type === "application/pdf" ? URL.createObjectURL(file) : null;
     setPreviewUrl(nextPreviewUrl);
     setPreviewOpen(false);
+    setArchivoHash(null);
+    setHashMatches([]);
+    if (!isSupabaseConfigured) return;
+    try {
+      const hash = await hashFile(file);
+      setArchivoHash(hash);
+      const matches = await buscarDocumentosPorHash(hash);
+      setHashMatches(matches);
+      if (matches.length) {
+        toast.warning(`Posible duplicado: este mismo archivo ya está registrado como ${matches[0].codigo_documento} (${matches[0].titulo}).`);
+      }
+    } catch {
+      // Verificación de duplicados es best-effort; no debe bloquear la selección del archivo.
+    }
   };
 
   const clearForm = () => {
@@ -193,6 +268,9 @@ export function NewDocumentPage() {
     setPreviewOpen(false);
     setEntityDraft({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
     setPendingAnexos([]);
+    setArchivoHash(null);
+    setHashMatches([]);
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
   };
 
   const pasteHistoricalRoute = async () => {
@@ -308,6 +386,7 @@ export function NewDocumentPage() {
         monto: values.monto ?? 0,
         tipoMovimientoId: values.tipo_movimiento_id || null,
         tipoOperacionId: isNoAplica ? null : values.tipo_operacion_id || null,
+        archivoHash: archivoHash,
       });
       if (pendingAnexos.length) {
         if (pendingAnexos.some((anexo) => !anexo.tipoAnexoId || anexo.titulo.trim().length < 2)) {
@@ -346,7 +425,10 @@ export function NewDocumentPage() {
       setPreviewOpen(false);
       setEntityDraft({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
       setPendingAnexos([]);
+      setArchivoHash(null);
+      setHashMatches([]);
       setIdempotencyKey(crypto.randomUUID());
+      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo registrar el documento.");
     } finally {
@@ -400,7 +482,7 @@ export function NewDocumentPage() {
           <Card className="p-5 sm:p-6">
             <SectionTitle icon={<Landmark />} title="Entidad y operación" description="Relación administrativa y económica" />
             <div className="grid gap-5 md:grid-cols-2">
-              <Field label="Tipo de entidad"><Select
+              <Field label="Tipo de entidad" hint="Proveedor, cliente o institución remitente/destinataria del documento."><Select
                 className="w-full"
                 {...register("tipo_entidad_id", {
                   onChange: () => {
@@ -425,9 +507,15 @@ export function NewDocumentPage() {
                 />
               </Field>
               <Field label="Tipo de categoría"><Select className="w-full" {...register("tipo_categoria_id")}><option value="">No especificado</option>{catalogos.tiposCategoria.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
-              <Field label="Ingreso / Egreso"><Select className="w-full" {...register("tipo_movimiento_id")}><option value="">No especificado</option>{catalogos.tiposMovimiento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
-              <Field label="Monto" error={errors.monto?.message}><Input type="number" min="0" step="0.01" disabled={isNoAplica} {...register("monto", { valueAsNumber: true })} /></Field>
-              <Field label="Tipo de operación" error={errors.tipo_operacion_id?.message}><Select className="w-full" disabled={isNoAplica} {...register("tipo_operacion_id")}><option value="">Seleccionar operación</option>{catalogos.tiposOperacion.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
+              <Field label="Naturaleza del documento" hint="¿Mueve dinero? Si es un oficio, memo o resolución, elige “No aplica”.">
+                <Select className="w-full" {...register("tipo_movimiento_id")}><option value="">No especificado</option>{catalogos.tiposMovimiento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
+              </Field>
+              {!isNoAplica && (
+                <>
+                  <Field label="Monto" error={errors.monto?.message}><Input type="number" min="0" step="0.01" {...register("monto", { valueAsNumber: true })} /></Field>
+                  <Field label="Tipo de operación" error={errors.tipo_operacion_id?.message}><Select className="w-full" {...register("tipo_operacion_id")}><option value="">Seleccionar operación</option>{catalogos.tiposOperacion.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
+                </>
+              )}
             </div>
           </Card>
 
@@ -494,6 +582,11 @@ export function NewDocumentPage() {
           {errors.archivo && <span className="mt-2 block text-xs text-rose-600">{errors.archivo.message}</span>}
           {uploading && <div className="mt-4"><div className="mb-1 flex justify-between text-xs"><span>Subiendo archivo</span><strong>{progress}%</strong></div><div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-teal-600 transition-all" style={{ width: `${progress}%` }} /></div></div>}
           {selectedFile && <div className="mt-3 rounded-xl bg-slate-100 p-3 text-xs dark:bg-slate-800"><strong>{selectedFile.type || "Archivo"}</strong><span className="ml-2 text-slate-500">{(selectedFile.size / 1024).toFixed(1)} KB</span></div>}
+          {hashMatches.length > 0 && (
+            <Alert variant="warning" className="mt-3">
+              Este archivo coincide con {hashMatches.length === 1 ? "un documento" : `${hashMatches.length} documentos`} ya registrado{hashMatches.length === 1 ? "" : "s"}: {hashMatches.map((match) => match.codigo_documento).join(", ")}. Revisa antes de guardar para evitar duplicados.
+            </Alert>
+          )}
           {previewUrl && <button type="button" onClick={() => setPreviewOpen(true)} className="mt-4 block w-full overflow-hidden rounded-xl border border-slate-200 text-left transition hover:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 dark:border-slate-700">{selectedFile?.type.startsWith("image/") ? <img src={previewUrl} alt="Vista previa" className="h-56 w-full object-contain" /> : <iframe src={previewUrl} title="Vista previa PDF" className="pointer-events-none h-72 w-full" />}</button>}
         </Card>
       </form>

@@ -12,11 +12,12 @@ export function SectionTitle({ icon, title, description }: { icon: ReactNode; ti
   );
 }
 
-export function Field({ label, error, children, className = "" }: { label: string; error?: string; children: ReactNode; className?: string }) {
+export function Field({ label, hint, error, children, className = "" }: { label: string; hint?: string; error?: string; children: ReactNode; className?: string }) {
   return (
     <label className={className}>
       <span className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
       {children}
+      {hint && !error && <span className="mt-1 block text-xs text-slate-400">{hint}</span>}
       {error && <span className="mt-1 block text-xs text-rose-600">{error}</span>}
     </label>
   );

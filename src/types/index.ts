@@ -73,6 +73,7 @@ export interface Documento {
   tipo_movimiento_id: string | null;
   tipo_operacion_id: string | null;
   idempotency_key?: string;
+  archivo_hash?: string | null;
   activo?: boolean;
   eliminado_at?: string | null;
   eliminado_por?: string | null;
@@ -213,6 +214,16 @@ export interface CreateDocumentoCommand {
   monto: number;
   tipoMovimientoId: string | null;
   tipoOperacionId: string | null;
+  archivoHash?: string | null;
+}
+
+export interface DocumentoHashMatch {
+  id: string;
+  codigo_documento: string;
+  titulo: string;
+  fecha_documento: string;
+  created_at: string;
+  creador_nombre: string | null;
 }
 
 export interface UpdateDocumentoCommand {
