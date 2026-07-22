@@ -1,0 +1,31 @@
+# Configuración de CodeRabbit para revisión automática de Pull Requests.
+# Referencia: https://docs.coderabbit.ai/reference/configuration
+language: "es-ES"
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!**/*.lock"
+    - "!package-lock.json"
+    - "!dist/**"
+  path_instructions:
+    - path: "supabase/migrations/**/*.sql"
+      instructions: >
+        Revisar que las funciones security definer validen permisos
+        (is_admin/has_permission) antes de exponer datos, que las migraciones
+        sean idempotentes (create or replace / if not exists) y que no se
+        rompan firmas de funciones ya usadas por el frontend.
+    - path: "src/**/*.tsx"
+      instructions: >
+        Revisar accesibilidad básica, manejo de estados de carga/error, y que
+        los filtros y formularios sigan los patrones ya usados en el resto
+        del proyecto (hooks use-*, componentes de ui/index.tsx).
+
+chat:
+  auto_reply: true
