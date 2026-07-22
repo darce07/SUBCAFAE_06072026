@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   type ColumnSizingState,
@@ -9,12 +9,12 @@ import {
 } from "@tanstack/react-table";
 import { ChevronDown, ChevronsLeft, ChevronsRight, Clipboard, Download, Eye, ExternalLink, FilePlus2, Pencil, Search, SlidersHorizontal, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
-import type { Documento } from "../types";
+import type { DocumentCreator, Documento } from "../types";
 import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { formatCurrency, formatDate, formatDateTime, formatRelativeTime, getStatusTone } from "../lib/utils";
-import { cambiarEstadoDocumento, deleteDocumento } from "../services/documentos.service";
+import { cambiarEstadoDocumento, deleteDocumento, getDocumentCreators } from "../services/documentos.service";
 import { useDebounce } from "../hooks/use-debounce";
 import { downloadDocumentoFile, getSignedUrl } from "../services/storage.service";
 import { usePermissions } from "../hooks/use-permissions";
@@ -85,6 +85,8 @@ export function DocumentsPage() {
   const [globalFilter, setGlobalFilter] = useState(searchParams.get("q") ?? "");
   const [categoryId, setCategoryId] = useState("");
   const [statusId, setStatusId] = useState("");
+  const [creadorId, setCreadorId] = useState("");
+  const [creators, setCreators] = useState<DocumentCreator[]>([]);
   const [year, setYear] = useState("");
   const [orderMode, setOrderMode] = useState<"registro_desc" | "registro_asc">("registro_desc");
   const [page, setPage] = useState(1);
@@ -99,6 +101,7 @@ export function DocumentsPage() {
     search: debouncedSearch,
     categoriaId: categoryId || undefined,
     estadoId: statusId || undefined,
+    creadorId: creadorId || undefined,
     anio: year ? Number(year) : undefined,
     orderBy: "created_at",
     orderDirection: orderMode === "registro_asc" ? "asc" : "desc",
@@ -114,6 +117,14 @@ export function DocumentsPage() {
   }, []);
   const watermarkUsuario = userContext?.nombreCompleto ?? userContext?.email ?? "usuario del sistema";
   const totalPages = Math.max(Math.ceil(count / pageSize), 1);
+
+  useEffect(() => {
+    let active = true;
+    void getDocumentCreators()
+      .then((result) => { if (active) setCreators(result); })
+      .catch(() => { if (active) setCreators([]); });
+    return () => { active = false; };
+  }, []);
 
   const toggleAutoFitColumn = useCallback((columnId: string, headerText: string, defaultSize: number) => {
     if (autoFitColumns[columnId]) {
@@ -325,6 +336,7 @@ export function DocumentsPage() {
           <div className={`grid-cols-1 gap-2 sm:grid sm:grid-cols-2 xl:flex ${mobileFiltersOpen ? "grid" : "hidden sm:grid"}`}>
             <Select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(1); }}><option value="">Todas las categorías</option>{catalogos.categorias.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={statusId} onChange={(event) => { setStatusId(event.target.value); setPage(1); }}><option value="">Todos los estados</option>{catalogos.estadosDocumento.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
+            <Select value={creadorId} onChange={(event) => { setCreadorId(event.target.value); setPage(1); }}><option value="">Todos los usuarios</option>{creators.map((item) => <option key={item.id} value={item.id}>{item.nombre_completo || item.email || "Sin nombre"}</option>)}</Select>
             <Select value={year} onChange={(event) => { setYear(event.target.value); setPage(1); }}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
             <Select value={orderMode} onChange={(event) => { setOrderMode(event.target.value as "registro_desc" | "registro_asc"); setPage(1); }}><option value="registro_desc">Registro: recientes primero</option><option value="registro_asc">Registro: antiguos primero</option></Select>
             <Select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value={5}>5 filas</option><option value={10}>10 filas</option><option value={20}>20 filas</option><option value={50}>50 filas</option></Select>

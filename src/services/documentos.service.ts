@@ -6,6 +6,7 @@ import type {
   DashboardFilters,
   DashboardResumen,
   DocumentAuditRecord,
+  DocumentCreator,
   Documento,
   DocumentoFilters,
   DocumentoHashMatch,
@@ -90,6 +91,25 @@ export async function buscarDocumentosPorHash(archivoHash: string): Promise<Docu
   return (data as DocumentoHashMatch[]) ?? [];
 }
 
+export async function getDocumentCreators(): Promise<DocumentCreator[]> {
+  if (!supabase) {
+    const seen = new Map<string, DocumentCreator>();
+    for (const documento of mockDocumentos) {
+      if (documento.created_by && !seen.has(documento.created_by)) {
+        seen.set(documento.created_by, {
+          id: documento.created_by,
+          nombre_completo: documento.usuario?.nombre_completo ?? null,
+          email: documento.usuario?.email ?? null,
+        });
+      }
+    }
+    return [...seen.values()];
+  }
+  const { data, error } = await supabase.rpc("obtener_usuarios_creadores_documentos");
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron cargar los usuarios."));
+  return (data ?? []) as DocumentCreator[];
+}
+
 export async function getDocumentos(filters: DocumentoFilters = {}): Promise<PaginatedResult<Documento>> {
   const page = Math.max(filters.page ?? 1, 1);
   const pageSize = Math.min(Math.max(filters.pageSize ?? 10, 1), 100);
@@ -130,6 +150,7 @@ export async function getDocumentos(filters: DocumentoFilters = {}): Promise<Pag
   if (filters.categoriaId) query = query.eq("categoria_id", filters.categoriaId);
   if (filters.estadoId) query = query.eq("estado_id", filters.estadoId);
   if (filters.entidadId) query = query.eq("entidad_id", filters.entidadId);
+  if (filters.creadorId) query = query.eq("created_by", filters.creadorId);
   if (filters.anio) query = query.eq("anio", filters.anio);
   if (filters.tipoMovimientoId) query = query.eq("tipo_movimiento_id", filters.tipoMovimientoId);
   if (filters.tipoMovimientoNombre) query = query.eq("tipo_movimiento.nombre", filters.tipoMovimientoNombre);
@@ -210,6 +231,7 @@ export async function getMontoTotal(filters: DocumentoFilters = {}): Promise<num
     if (filters.categoriaId) query = query.eq("categoria_id", filters.categoriaId);
     if (filters.estadoId) query = query.eq("estado_id", filters.estadoId);
     if (filters.entidadId) query = query.eq("entidad_id", filters.entidadId);
+    if (filters.creadorId) query = query.eq("created_by", filters.creadorId);
     if (filters.anio) query = query.eq("anio", filters.anio);
     if (filters.tipoMovimientoId) query = query.eq("tipo_movimiento_id", filters.tipoMovimientoId);
     if (filters.tipoMovimientoNombre) query = query.eq("tipo_movimiento.nombre", filters.tipoMovimientoNombre);
@@ -361,6 +383,7 @@ function filterMockDocumentos(filters: DocumentoFilters) {
       && (!filters.categoriaId || documento.categoria_id === filters.categoriaId)
       && (!filters.estadoId || documento.estado_id === filters.estadoId)
       && (!filters.entidadId || documento.entidad_id === filters.entidadId)
+      && (!filters.creadorId || documento.created_by === filters.creadorId)
       && (!filters.anio || documento.anio === filters.anio)
       && (!filters.tipoMovimientoId || documento.tipo_movimiento_id === filters.tipoMovimientoId)
       && (!filters.tipoMovimientoNombre || documento.tipo_movimiento?.nombre === filters.tipoMovimientoNombre)

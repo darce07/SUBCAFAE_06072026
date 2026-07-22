@@ -173,11 +173,18 @@ export interface DocumentoAnexoVersion {
   created_at: string;
 }
 
+export interface DocumentCreator {
+  id: string;
+  nombre_completo: string | null;
+  email: string | null;
+}
+
 export interface DocumentoFilters {
   search?: string;
   categoriaId?: string;
   estadoId?: string;
   entidadId?: string;
+  creadorId?: string;
   anio?: number;
   tipoMovimientoId?: string;
   tipoMovimientoNombre?: "Ingreso" | "Egreso" | "No aplica";
