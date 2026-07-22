@@ -6,6 +6,7 @@ import type {
   AuditRecord,
   CatalogItem,
   ControlInternoFilters,
+  ControlInternoHoy,
   ControlInternoUsuario,
   PaginatedResult,
   RolePermissionRow,
@@ -89,4 +90,11 @@ export async function getControlInternoAnios(): Promise<number[]> {
   const { data, error } = await supabase.rpc("obtener_control_interno_anios");
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron cargar los años disponibles."));
   return (data ?? []) as number[];
+}
+
+export async function getControlInternoHoy(): Promise<ControlInternoHoy[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc("obtener_control_interno_hoy");
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo cargar la actividad de hoy."));
+  return (data ?? []) as ControlInternoHoy[];
 }

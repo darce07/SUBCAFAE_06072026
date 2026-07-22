@@ -270,6 +270,11 @@ export interface DashboardFilters {
   mes?: number;
 }
 
+export interface ControlInternoHoy {
+  hora: number;
+  subidos: number;
+}
+
 export interface ControlInternoUsuario {
   usuario_id: string;
   usuario_nombre: string | null;

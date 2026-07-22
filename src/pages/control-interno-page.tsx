@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarRange, FilePlus2, FileX2, PenSquare, RotateCcw, Trophy, UserRoundCog } from "lucide-react";
+import { CalendarClock, CalendarRange, FilePlus2, FileX2, PenSquare, RotateCcw, Trophy, UserRoundCog } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { Alert, Button, Card, EmptyState, PageHeader, Select, Skeleton } from "../components/ui";
 import { ChartFrame } from "../components/chart-frame";
 import { usePermissions } from "../hooks/use-permissions";
 import { useControlInterno } from "../hooks/use-control-interno";
+import { useControlInternoHoy } from "../hooks/use-control-interno-hoy";
 import { chartAxisTick, chartGridStroke, chartTooltipLabelStyle, chartTooltipStyle } from "../lib/chart-theme";
 
 const months = [
@@ -28,7 +29,11 @@ export function ControlInternoPage() {
     mes: month ? Number(month) : undefined,
   }), [month, year]);
   const { data, loading, error } = useControlInterno(filters);
+  const { data: hoyData, loading: hoyLoading, error: hoyError } = useControlInternoHoy();
   const hasPeriodFilter = Boolean(year || month);
+  const totalHoy = hoyData.reduce((sum, row) => sum + row.subidos, 0);
+  const hoyChartData = hoyData.map((row) => ({ hora: `${String(row.hora).padStart(2, "0")}:00`, subidos: row.subidos }));
+  const todayLabel = new Intl.DateTimeFormat("es-PE", { timeZone: "America/Lima", dateStyle: "full" }).format(new Date());
 
   const fallbackYears = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -111,6 +116,35 @@ export function ControlInternoPage() {
             </Button>
           </div>
         </div>
+      </Card>
+
+      <Card className="min-w-0 overflow-hidden p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 font-bold text-slate-950 dark:text-white"><CalendarClock className="size-5 text-teal-700" />Documentos subidos hoy</div>
+          <span className="text-xs capitalize text-slate-500">{todayLabel}</span>
+        </div>
+        <p className="text-sm text-slate-500">Desglose por hora del día en curso, independiente del filtro de periodo.</p>
+        {hoyError && <Alert variant="warning" className="mt-4">{hoyError}</Alert>}
+        {!hoyLoading && totalHoy === 0 ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
+            Todavía no se ha subido ningún documento hoy.
+          </div>
+        ) : (
+          <>
+            <p className="mt-4 text-2xl font-black text-slate-950 dark:text-white">{totalHoy.toLocaleString("es-PE")} <span className="text-sm font-medium text-slate-500">documentos hoy</span></p>
+            <ChartFrame height={220} className="mt-3">
+              {({ width, height }) => (
+                <BarChart width={width} height={height} data={hoyChartData} barCategoryGap={2}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGridStroke} />
+                  <XAxis dataKey="hora" axisLine={false} tickLine={false} tick={chartAxisTick} interval={2} />
+                  <YAxis axisLine={false} tickLine={false} tick={chartAxisTick} allowDecimals={false} />
+                  <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(value) => [`${value}`, "Subidos"]} />
+                  <Bar dataKey="subidos" name="Subidos" fill="#0d9488" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              )}
+            </ChartFrame>
+          </>
+        )}
       </Card>
 
       {!loading && data.length === 0 ? (
