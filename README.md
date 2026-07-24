@@ -106,9 +106,23 @@ El bucket `documentos` es privado. El frontend guarda solamente `archivo_path`; 
 ## Validación
 
 ```bash
+npm run lint
 npm run typecheck
 npm run build
 ```
+
+CI (`.github/workflows/ci.yml`) corre `lint` + `build` en cada push/PR a `main`.
+
+## Respaldos
+
+Módulo `/respaldos` (permiso `sistema:respaldar`, ver `021_backup_sistema.sql`
+en adelante): genera un `.zip` con los documentos de un año (filtrable por
+categoría/archivador) más sus archivos reales del bucket `documentos`,
+manteniendo la jerarquía de la ruta histórica. Corre en la Edge Function
+`supabase/functions/generar-backup` (deploy: `supabase functions deploy
+generar-backup`), en segundo plano vía `EdgeRuntime.waitUntil` para no
+depender de que el navegador siga conectado. El resultado se lista en
+`backups_generados` con estado `procesando/listo/error`.
 
 ## Alcance
 
@@ -116,7 +130,9 @@ npm run build
 - Rutas protegidas y layout institucional responsive.
 - Gestión documental, explorador histórico y archivo físico.
 - Verificación físico-digital.
-- Ingresos, egresos, balance y libro contable.
+- Ingresos, egresos, balance y libro contable, con exportación a Excel/PDF.
+- Respaldos de documentos por período (ver sección arriba).
+- Control interno: actividad por usuario (subido/editado/eliminado), exportable a PDF.
 - Auditoría, catálogos, usuarios y permisos.
 - Centro de notificaciones y preferencias visuales.
 - Datos mock centralizados mientras no exista backend funcional.

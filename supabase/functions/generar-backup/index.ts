@@ -10,8 +10,14 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import JSZip from "npm:jszip@3";
 
+// El JWT ya autentica cada request, pero "*" deja que cualquier sitio
+// dispare la function desde el navegador de un usuario logueado (CSRF-like
+// via fetch con credenciales). Restringir el origen es defensa en
+// profundidad barata. SITE_URL se configura como secret de la función; si
+// falta, cae al dominio de producción conocido en vez de abrir a todos.
+const allowedOrigin = Deno.env.get("SITE_URL") ?? "https://subcafae-06072026.vercel.app";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": allowedOrigin,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
