@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarRange, FilePlus2, FileX2, PenSquare, RotateCcw, Trophy, UserRoundCog } from "lucide-react";
+import { CalendarRange, Download, FilePlus2, FileX2, PenSquare, RotateCcw, Trophy, UserRoundCog } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { Alert, Badge, Button, Card, EmptyState, PageHeader, Select, Skeleton } from "../components/ui";
 import { ChartFrame } from "../components/chart-frame";
 import { usePermissions } from "../hooks/use-permissions";
 import { useControlInterno } from "../hooks/use-control-interno";
 import { chartAxisTick, chartGridStroke, chartTooltipLabelStyle, chartTooltipStyle } from "../lib/chart-theme";
+import { exportToPdf } from "../lib/export";
 
 const months = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -55,6 +56,25 @@ export function ControlInternoPage() {
       eliminados: row.eliminados,
     }));
 
+  const periodoLabel = month || year ? `${month ? months[Number(month) - 1] : "Todos los meses"} ${year || ""}`.trim() : "Todos los periodos";
+
+  const onExportPdf = () => {
+    const rows = data.map((row) => [
+      row.usuario_nombre || "Usuario sin perfil",
+      row.usuario_email ?? "—",
+      row.subidos,
+      row.editados,
+      row.eliminados,
+      row.subidos + row.editados + row.eliminados,
+    ]);
+    exportToPdf(
+      `Control interno · ${periodoLabel}`,
+      ["Usuario", "Correo", "Subidos", "Editados", "Eliminados", "Total"],
+      rows,
+      `control-interno-${new Date().toISOString().slice(0, 10)}`,
+    );
+  };
+
   if (!isAdmin) {
     return (
       <Card className="p-8 text-center">
@@ -70,6 +90,7 @@ export function ControlInternoPage() {
         eyebrow="Supervisión"
         title="Control interno"
         description="Actividad documental por usuario: quién sube, edita y elimina, con filtro por periodo."
+        action={<Button variant="secondary" disabled={data.length === 0} onClick={onExportPdf}><Download className="size-4" />Descargar PDF</Button>}
       />
       {error && <Alert variant="warning">{error}</Alert>}
 
