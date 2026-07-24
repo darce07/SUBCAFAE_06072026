@@ -34,6 +34,7 @@ import { useAppStore } from "../../store/use-app-store";
 import { useAuth } from "../../features/auth/auth-context";
 import { usePermissions } from "../../hooks/use-permissions";
 import { Alert, Button, Input } from "../ui";
+import { ErrorBoundary } from "../error-boundary";
 
 interface NavItem {
   label: string;
@@ -242,7 +243,9 @@ export function DashboardLayout() {
               </span>
             ))}
           </div>
-          <Outlet />
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
