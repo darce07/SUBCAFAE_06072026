@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CalendarRange, Download, FilePlus2, FileX2, PenSquare, RotateCcw, Trophy, UserRoundCog } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
-import { Alert, Badge, Button, Card, EmptyState, PageHeader, Select, Skeleton } from "../components/ui";
+import { Alert, Button, Card, EmptyState, PageHeader, Select, Skeleton } from "../components/ui";
 import { ChartFrame } from "../components/chart-frame";
 import { usePermissions } from "../hooks/use-permissions";
 import { useControlInterno } from "../hooks/use-control-interno";
@@ -14,7 +14,11 @@ const months = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
-const podiumTone = ["amber", "slate", "orange"] as const;
+const podiumTone = [
+  "bg-amber-100 text-amber-800 ring-amber-500/30 dark:bg-amber-950/60 dark:text-amber-300",
+  "bg-slate-200 text-slate-700 ring-slate-500/20 dark:bg-slate-800 dark:text-slate-300",
+  "bg-orange-100 text-orange-800 ring-orange-500/30 dark:bg-orange-950/60 dark:text-orange-300",
+];
 
 export function ControlInternoPage() {
   const { isAdmin } = usePermissions();
@@ -162,7 +166,7 @@ export function ControlInternoPage() {
               <div className="grid gap-3 sm:grid-cols-3">
                 {top3.map((row, index) => (
                   <div key={row.usuario_id} className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                    <Badge tone={podiumTone[index]} className="shrink-0 !size-9 !rounded-full !p-0 text-center leading-9">{index + 1}</Badge>
+                    <div className={`grid size-9 shrink-0 place-items-center rounded-full text-sm font-bold ring-1 ring-inset ${podiumTone[index]}`}>{index + 1}</div>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{row.usuario_nombre || row.usuario_email || "Usuario sin perfil"}</p>
                       <p className="text-xs text-slate-500">{row.subidos.toLocaleString("es-PE")} documentos subidos</p>
