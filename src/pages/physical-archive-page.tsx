@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Archive, FileQuestion, FolderArchive, LoaderCircle, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
 import { useArchivoFisicoDocumentos, useArchivoFisicoResumen } from "../hooks/use-archivo-fisico-documentos";
@@ -14,6 +15,7 @@ export function PhysicalArchivePage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const debouncedSearch = useDebounce(search);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const catalogos = useCatalogos();
   const activeArchives = useMemo(() => catalogos.archivadores.filter((item) => item.activo), [catalogos.archivadores]);
   const selectedArchive = activeArchives.find((item) => item.id === selectedArchiveId) ?? null;
@@ -35,6 +37,7 @@ export function PhysicalArchivePage() {
   const selectArchive = (archiveId: string) => {
     setSelectedArchiveId(archiveId);
     setPage(1);
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -126,6 +129,7 @@ export function PhysicalArchivePage() {
         )}
       </section>
 
+      <div ref={resultsRef}>
       <Card className="overflow-hidden">
         <div className="border-b border-slate-200 p-5 dark:border-slate-800">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -176,15 +180,17 @@ export function PhysicalArchivePage() {
           </>
         )}
       </Card>
+      </div>
     </div>
   );
 }
 
 function ArchiveDocumentList({ documentos }: { documentos: Documento[] }) {
+  const navigate = useNavigate();
   return (
     <>
       <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">
-        {documentos.map((documento) => <ArchiveDocumentCard key={documento.id} documento={documento} />)}
+        {documentos.map((documento) => <ArchiveDocumentCard key={documento.id} documento={documento} onClick={() => navigate(`/documentos/${documento.id}`)} />)}
       </div>
       <div className="table-scroll responsive-table">
         <table className="w-full text-left text-sm">
@@ -201,7 +207,11 @@ function ArchiveDocumentList({ documentos }: { documentos: Documento[] }) {
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {documentos.map((documento) => (
-              <tr key={documento.id}>
+              <tr
+                key={documento.id}
+                onClick={() => navigate(`/documentos/${documento.id}`)}
+                className="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40"
+              >
                 <td className="px-5 py-4 font-semibold text-teal-700">{documento.codigo_documento}</td>
                 <td className="px-5 py-4">{formatDate(documento.fecha_documento)}</td>
                 <td className="px-5 py-4">{documento.categoria?.nombre ?? "Sin categoría"}</td>
@@ -218,9 +228,9 @@ function ArchiveDocumentList({ documentos }: { documentos: Documento[] }) {
   );
 }
 
-function ArchiveDocumentCard({ documento }: { documento: Documento }) {
+function ArchiveDocumentCard({ documento, onClick }: { documento: Documento; onClick: () => void }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+    <button type="button" onClick={onClick} className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="break-words font-bold text-teal-700">{documento.codigo_documento}</p>
@@ -234,7 +244,7 @@ function ArchiveDocumentCard({ documento }: { documento: Documento }) {
         <ArchiveInfo label="Entidad" value={documento.entidad?.nombre ?? "—"} />
         <ArchiveInfo label="Ruta física" value={documento.ruta_historica || "Sin ruta registrada"} />
       </div>
-    </div>
+    </button>
   );
 }
 
