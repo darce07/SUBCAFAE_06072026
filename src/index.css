@@ -14,6 +14,7 @@
   --chart-tooltip-bg: #ffffff;
   --chart-tooltip-border: #e2e8f0;
   --chart-tooltip-text: #0f172a;
+  --table-scroll-bg: #ffffff;
 }
 
 .dark {
@@ -22,6 +23,7 @@
   --chart-tooltip-bg: #1e293b;
   --chart-tooltip-border: #334155;
   --chart-tooltip-text: #f1f5f9;
+  --table-scroll-bg: #0f172a;
 }
 
 * {
@@ -148,6 +150,19 @@ iframe {
   overflow-x: auto;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
+  /* Sombra de scroll: sin JS, avisa que hay más columnas a la derecha (o
+     izquierda) sin depender de que el usuario note el scrollbar delgado del
+     fondo. Se apaga sola al llegar al borde correspondiente. Técnica
+     estándar de "scrolling shadows" con gradientes fijos (scroll) + de
+     fondo (local) que se desplazan junto al contenido. */
+  background:
+    linear-gradient(to right, var(--table-scroll-bg) 30%, transparent) local,
+    linear-gradient(to left, var(--table-scroll-bg) 30%, transparent) 100% 0 local,
+    linear-gradient(to right, rgba(15, 23, 42, 0.18), transparent) scroll,
+    linear-gradient(to left, rgba(15, 23, 42, 0.18), transparent) 100% 0 scroll;
+  background-repeat: no-repeat;
+  background-color: var(--table-scroll-bg);
+  background-size: 32px 100%, 32px 100%, 14px 100%, 14px 100%;
 }
 
 .table-scroll > table {
