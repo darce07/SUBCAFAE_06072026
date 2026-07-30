@@ -39,5 +39,10 @@ export function getSupabaseErrorMessage(error: unknown, fallback = "Ocurrió un 
   if (normalized.includes("storage") && normalized.includes("not found")) {
     return "No se encontró el archivo solicitado.";
   }
-  return fallback;
+  // Los triggers y RPCs "_seguro" del proyecto siempre lanzan `raise
+  // exception` con mensajes en español pensados para el usuario final (ver
+  // validate_documento(), editar_documento_seguro_v2, etc.). Descartarlos
+  // detrás de un fallback genérico escondía la causa real de cualquier
+  // validación de negocio no listada arriba — pasó con este mismo bug.
+  return message.trim() || fallback;
 }
