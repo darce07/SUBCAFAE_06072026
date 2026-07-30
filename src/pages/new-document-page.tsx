@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarDays, ClipboardPaste, ExternalLink, Eye, FileText, Landmark, MapPin, Paperclip, Save, UploadCloud, X } from "lucide-react";
@@ -17,6 +17,7 @@ import { Field, SectionTitle } from "../components/form-field";
 import { createOrGetEntidad } from "../services/catalogos.service";
 import { DocumentAttachmentsSection } from "../components/document-attachments-section";
 import { TextFilePreview } from "../components/text-file-preview";
+import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo } from "../services/anexos.service";
 import { uploadDocumentoAnexoFile } from "../services/storage.service";
 import type { DocumentoHashMatch, PendingDocumentoAnexo } from "../types";
@@ -134,6 +135,7 @@ export function NewDocumentPage() {
     watch,
     setValue,
     reset,
+    control,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -517,7 +519,13 @@ export function NewDocumentPage() {
               </Field>
               {!isNoAplica && (
                 <>
-                  <Field label="Monto" error={errors.monto?.message}><Input type="number" min="0" step="0.01" {...register("monto", { valueAsNumber: true })} /></Field>
+                  <Field label="Monto" error={errors.monto?.message}>
+                    <Controller
+                      name="monto"
+                      control={control}
+                      render={({ field }) => <MontoInput value={field.value} onChange={field.onChange} />}
+                    />
+                  </Field>
                   <Field label="Tipo de operación" error={errors.tipo_operacion_id?.message}><Select className="w-full" {...register("tipo_operacion_id")}><option value="">Seleccionar operación</option>{catalogos.tiposOperacion.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
                 </>
               )}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { CalendarDays, ExternalLink, FilePenLine, LoaderCircle, Paperclip, Save, UploadCloud, X } from "lucide-react";
@@ -16,6 +16,7 @@ import { EntityCombobox, type EntityDraft } from "../components/entity-combobox"
 import { Field, SectionTitle } from "../components/form-field";
 import { createOrGetEntidad } from "../services/catalogos.service";
 import { DocumentAttachmentsSection } from "../components/document-attachments-section";
+import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo, deleteDocumentoAnexo, getDocumentoAnexos, updateDocumentoAnexo } from "../services/anexos.service";
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview, removeDocumentoFile, uploadDocumentoAnexoFile } from "../services/storage.service";
 import type { DocumentoAnexo, PendingDocumentoAnexo } from "../types";
@@ -91,6 +92,7 @@ export function EditDocumentPage() {
     reset,
     watch,
     setValue,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -457,7 +459,13 @@ export function EditDocumentPage() {
             <Field label="Archivador"><Select className="w-full" {...register("archivador_id")}><option value="">Sin archivador</option>{catalogos.archivadores.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
             <Field label="Tipo de movimiento"><Select className="w-full" {...register("tipo_movimiento_id")}><option value="">No especificado</option>{catalogos.tiposMovimiento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
             <Field label="Tipo de operación"><Select className="w-full" disabled={noAplica} {...register("tipo_operacion_id")}><option value="">No especificada</option>{catalogos.tiposOperacion.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
-            <Field label="Monto" error={errors.monto?.message}><Input type="number" min="0" step="0.01" disabled={noAplica} {...register("monto", { valueAsNumber: true })} /></Field>
+            <Field label="Monto" error={errors.monto?.message}>
+              <Controller
+                name="monto"
+                control={control}
+                render={({ field }) => <MontoInput value={field.value} onChange={field.onChange} disabled={noAplica} />}
+              />
+            </Field>
             <Field label="Descripción" className="md:col-span-2"><textarea className="min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950" {...register("descripcion")} /></Field>
             <Field label="Ruta histórica" className="md:col-span-2"><textarea className="min-h-24 w-full rounded-xl border border-slate-200 bg-white p-3 font-mono text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950" {...register("ruta_historica")} /></Field>
           </div>
