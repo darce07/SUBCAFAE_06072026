@@ -11,13 +11,6 @@ export function useEntitySearch(tipoEntidadId: string, search: string) {
   const requestId = useRef(0);
 
   const refresh = useCallback(async (searchOverride?: string) => {
-    if (!tipoEntidadId) {
-      setEntities([]);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
     const currentRequest = ++requestId.current;
     setLoading(true);
     setError(null);

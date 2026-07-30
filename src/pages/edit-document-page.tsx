@@ -161,12 +161,10 @@ export function EditDocumentPage() {
   const canEditAnexos = can("anexos", "editar") || can("documentos", "editar");
 
   const refreshEntitySection = async () => {
-    if (!selectedEntityType) {
-      toast.error("Selecciona primero el tipo de entidad.");
-      return [];
-    }
     const results = await entitySearch.refresh(entityDraft.numeroDocumento || entityDraft.nombre) ?? [];
-    const existing = findMatchingEntity(results, selectedEntityType, entityDraft.nombre, entityDraft.tipoDocumento, entityDraft.numeroDocumento);
+    const existing = selectedEntityType
+      ? findMatchingEntity(results, selectedEntityType, entityDraft.nombre, entityDraft.tipoDocumento, entityDraft.numeroDocumento)
+      : null;
     if (existing) {
       setValue("entidad_id", existing.id, { shouldDirty: true });
       setEntityDraft({
@@ -426,26 +424,15 @@ export function EditDocumentPage() {
             <Field label="Categoría *" error={errors.categoria_id?.message}><Select className="w-full" {...register("categoria_id")}>{catalogos.categorias.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
             <Field label="Estado *" error={errors.estado_id?.message}><Select className="w-full" {...register("estado_id")}>{catalogos.estadosDocumento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
             <Field label="Título *" error={errors.titulo?.message} className="md:col-span-2"><Input {...register("titulo")} /></Field>
-            <Field label="Tipo de entidad">
-              <Select
-                className="w-full"
-                {...register("tipo_entidad_id")}
-                onChange={(event) => {
-                  setValue("tipo_entidad_id", event.target.value, { shouldDirty: true });
-                  setValue("entidad_id", "", { shouldDirty: true });
-                  setEntityDraft({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
-                }}
-              >
-                <option value="">No especificado</option>
-                {catalogos.tiposEntidad.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-              </Select>
-            </Field>
-            <Field label="Entidad" className="md:col-span-2">
+            <input type="hidden" {...register("tipo_entidad_id")} />
+            <Field label="Entidad" className="md:col-span-2" hint="Buscá por nombre o RUC — el tipo se completa solo al elegirla.">
               <input type="hidden" {...register("entidad_id")} />
               <EntityCombobox
                 entities={entitySearch.entities}
                 entityTypeId={selectedEntityType ?? ""}
                 entityTypeName={selectedEntityTypeName}
+                tiposEntidad={catalogos.tiposEntidad}
+                onEntityTypeChange={(id) => setValue("tipo_entidad_id", id, { shouldDirty: true })}
                 value={selectedEntityId ?? ""}
                 draft={entityDraft}
                 onChange={(entityId) => setValue("entidad_id", entityId, { shouldDirty: true })}

@@ -24,7 +24,7 @@ export async function searchEntidades(tipoEntidadId: string, search = "", limit 
   if (!supabase) {
     const term = normalizedSearch.toLocaleLowerCase("es");
     return mockCatalogos.entidades
-      .filter((entity) => entity.activo && entity.tipo_entidad_id === tipoEntidadId)
+      .filter((entity) => entity.activo && (!tipoEntidadId || entity.tipo_entidad_id === tipoEntidadId))
       .filter((entity) => !term || [entity.nombre, entity.tipo_documento ?? "", entity.numero_documento ?? ""]
         .some((value) => value.toLocaleLowerCase("es").includes(term)))
       .slice(0, safeLimit);
@@ -34,9 +34,12 @@ export async function searchEntidades(tipoEntidadId: string, search = "", limit 
     .from("entidades")
     .select("id,nombre,descripcion,activo,tipo_entidad_id,tipo_documento,numero_documento,created_at,updated_at")
     .eq("activo", true)
-    .eq("tipo_entidad_id", tipoEntidadId)
     .order("nombre", { ascending: true })
     .limit(safeLimit);
+
+  // Sin tipo preseleccionado se busca en todas las entidades (el usuario
+  // no debería tener que adivinar el tipo solo para poder buscar).
+  if (tipoEntidadId) query = query.eq("tipo_entidad_id", tipoEntidadId);
 
   if (normalizedSearch) {
     query = query.or(`nombre.ilike.%${normalizedSearch}%,numero_documento.ilike.%${normalizedSearch}%`);
