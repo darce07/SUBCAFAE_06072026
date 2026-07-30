@@ -148,7 +148,7 @@ export function AuditPage() {
             <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">
               {records.map((record) => <AuditMobileCard key={record.id} record={record} />)}
             </div>
-            <div className="table-scroll responsive-table">
+            <div className="table-scroll responsive-table" tabIndex={0}>
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900"><tr>{["Fecha", "Módulo", "Estado", "Responsable", "Resumen"].map((header) => <th key={header} className="whitespace-nowrap px-4 py-3">{header}</th>)}</tr></thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">{records.map((record) => <tr key={record.id}><td className="whitespace-nowrap px-4 py-3">{formatAuditDate(record.created_at)}</td><td className="px-4 py-3 font-semibold">{moduleLabels[record.tabla] ?? "Módulo del sistema"}</td><td className="px-4 py-3"><AuditActionBadge record={record} /></td><td className="px-4 py-3"><Responsible record={record} /></td><td className="max-w-96 px-4 py-3 text-xs text-slate-500">{summarizeChange(record)}</td></tr>)}</tbody>

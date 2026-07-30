@@ -202,7 +202,7 @@ export function ControlInternoPage() {
                 {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-10 w-full" />)}
               </div>
             ) : (
-              <div className="table-scroll responsive-table">
+              <div className="table-scroll responsive-table" tabIndex={0}>
                 <table className="w-full text-left text-sm">
                   <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900">
                     <tr>{["Usuario", "Subidos", "Editados", "Eliminados", "Total"].map((header) => <th key={header} className="whitespace-nowrap px-4 py-3">{header}</th>)}</tr>

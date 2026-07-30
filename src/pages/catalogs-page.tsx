@@ -245,7 +245,7 @@ export function CatalogsPage() {
               </div>
             )}
           </div>
-          <div className="table-scroll responsive-table">
+          <div className="table-scroll responsive-table" tabIndex={0}>
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900"><tr><th className="px-5 py-3">Nombre</th><th className="px-5 py-3">Descripción</th><th className="px-5 py-3">Estado</th><th className="px-5 py-3 text-right">Acciones</th></tr></thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">

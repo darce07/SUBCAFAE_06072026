@@ -373,7 +373,7 @@ export function DocumentsPage() {
                 />
               ))}
             </div>
-            <div className="table-scroll responsive-table">
+            <div className="table-scroll responsive-table" tabIndex={0}>
             <table className="text-left text-sm" style={{ width: table.getTotalSize(), tableLayout: "fixed" }}>
               <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-900/70">
                 {table.getHeaderGroups().map((headerGroup) => (

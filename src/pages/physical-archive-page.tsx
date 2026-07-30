@@ -192,7 +192,7 @@ function ArchiveDocumentList({ documentos }: { documentos: Documento[] }) {
       <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">
         {documentos.map((documento) => <ArchiveDocumentCard key={documento.id} documento={documento} onClick={() => navigate(`/documentos/${documento.id}`)} />)}
       </div>
-      <div className="table-scroll responsive-table">
+      <div className="table-scroll responsive-table" tabIndex={0}>
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900">
             <tr>

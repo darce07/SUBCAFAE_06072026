@@ -128,7 +128,7 @@ function AccountingRows({ movements }: { movements: Documento[] }) {
           );
         })}
       </div>
-      <div className="table-scroll responsive-table">
+      <div className="table-scroll responsive-table" tabIndex={0}>
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900">
             <tr>{["Asiento", "Fecha", "Detalle", "Documento", "Debe", "Haber", "Saldo", "Estado"].map((item) => <th key={item} className="whitespace-nowrap px-4 py-3">{item}</th>)}</tr>

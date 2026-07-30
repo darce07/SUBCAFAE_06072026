@@ -118,7 +118,7 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
             <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">
               {rows.map((row) => <FinanceMobileCard key={row.id} row={row} isIncome={isIncome} />)}
             </div>
-            <div className="table-scroll responsive-table">
+            <div className="table-scroll responsive-table" tabIndex={0}>
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900">
                   <tr>{["Código", "Fecha", "Categoría", "Entidad", "Título", "Operación", "Estado", "Monto"].map((header) => <th key={header} className="whitespace-nowrap px-4 py-3">{header}</th>)}</tr>

@@ -33,6 +33,7 @@ import { cn } from "../../lib/utils";
 import { useAppStore } from "../../store/use-app-store";
 import { useAuth } from "../../features/auth/auth-context";
 import { usePermissions } from "../../hooks/use-permissions";
+import { useTableScrollKeyboard } from "../../hooks/use-table-scroll-keyboard";
 import { Alert, Button, Input } from "../ui";
 import { ErrorBoundary } from "../error-boundary";
 
@@ -108,6 +109,7 @@ const pageNames: Record<string, string> = {
 };
 
 export function DashboardLayout() {
+  useTableScrollKeyboard();
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, session, userContext, contextError } = useAuth();
