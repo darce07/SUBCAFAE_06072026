@@ -3,11 +3,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   type ColumnSizingState,
   type ColumnDef,
+  type VisibilityState,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronDown, ChevronsLeft, ChevronsRight, Clipboard, Download, Eye, ExternalLink, FilePlus2, Pencil, Search, SlidersHorizontal, Trash2, TriangleAlert } from "lucide-react";
+import { ChevronDown, ChevronsLeft, ChevronsRight, Clipboard, Columns3, Download, Eye, ExternalLink, FilePlus2, Pencil, Search, SlidersHorizontal, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import type { DocumentCreator, Documento } from "../types";
 import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
@@ -96,6 +97,18 @@ export function DocumentsPage() {
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
   const [autoFitColumns, setAutoFitColumns] = useState<Record<string, boolean>>({});
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
+    try {
+      const stored = localStorage.getItem("sigdaf:documentos-columnas");
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+  useEffect(() => {
+    localStorage.setItem("sigdaf:documentos-columnas", JSON.stringify(columnVisibility));
+  }, [columnVisibility]);
   const debouncedSearch = useDebounce(globalFilter, 400);
   const { documentos, count, loading, error, usingFallback, refresh } = useDocumentos({
     search: debouncedSearch,
@@ -209,6 +222,7 @@ export function DocumentsPage() {
         size: 150,
         minSize: 130,
         maxSize: 240,
+        enableHiding: false,
         cell: ({ row }) => <button onClick={() => navigate(`/documentos/${row.original.id}`)} className="font-bold text-teal-700 hover:underline dark:text-teal-400">{row.original.codigo_documento}</button>,
       },
       { id: "categoria", accessorFn: (row) => row.categoria?.nombre ?? "", header: "Categoría", size: 170, minSize: 140, maxSize: 300, cell: ({ row }) => <Badge tone="blue">{row.original.categoria?.nombre ?? "Sin categoría"}</Badge> },
@@ -277,6 +291,7 @@ export function DocumentsPage() {
         size: 300,
         minSize: 250,
         maxSize: 360,
+        enableHiding: false,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
             <Button variant="ghost" size="icon" title="Ver detalle" onClick={() => navigate(`/documentos/${row.original.id}`)}><Eye className="size-4" /></Button>
@@ -302,7 +317,8 @@ export function DocumentsPage() {
     columnResizeMode: "onChange",
     enableColumnResizing: true,
     onColumnSizingChange: setColumnSizing,
-    state: { columnSizing },
+    onColumnVisibilityChange: setColumnVisibility,
+    state: { columnSizing, columnVisibility },
   });
 
   return (
@@ -340,6 +356,24 @@ export function DocumentsPage() {
             <Select value={year} onChange={(event) => { setYear(event.target.value); setPage(1); }}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
             <Select value={orderMode} onChange={(event) => { setOrderMode(event.target.value as "registro_desc" | "registro_asc"); setPage(1); }}><option value="registro_desc">Registro: recientes primero</option><option value="registro_asc">Registro: antiguos primero</option></Select>
             <Select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value={5}>5 filas</option><option value={10}>10 filas</option><option value={20}>20 filas</option><option value={50}>50 filas</option></Select>
+            <div className="relative">
+              <Button type="button" variant="secondary" onClick={() => setColumnsMenuOpen((value) => !value)}>
+                <Columns3 className="size-4" />Columnas
+              </Button>
+              {columnsMenuOpen && (
+                <>
+                  <button type="button" aria-label="Cerrar" className="fixed inset-0 z-40" onClick={() => setColumnsMenuOpen(false)} />
+                  <div className="absolute right-0 z-50 mt-2 max-h-80 w-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+                    {table.getAllLeafColumns().filter((column) => column.getCanHide()).map((column) => (
+                      <label key={column.id} className="flex cursor-pointer items-center gap-2 rounded-xl p-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">
+                        <input type="checkbox" checked={column.getIsVisible()} onChange={column.getToggleVisibilityHandler()} />
+                        <span className="truncate">{typeof column.columnDef.header === "string" ? column.columnDef.header : column.id}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
         {loading ? (
