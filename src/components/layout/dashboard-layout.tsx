@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Archive,
@@ -34,8 +34,10 @@ import { useAppStore } from "../../store/use-app-store";
 import { useAuth } from "../../features/auth/auth-context";
 import { usePermissions } from "../../hooks/use-permissions";
 import { useTableScrollKeyboard } from "../../hooks/use-table-scroll-keyboard";
+import { useIdleLogout } from "../../hooks/use-idle-logout";
 import { Alert, Button, Input } from "../ui";
 import { ErrorBoundary } from "../error-boundary";
+import { toast } from "sonner";
 
 interface NavItem {
   label: string;
@@ -117,6 +119,24 @@ export function DashboardLayout() {
   const { theme, toggleTheme, sidebarCollapsed, toggleSidebar, fontSize, accent, density } = useAppStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useIdleLogout(
+    () => { void signOut(); toast.error("Sesión cerrada por inactividad (30 min)."); },
+    () => toast.warning("Tu sesión se cerrará en 1 minuto por inactividad.", { duration: 10000 }),
+  );
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName)) return;
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
   const displayName = userContext?.nombreCompleto || session?.user.email?.split("@")[0] || "Usuario";
   const roleName = userContext?.roles[0] || "Sin rol asignado";
   const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "U";
@@ -210,7 +230,7 @@ export function DashboardLayout() {
           <button aria-label="Abrir menú" className="mr-3 rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
           <form onSubmit={submitSearch} className="relative hidden w-full max-w-md md:block">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} className="border-transparent bg-slate-100 pl-9 dark:bg-slate-900" placeholder="Buscar documento, descripción o ruta..." />
+            <Input ref={searchInputRef} value={search} onChange={(event) => setSearch(event.target.value)} className="border-transparent bg-slate-100 pl-9 dark:bg-slate-900" placeholder="Buscar documento, descripción o ruta... (/)" />
           </form>
           <Link to="/documentos" className="ml-1 grid size-10 place-items-center rounded-xl text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden" aria-label="Buscar documentos">
             <Search className="size-5" />
