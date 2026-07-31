@@ -56,6 +56,25 @@ function clampColumnSize(columnId: string, size: number) {
   return Math.min(Math.max(size, limits.min), limits.max);
 }
 
+const DEFAULT_COLUMN_VISIBILITY: VisibilityState = {
+  categoria: false,
+  fecha_documento: false,
+  created_at: true,
+  usuario: true,
+  tipo_entidad: false,
+  entidad: false,
+  tipo_categoria: false,
+  estado: false,
+  monto: false,
+  movimiento: false,
+  operacion: false,
+  titulo: true,
+  descripcion: false,
+  archivador: false,
+  ruta_historica: false,
+  archivo_path: true,
+};
+
 function getColumnText(documento: Documento, columnId: string) {
   const values: Record<string, string> = {
     codigo_documento: documento.codigo_documento,
@@ -101,9 +120,9 @@ export function DocumentsPage() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
     try {
       const stored = localStorage.getItem("sigdaf:documentos-columnas");
-      return stored ? JSON.parse(stored) : {};
+      return stored ? { ...DEFAULT_COLUMN_VISIBILITY, ...JSON.parse(stored) } : DEFAULT_COLUMN_VISIBILITY;
     } catch {
-      return {};
+      return DEFAULT_COLUMN_VISIBILITY;
     }
   });
   useEffect(() => {
@@ -349,7 +368,7 @@ export function DocumentsPage() {
               <SlidersHorizontal className="size-4" />Filtros
             </Button>
           </div>
-          <div className={`grid-cols-1 gap-2 sm:grid sm:grid-cols-2 xl:flex ${mobileFiltersOpen ? "grid" : "hidden sm:grid"}`}>
+          <div className={`grid-cols-1 gap-2 sm:grid sm:grid-cols-2 xl:flex xl:flex-wrap ${mobileFiltersOpen ? "grid" : "hidden sm:grid"}`}>
             <Select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(1); }}><option value="">Todas las categorías</option>{catalogos.categorias.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={statusId} onChange={(event) => { setStatusId(event.target.value); setPage(1); }}><option value="">Todos los estados</option>{catalogos.estadosDocumento.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={creadorId} onChange={(event) => { setCreadorId(event.target.value); setPage(1); }}><option value="">Todos los usuarios</option>{creators.map((item) => <option key={item.id} value={item.id}>{item.nombre_completo || item.email || "Sin nombre"}</option>)}</Select>

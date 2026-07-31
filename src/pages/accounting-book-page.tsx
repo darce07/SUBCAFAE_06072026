@@ -3,16 +3,28 @@ import { useMemo, useState } from "react";
 import { useLibroContable } from "../hooks/use-libro-contable";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
+import { useColumnVisibility } from "../hooks/use-column-visibility";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
 import { exportToExcel, exportToPdf } from "../lib/export";
 import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
+import { ColumnsMenu } from "../components/columns-menu";
 import type { Documento } from "../types";
+
+const ACCOUNTING_COLUMNS = [
+  { id: "fecha", label: "Fecha" },
+  { id: "documento", label: "Documento" },
+  { id: "debe", label: "Debe" },
+  { id: "haber", label: "Haber" },
+  { id: "saldo", label: "Saldo" },
+  { id: "estado", label: "Estado" },
+];
 
 export function AccountingBookPage() {
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [year, setYear] = useState("");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const columnVisibility = useColumnVisibility("sigdaf:libro-contable-columnas");
   const debouncedSearch = useDebounce(search);
   const catalogos = useCatalogos({ includeEntidades: false });
   const years = useMemo(() => {
@@ -70,9 +82,10 @@ export function AccountingBookPage() {
               <SlidersHorizontal className="size-4" />Filtros
             </Button>
           </div>
-          <div className={`grid-cols-1 gap-2 sm:grid sm:grid-cols-2 md:flex ${mobileFiltersOpen ? "grid" : "hidden sm:grid"}`}>
+          <div className={`grid-cols-1 gap-2 sm:grid sm:grid-cols-2 md:flex md:flex-wrap ${mobileFiltersOpen ? "grid" : "hidden sm:grid"}`}>
             <Select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">Todas las categorías</option>{catalogos.categorias.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={year} onChange={(event) => setYear(event.target.value)}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
+            <ColumnsMenu columns={ACCOUNTING_COLUMNS} isVisible={columnVisibility.isVisible} toggle={columnVisibility.toggle} />
           </div>
         </div>
         {loading ? (
@@ -90,7 +103,7 @@ export function AccountingBookPage() {
           </div>
         ) : (
           <>
-            <AccountingRows movements={movements} />
+            <AccountingRows movements={movements} isVisible={columnVisibility.isVisible} />
             <p className="border-t border-slate-200 p-3 text-xs text-slate-500 dark:border-slate-800 sm:p-4">{movements.length} asientos · saldo acumulado desde el primer registro</p>
           </>
         )}
@@ -99,7 +112,7 @@ export function AccountingBookPage() {
   );
 }
 
-function AccountingRows({ movements }: { movements: Documento[] }) {
+function AccountingRows({ movements, isVisible }: { movements: Documento[]; isVisible: (columnId: string) => boolean }) {
   let mobileBalance = 0;
   let tableBalance = 0;
   return (
@@ -131,7 +144,16 @@ function AccountingRows({ movements }: { movements: Documento[] }) {
       <div className="table-scroll responsive-table" tabIndex={0}>
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900">
-            <tr>{["Asiento", "Fecha", "Detalle", "Documento", "Debe", "Haber", "Saldo", "Estado"].map((item) => <th key={item} className="whitespace-nowrap px-4 py-3">{item}</th>)}</tr>
+            <tr>
+              <th className="whitespace-nowrap px-4 py-3">Asiento</th>
+              {isVisible("fecha") && <th className="whitespace-nowrap px-4 py-3">Fecha</th>}
+              <th className="whitespace-nowrap px-4 py-3">Detalle</th>
+              {isVisible("documento") && <th className="whitespace-nowrap px-4 py-3">Documento</th>}
+              {isVisible("debe") && <th className="whitespace-nowrap px-4 py-3">Debe</th>}
+              {isVisible("haber") && <th className="whitespace-nowrap px-4 py-3">Haber</th>}
+              {isVisible("saldo") && <th className="whitespace-nowrap px-4 py-3">Saldo</th>}
+              {isVisible("estado") && <th className="whitespace-nowrap px-4 py-3">Estado</th>}
+            </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {movements.map((movement, index) => {
@@ -140,13 +162,13 @@ function AccountingRows({ movements }: { movements: Documento[] }) {
               return (
                 <tr key={movement.id}>
                   <td className="px-4 py-3 font-bold">ASI-{String(index + 1).padStart(4, "0")}</td>
-                  <td className="whitespace-nowrap px-4 py-3">{formatDate(movement.fecha_documento)}</td>
+                  {isVisible("fecha") && <td className="whitespace-nowrap px-4 py-3">{formatDate(movement.fecha_documento)}</td>}
                   <td className="min-w-60 px-4 py-3"><strong>{movement.titulo}</strong><p className="text-xs text-slate-500">{movement.categoria?.nombre} · {movement.entidad?.nombre ?? "Sin entidad"}</p></td>
-                  <td className="px-4 py-3">{movement.codigo_documento}</td>
-                  <td className="px-4 py-3 text-emerald-600">{income ? formatCurrency(movement.monto) : "—"}</td>
-                  <td className="px-4 py-3 text-rose-600">{!income ? formatCurrency(movement.monto) : "—"}</td>
-                  <td className="px-4 py-3 font-bold">{formatCurrency(tableBalance)}</td>
-                  <td className="px-4 py-3"><Badge tone={getStatusTone(movement.estado?.nombre)}>{movement.estado?.nombre ?? "Pendiente"}</Badge></td>
+                  {isVisible("documento") && <td className="px-4 py-3">{movement.codigo_documento}</td>}
+                  {isVisible("debe") && <td className="px-4 py-3 text-emerald-600">{income ? formatCurrency(movement.monto) : "—"}</td>}
+                  {isVisible("haber") && <td className="px-4 py-3 text-rose-600">{!income ? formatCurrency(movement.monto) : "—"}</td>}
+                  {isVisible("saldo") && <td className="px-4 py-3 font-bold">{formatCurrency(tableBalance)}</td>}
+                  {isVisible("estado") && <td className="px-4 py-3"><Badge tone={getStatusTone(movement.estado?.nombre)}>{movement.estado?.nombre ?? "Pendiente"}</Badge></td>}
                 </tr>
               );
             })}
