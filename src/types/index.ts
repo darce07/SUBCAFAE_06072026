@@ -58,6 +58,8 @@ export interface Documento {
   anio: number;
   mes: number;
   dia: number;
+  periodo_mes: number | null;
+  periodo_anio: number | null;
   tipo_entidad_id: string | null;
   entidad_id: string | null;
   tipo_categoria_id: string | null;
@@ -222,6 +224,8 @@ export interface CreateDocumentoCommand {
   tipoMovimientoId: string | null;
   tipoOperacionId: string | null;
   archivoHash?: string | null;
+  periodoMes?: number | null;
+  periodoAnio?: number | null;
 }
 
 export interface DocumentoHashMatch {
@@ -249,6 +253,8 @@ export interface UpdateDocumentoCommand {
   monto: number;
   tipoMovimientoId: string | null;
   tipoOperacionId: string | null;
+  periodoMes?: number | null;
+  periodoAnio?: number | null;
 }
 
 export interface DashboardResumen {

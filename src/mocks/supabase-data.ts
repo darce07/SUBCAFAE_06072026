@@ -37,7 +37,7 @@ const movement = (name: string) => mockCatalogos.tiposMovimiento.find((value) =>
 export const mockDocumentos: Documento[] = [
   {
     id: "1", codigo_documento: "DOC-2026-001", categoria_id: category("Resolución").id,
-    fecha_documento: "2026-01-15", anio: 2026, mes: 1, dia: 15, tipo_entidad_id: "te-3",
+    fecha_documento: "2026-01-15", anio: 2026, mes: 1, dia: 15, periodo_mes: null, periodo_anio: null, tipo_entidad_id: "te-3",
     entidad_id: "ent-1", tipo_categoria_id: "tc-1", estado_id: state("Verificado").id,
     titulo: "Resolución de aprobación presupuestal", descripcion: "Aprobación del presupuesto institucional.",
     ruta_historica: "2026/Administración/Resoluciones", archivador_id: "arc-1",
@@ -46,7 +46,7 @@ export const mockDocumentos: Documento[] = [
   },
   {
     id: "2", codigo_documento: "DOC-2026-002", categoria_id: category("Facturas").id,
-    fecha_documento: "2026-02-08", anio: 2026, mes: 2, dia: 8, tipo_entidad_id: "te-2",
+    fecha_documento: "2026-02-08", anio: 2026, mes: 2, dia: 8, periodo_mes: null, periodo_anio: null, tipo_entidad_id: "te-2",
     entidad_id: "ent-3", tipo_categoria_id: "tc-2", estado_id: state("Pendiente").id,
     titulo: "Factura por servicios generales", descripcion: "Servicio de mantenimiento de instalaciones.",
     ruta_historica: "2026/Tesorería/Facturas", archivador_id: "arc-2",
@@ -55,7 +55,7 @@ export const mockDocumentos: Documento[] = [
   },
   {
     id: "3", codigo_documento: "DOC-2026-003", categoria_id: category("Caja Chica").id,
-    fecha_documento: "2026-03-19", anio: 2026, mes: 3, dia: 19, tipo_entidad_id: "te-1",
+    fecha_documento: "2026-03-19", anio: 2026, mes: 3, dia: 19, periodo_mes: null, periodo_anio: null, tipo_entidad_id: "te-1",
     entidad_id: "ent-4", tipo_categoria_id: "tc-2", estado_id: state("Observado").id,
     titulo: "Rendición de caja chica", descripcion: "Rendición mensual de gastos menores.",
     ruta_historica: null, archivador_id: null, archivo_url: null, archivo_path: null,

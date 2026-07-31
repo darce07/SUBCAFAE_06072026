@@ -25,6 +25,8 @@ import { findMatchingEntity, validateEntityDocument } from "../lib/entity-docume
 
 const minDocumentYear = 2000;
 const maxDocumentYear = new Date().getFullYear() + 1;
+const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const periodYears = Array.from({ length: maxDocumentYear - minDocumentYear + 1 }, (_, index) => maxDocumentYear - index);
 
 function isValidDocumentDate(value: string) {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -54,7 +56,17 @@ const schema = z.object({
   monto: z.number().min(0, "El monto no puede ser negativo."),
   tipo_movimiento_id: z.string().optional(),
   tipo_operacion_id: z.string().optional(),
+  periodo_mes: z.string().optional(),
+  periodo_anio: z.string().optional(),
   archivo: z.instanceof(File).optional(),
+}).superRefine((values, context) => {
+  if (Boolean(values.periodo_mes) !== Boolean(values.periodo_anio)) {
+    context.addIssue({
+      code: "custom",
+      path: ["periodo_anio"],
+      message: "Completa mes y año del periodo, o deja ambos vacíos.",
+    });
+  }
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -121,6 +133,8 @@ export function EditDocumentPage() {
           monto: Number(documento.monto ?? 0),
           tipo_movimiento_id: documento.tipo_movimiento_id ?? "",
           tipo_operacion_id: documento.tipo_operacion_id ?? "",
+          periodo_mes: documento.periodo_mes ? String(documento.periodo_mes) : "",
+          periodo_anio: documento.periodo_anio ? String(documento.periodo_anio) : "",
         });
         setCurrentPath(documento.archivo_path);
         setCurrentExtension(documento.extension);
@@ -261,6 +275,8 @@ export function EditDocumentPage() {
         monto: values.monto,
         tipoMovimientoId: values.tipo_movimiento_id || null,
         tipoOperacionId: noAplica ? null : values.tipo_operacion_id || null,
+        periodoMes: values.periodo_mes ? Number(values.periodo_mes) : null,
+        periodoAnio: values.periodo_anio ? Number(values.periodo_anio) : null,
       });
       if (pendingAnexos.length) {
         if (pendingAnexos.some((anexo) => !anexo.tipoAnexoId || anexo.titulo.trim().length < 2)) {
@@ -422,6 +438,22 @@ export function EditDocumentPage() {
               {!canChangeDate && <span className="mt-1 block text-xs text-amber-700">Tu rol actual no permite modificar la fecha.</span>}
             </Field>
             <Field label="Categoría *" error={errors.categoria_id?.message}><Select className="w-full" {...register("categoria_id")}>{catalogos.categorias.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
+            <Field
+              label="Mes del periodo (opcional)"
+              error={errors.periodo_mes?.message}
+              hint="El mes al que se refiere el documento (ej. el mes facturado), si aplica — no la fecha del documento."
+            >
+              <Select className="w-full" {...register("periodo_mes")}>
+                <option value="">Sin periodo</option>
+                {monthNames.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
+              </Select>
+            </Field>
+            <Field label="Año del periodo (opcional)" error={errors.periodo_anio?.message}>
+              <Select className="w-full" {...register("periodo_anio")}>
+                <option value="">Sin periodo</option>
+                {periodYears.map((year) => <option key={year} value={year}>{year}</option>)}
+              </Select>
+            </Field>
             <Field label="Estado *" error={errors.estado_id?.message}><Select className="w-full" {...register("estado_id")}>{catalogos.estadosDocumento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
             <Field label="Título *" error={errors.titulo?.message} className="md:col-span-2"><Input {...register("titulo")} /></Field>
             <input type="hidden" {...register("tipo_entidad_id")} />
