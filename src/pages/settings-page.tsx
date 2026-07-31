@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { BadgeCheck, KeyRound, Mail, Palette, ShieldCheck, TableProperties, Type, UserRound } from "lucide-react";
+import { BadgeCheck, BookOpen, Download, KeyRound, Mail, Palette, ShieldCheck, TableProperties, Type, UserRound } from "lucide-react";
 import { useAppStore } from "../store/use-app-store";
 import { useAuth } from "../features/auth/auth-context";
 import { updateMyPassword } from "../services/auth.service";
@@ -118,6 +118,17 @@ export function SettingsPage() {
               <option value="comfortable">Cómoda</option>
             </Select>
           </SettingRow>
+        </SettingCard>
+        <SettingCard icon={<BookOpen />} title="Ayuda" description="Guía de uso del sistema">
+          <div className="flex items-center justify-between gap-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Manual de usuario</p>
+              <p className="text-xs text-slate-500">Explica cómo usar cada módulo de SIGDAF, paso a paso.</p>
+            </div>
+            <a href="/manual-usuario-sigdaf.pdf" download="Manual de usuario SIGDAF.pdf" className="shrink-0">
+              <Button type="button" variant="secondary"><Download className="size-4" />Descargar PDF</Button>
+            </a>
+          </div>
         </SettingCard>
       </div>
     </div>
