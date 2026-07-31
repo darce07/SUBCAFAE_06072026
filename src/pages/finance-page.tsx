@@ -7,9 +7,20 @@ import { useMontoTotal } from "../hooks/use-monto-total";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
+import { useColumnVisibility } from "../hooks/use-column-visibility";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
 import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
+import { ColumnsMenu } from "../components/columns-menu";
 import type { Documento } from "../types";
+
+const FINANCE_COLUMNS = [
+  { id: "fecha", label: "Fecha" },
+  { id: "categoria", label: "Categoría" },
+  { id: "entidad", label: "Entidad" },
+  { id: "titulo", label: "Título" },
+  { id: "operacion", label: "Operación" },
+  { id: "estado", label: "Estado" },
+];
 
 const PAGE_SIZE = 20;
 
@@ -21,6 +32,7 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
   const [year, setYear] = useState("");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const columnVisibility = useColumnVisibility(`sigdaf:finanzas-${kind.toLowerCase()}-columnas`);
   const debouncedSearch = useDebounce(search);
   const { canCreate } = usePermissions();
   const catalogos = useCatalogos({ includeEntidades: false });
@@ -94,10 +106,11 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
               <SlidersHorizontal className="size-4" />Filtros
             </Button>
           </div>
-          <div className={`grid-cols-1 gap-2 sm:grid sm:grid-cols-3 xl:flex ${mobileFiltersOpen ? "grid" : "hidden sm:grid"}`}>
+          <div className={`grid-cols-1 gap-2 sm:grid sm:grid-cols-3 xl:flex xl:flex-wrap ${mobileFiltersOpen ? "grid" : "hidden sm:grid"}`}>
             <Select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">Todas las categorías</option>{catalogos.categorias.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={statusId} onChange={(event) => setStatusId(event.target.value)}><option value="">Todos los estados</option>{catalogos.estadosDocumento.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={year} onChange={(event) => setYear(event.target.value)}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
+            <ColumnsMenu columns={FINANCE_COLUMNS} isVisible={columnVisibility.isVisible} toggle={columnVisibility.toggle} />
           </div>
         </div>
 
@@ -121,18 +134,27 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
             <div className="table-scroll responsive-table" tabIndex={0}>
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900">
-                  <tr>{["Código", "Fecha", "Categoría", "Entidad", "Título", "Operación", "Estado", "Monto"].map((header) => <th key={header} className="whitespace-nowrap px-4 py-3">{header}</th>)}</tr>
+                  <tr>
+                    <th className="whitespace-nowrap px-4 py-3">Código</th>
+                    {columnVisibility.isVisible("fecha") && <th className="whitespace-nowrap px-4 py-3">Fecha</th>}
+                    {columnVisibility.isVisible("categoria") && <th className="whitespace-nowrap px-4 py-3">Categoría</th>}
+                    {columnVisibility.isVisible("entidad") && <th className="whitespace-nowrap px-4 py-3">Entidad</th>}
+                    {columnVisibility.isVisible("titulo") && <th className="whitespace-nowrap px-4 py-3">Título</th>}
+                    {columnVisibility.isVisible("operacion") && <th className="whitespace-nowrap px-4 py-3">Operación</th>}
+                    {columnVisibility.isVisible("estado") && <th className="whitespace-nowrap px-4 py-3">Estado</th>}
+                    <th className="whitespace-nowrap px-4 py-3">Monto</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {rows.map((row) => (
                     <tr key={row.id}>
                       <td className="px-4 py-3 font-bold text-teal-700">{row.codigo_documento}</td>
-                      <td className="whitespace-nowrap px-4 py-3">{formatDate(row.fecha_documento)}</td>
-                      <td className="px-4 py-3">{row.categoria?.nombre ?? "—"}</td>
-                      <td className="px-4 py-3">{row.entidad?.nombre ?? "—"}</td>
-                      <td className="max-w-64 truncate px-4 py-3">{row.titulo}</td>
-                      <td className="px-4 py-3">{row.tipo_operacion?.nombre ?? "—"}</td>
-                      <td className="px-4 py-3"><Badge tone={getStatusTone(row.estado?.nombre)}>{row.estado?.nombre ?? "Sin estado"}</Badge></td>
+                      {columnVisibility.isVisible("fecha") && <td className="whitespace-nowrap px-4 py-3">{formatDate(row.fecha_documento)}</td>}
+                      {columnVisibility.isVisible("categoria") && <td className="px-4 py-3">{row.categoria?.nombre ?? "—"}</td>}
+                      {columnVisibility.isVisible("entidad") && <td className="px-4 py-3">{row.entidad?.nombre ?? "—"}</td>}
+                      {columnVisibility.isVisible("titulo") && <td className="max-w-64 truncate px-4 py-3">{row.titulo}</td>}
+                      {columnVisibility.isVisible("operacion") && <td className="px-4 py-3">{row.tipo_operacion?.nombre ?? "—"}</td>}
+                      {columnVisibility.isVisible("estado") && <td className="px-4 py-3"><Badge tone={getStatusTone(row.estado?.nombre)}>{row.estado?.nombre ?? "Sin estado"}</Badge></td>}
                       <td className={`whitespace-nowrap px-4 py-3 text-right font-black ${isIncome ? "text-emerald-600" : "text-rose-600"}`}>{isIncome ? "+" : "-"} {formatCurrency(row.monto)}</td>
                     </tr>
                   ))}

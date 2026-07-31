@@ -4,10 +4,21 @@ import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
+import { useColumnVisibility } from "../hooks/use-column-visibility";
 import { useArchivoFisicoDocumentos, useArchivoFisicoResumen } from "../hooks/use-archivo-fisico-documentos";
 import { Alert, Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
+import { ColumnsMenu } from "../components/columns-menu";
 import { formatDate, getStatusTone } from "../lib/utils";
 import type { Documento } from "../types";
+
+const ARCHIVE_COLUMNS = [
+  { id: "fecha", label: "Fecha" },
+  { id: "categoria", label: "Categoría" },
+  { id: "entidad", label: "Entidad" },
+  { id: "titulo", label: "Título" },
+  { id: "estado", label: "Estado" },
+  { id: "ruta", label: "Ruta física" },
+];
 
 export function PhysicalArchivePage() {
   const [search, setSearch] = useState("");
@@ -16,6 +27,7 @@ export function PhysicalArchivePage() {
   const [pageSize, setPageSize] = useState(10);
   const debouncedSearch = useDebounce(search);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const columnVisibility = useColumnVisibility("sigdaf:archivo-fisico-columnas");
   const catalogos = useCatalogos();
   const activeArchives = useMemo(() => catalogos.archivadores.filter((item) => item.activo), [catalogos.archivadores]);
   const selectedArchive = activeArchives.find((item) => item.id === selectedArchiveId) ?? null;
@@ -143,7 +155,7 @@ export function PhysicalArchivePage() {
                   : "Elige un archivador para consultar su contenido físico."}
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Select
                 value={String(pageSize)}
                 onChange={(event) => {
@@ -154,6 +166,7 @@ export function PhysicalArchivePage() {
               >
                 {[10, 20, 50].map((size) => <option key={size} value={size}>{size}</option>)}
               </Select>
+              <ColumnsMenu columns={ARCHIVE_COLUMNS} isVisible={columnVisibility.isVisible} toggle={columnVisibility.toggle} />
             </div>
           </div>
         </div>
@@ -166,7 +179,7 @@ export function PhysicalArchivePage() {
           </div>
         ) : (
           <>
-            <ArchiveDocumentList documentos={documentos} />
+            <ArchiveDocumentList documentos={documentos} isVisible={columnVisibility.isVisible} />
             {!documentos.length && (
               <div className="p-5 text-sm text-slate-500">No hay documentos para los filtros seleccionados.</div>
             )}
@@ -185,7 +198,7 @@ export function PhysicalArchivePage() {
   );
 }
 
-function ArchiveDocumentList({ documentos }: { documentos: Documento[] }) {
+function ArchiveDocumentList({ documentos, isVisible }: { documentos: Documento[]; isVisible: (columnId: string) => boolean }) {
   const navigate = useNavigate();
   return (
     <>
@@ -197,12 +210,12 @@ function ArchiveDocumentList({ documentos }: { documentos: Documento[] }) {
           <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900">
             <tr>
               <th className="px-5 py-3">Código</th>
-              <th className="px-5 py-3">Fecha</th>
-              <th className="px-5 py-3">Categoría</th>
-              <th className="px-5 py-3">Entidad</th>
-              <th className="px-5 py-3">Título</th>
-              <th className="px-5 py-3">Estado</th>
-              <th className="px-5 py-3">Ruta física</th>
+              {isVisible("fecha") && <th className="px-5 py-3">Fecha</th>}
+              {isVisible("categoria") && <th className="px-5 py-3">Categoría</th>}
+              {isVisible("entidad") && <th className="px-5 py-3">Entidad</th>}
+              {isVisible("titulo") && <th className="px-5 py-3">Título</th>}
+              {isVisible("estado") && <th className="px-5 py-3">Estado</th>}
+              {isVisible("ruta") && <th className="px-5 py-3">Ruta física</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -213,12 +226,12 @@ function ArchiveDocumentList({ documentos }: { documentos: Documento[] }) {
                 className="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40"
               >
                 <td className="px-5 py-4 font-semibold text-teal-700">{documento.codigo_documento}</td>
-                <td className="px-5 py-4">{formatDate(documento.fecha_documento)}</td>
-                <td className="px-5 py-4">{documento.categoria?.nombre ?? "Sin categoría"}</td>
-                <td className="px-5 py-4">{documento.entidad?.nombre ?? "—"}</td>
-                <td className="max-w-md px-5 py-4">{documento.titulo}</td>
-                <td className="px-5 py-4"><Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Pendiente"}</Badge></td>
-                <td className="px-5 py-4 text-slate-500">{documento.ruta_historica || "Sin ruta registrada"}</td>
+                {isVisible("fecha") && <td className="px-5 py-4">{formatDate(documento.fecha_documento)}</td>}
+                {isVisible("categoria") && <td className="px-5 py-4">{documento.categoria?.nombre ?? "Sin categoría"}</td>}
+                {isVisible("entidad") && <td className="px-5 py-4">{documento.entidad?.nombre ?? "—"}</td>}
+                {isVisible("titulo") && <td className="max-w-md px-5 py-4">{documento.titulo}</td>}
+                {isVisible("estado") && <td className="px-5 py-4"><Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Pendiente"}</Badge></td>}
+                {isVisible("ruta") && <td className="px-5 py-4 text-slate-500">{documento.ruta_historica || "Sin ruta registrada"}</td>}
               </tr>
             ))}
           </tbody>
