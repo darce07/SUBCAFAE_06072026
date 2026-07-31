@@ -26,6 +26,8 @@ import { findMatchingEntity, validateEntityDocument } from "../lib/entity-docume
 
 const minDocumentYear = 2000;
 const maxDocumentYear = new Date().getFullYear() + 1;
+const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const periodYears = Array.from({ length: maxDocumentYear - minDocumentYear + 1 }, (_, index) => maxDocumentYear - index);
 
 function isValidDocumentDate(value: string) {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -56,6 +58,8 @@ const schema = z.object({
   descripcion: z.string().optional(),
   ruta_historica: z.string().optional(),
   archivador_id: z.string().optional(),
+  periodo_mes: z.string().optional(),
+  periodo_anio: z.string().optional(),
   archivo: z.instanceof(File, { message: "Selecciona un archivo digital." }),
 }).superRefine((values, context) => {
   const movement = values.tipo_movimiento_nombre?.toLocaleLowerCase("es") ?? "";
@@ -64,6 +68,13 @@ const schema = z.object({
       code: "custom",
       path: ["tipo_operacion_id"],
       message: "Selecciona el tipo de operación para ingresos o egresos.",
+    });
+  }
+  if (Boolean(values.periodo_mes) !== Boolean(values.periodo_anio)) {
+    context.addIssue({
+      code: "custom",
+      path: ["periodo_anio"],
+      message: "Completa mes y año del periodo, o deja ambos vacíos.",
     });
   }
 });
@@ -392,6 +403,8 @@ export function NewDocumentPage() {
         tipoMovimientoId: values.tipo_movimiento_id || null,
         tipoOperacionId: isNoAplica ? null : values.tipo_operacion_id || null,
         archivoHash: archivoHash,
+        periodoMes: values.periodo_mes ? Number(values.periodo_mes) : null,
+        periodoAnio: values.periodo_anio ? Number(values.periodo_anio) : null,
       });
       if (pendingAnexos.length) {
         if (pendingAnexos.some((anexo) => !anexo.tipoAnexoId || anexo.titulo.trim().length < 2)) {
@@ -476,6 +489,22 @@ export function NewDocumentPage() {
               <Field label="Año"><Input readOnly value={dateParts?.anio ?? ""} placeholder="Automático" /></Field>
               <Field label="Mes"><Input readOnly value={dateParts?.mes ?? ""} placeholder="Automático" /></Field>
               <Field label="Día"><Input readOnly value={dateParts?.dia ?? ""} placeholder="Automático" /></Field>
+              <Field
+                label="Mes del periodo (opcional)"
+                error={errors.periodo_mes?.message}
+                hint="El mes al que se refiere el documento (ej. el mes facturado), si aplica — no la fecha del documento."
+              >
+                <Select className="w-full" {...register("periodo_mes")}>
+                  <option value="">Sin periodo</option>
+                  {monthNames.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
+                </Select>
+              </Field>
+              <Field label="Año del periodo (opcional)" error={errors.periodo_anio?.message}>
+                <Select className="w-full" {...register("periodo_anio")}>
+                  <option value="">Sin periodo</option>
+                  {periodYears.map((year) => <option key={year} value={year}>{year}</option>)}
+                </Select>
+              </Field>
               <Field label="Estado *" error={errors.estado_id?.message}>
                 <Select className="w-full" {...register("estado_id")}><option value="">Seleccionar estado</option>{catalogos.estadosDocumento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
               </Field>

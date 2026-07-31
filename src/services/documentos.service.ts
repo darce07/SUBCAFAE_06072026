@@ -52,6 +52,8 @@ export async function createDocumento(command: CreateDocumentoCommand): Promise<
       tipo_operacion_id: command.tipoOperacionId,
       idempotency_key: command.idempotencyKey,
       archivo_hash: command.archivoHash ?? null,
+      periodo_mes: command.periodoMes ?? null,
+      periodo_anio: command.periodoAnio ?? null,
       activo: true,
     };
   }
@@ -59,6 +61,8 @@ export async function createDocumento(command: CreateDocumentoCommand): Promise<
   const { data, error } = await supabase.rpc("registrar_documento_seguro", {
     p_idempotency_key: command.idempotencyKey,
     p_archivo_hash: command.archivoHash ?? null,
+    p_periodo_mes: command.periodoMes ?? null,
+    p_periodo_anio: command.periodoAnio ?? null,
     p_categoria_id: command.categoriaId,
     p_fecha_documento: command.fechaDocumento,
     p_tipo_entidad_id: command.tipoEntidadId,
@@ -443,11 +447,15 @@ export async function editDocumento(id: string, command: UpdateDocumentoCommand)
       monto: command.monto,
       tipo_movimiento_id: command.tipoMovimientoId,
       tipo_operacion_id: command.tipoOperacionId,
+      periodo_mes: command.periodoMes ?? null,
+      periodo_anio: command.periodoAnio ?? null,
     };
   }
 
   const { data, error } = await supabase.rpc("editar_documento_seguro_v2", {
     p_documento_id: id,
+    p_periodo_mes: command.periodoMes ?? null,
+    p_periodo_anio: command.periodoAnio ?? null,
     p_fecha_documento: command.fechaDocumento,
     p_categoria_id: command.categoriaId,
     p_tipo_entidad_id: command.tipoEntidadId,

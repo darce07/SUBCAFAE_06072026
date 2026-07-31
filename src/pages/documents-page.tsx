@@ -40,8 +40,16 @@ const columnAutoSizeLimits: Record<string, { min: number; max: number }> = {
   archivador: { min: 150, max: 300 },
   ruta_historica: { min: 220, max: 760 },
   archivo_path: { min: 120, max: 170 },
+  periodo: { min: 130, max: 200 },
   actions: { min: 260, max: 340 },
 };
+
+const shortMonthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+function formatPeriodo(documento: Documento) {
+  if (!documento.periodo_mes || !documento.periodo_anio) return null;
+  return `${shortMonthNames[documento.periodo_mes - 1]}. ${documento.periodo_anio}`;
+}
 
 function actionLabel(tipo: NonNullable<Documento["ultima_accion"]>["tipo"]) {
   return { creado: "Subido", editado: "Editado", eliminado: "Eliminado", recuperado: "Recuperado" }[tipo];
@@ -73,6 +81,7 @@ const DEFAULT_COLUMN_VISIBILITY: VisibilityState = {
   archivador: false,
   ruta_historica: false,
   archivo_path: true,
+  periodo: false,
 };
 
 function getColumnText(documento: Documento, columnId: string) {
@@ -94,6 +103,7 @@ function getColumnText(documento: Documento, columnId: string) {
     archivador: documento.archivador?.nombre ?? "Sin archivador",
     ruta_historica: documento.ruta_historica ?? "Sin ruta",
     archivo_path: documento.archivo_path ? "Disponible" : "Sin archivo",
+    periodo: formatPeriodo(documento) ?? "Sin periodo",
     actions: "Ver Editar Copiar Archivo Descargar Observar Eliminar",
   };
   return values[columnId] ?? "";
@@ -246,6 +256,7 @@ export function DocumentsPage() {
       },
       { id: "categoria", accessorFn: (row) => row.categoria?.nombre ?? "", header: "Categoría", size: 170, minSize: 140, maxSize: 300, cell: ({ row }) => <Badge tone="blue">{row.original.categoria?.nombre ?? "Sin categoría"}</Badge> },
       { accessorKey: "fecha_documento", header: "Fecha", size: 130, minSize: 115, maxSize: 170, cell: ({ getValue }) => <span className="whitespace-nowrap">{formatDate(String(getValue()))}</span> },
+      { id: "periodo", accessorFn: (row) => formatPeriodo(row) ?? "", header: "Periodo", size: 140, minSize: 130, maxSize: 200, cell: ({ row }) => formatPeriodo(row.original) ? <span className="whitespace-nowrap capitalize">{formatPeriodo(row.original)}</span> : <span className="text-slate-400">—</span> },
       { accessorKey: "created_at", header: "Registrado", size: 170, minSize: 145, maxSize: 220, cell: ({ getValue }) => getValue() ? <span className="whitespace-nowrap">{formatDateTime(String(getValue()))}</span> : "—" },
       {
         id: "usuario",
