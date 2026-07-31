@@ -486,9 +486,6 @@ export function NewDocumentPage() {
               <Field label="Fecha *" error={errors.fecha_documento?.message}>
                 <div className="relative"><CalendarDays className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input type="date" min={`${minDocumentYear}-01-01`} max={`${maxDocumentYear}-12-31`} className="pl-9" {...register("fecha_documento")} /></div>
               </Field>
-              <Field label="Año"><Input readOnly value={dateParts?.anio ?? ""} placeholder="Automático" /></Field>
-              <Field label="Mes"><Input readOnly value={dateParts?.mes ?? ""} placeholder="Automático" /></Field>
-              <Field label="Día"><Input readOnly value={dateParts?.dia ?? ""} placeholder="Automático" /></Field>
               <Field
                 label="Mes del periodo (opcional)"
                 error={errors.periodo_mes?.message}
