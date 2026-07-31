@@ -72,17 +72,15 @@ export function AccountingBookPage() {
       />
       {error && <Alert>{error}</Alert>}
       <Card>
-        <div className="flex flex-col gap-3 border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4 md:flex-row md:items-center">
-          <div className="flex gap-2">
-            <div className="relative w-full flex-1 md:max-w-lg">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Buscar documento o descripción..." />
-            </div>
-            <Button type="button" variant="secondary" size="md" className="shrink-0 sm:hidden" onClick={() => setMobileFiltersOpen((value) => !value)} aria-expanded={mobileFiltersOpen}>
-              <SlidersHorizontal className="size-4" />Filtros
-            </Button>
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-3 dark:border-slate-800 sm:p-4">
+          <div className="relative w-full min-w-0 sm:w-72">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Buscar documento o descripción..." />
           </div>
-          <div className={`grid-cols-1 gap-2 sm:grid sm:grid-cols-2 md:flex md:flex-wrap ${mobileFiltersOpen ? "grid" : "hidden sm:grid"}`}>
+          <Button type="button" variant="secondary" size="md" className="shrink-0 sm:hidden" onClick={() => setMobileFiltersOpen((value) => !value)} aria-expanded={mobileFiltersOpen}>
+            <SlidersHorizontal className="size-4" />Filtros
+          </Button>
+          <div className={`sm:contents ${mobileFiltersOpen ? "flex flex-wrap gap-2" : "hidden"}`}>
             <Select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">Todas las categorías</option>{catalogos.categorias.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={year} onChange={(event) => setYear(event.target.value)}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
             <ColumnsMenu columns={ACCOUNTING_COLUMNS} isVisible={columnVisibility.isVisible} toggle={columnVisibility.toggle} />
