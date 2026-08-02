@@ -16,8 +16,12 @@ const EMAIL_DOMAINS = ["gmail.com", "hotmail.com", "outlook.com", "yahoo.com", "
 
 function getEmailSuggestions(value: string): string[] {
   const atIndex = value.indexOf("@");
-  if (atIndex === -1 || !value.slice(0, atIndex)) return [];
+  if (atIndex === -1) {
+    if (!value) return [];
+    return EMAIL_DOMAINS.map((domain) => `${value}@${domain}`);
+  }
   const user = value.slice(0, atIndex);
+  if (!user) return [];
   const domainPart = value.slice(atIndex + 1);
   if (domainPart.includes(".")) return [];
   return EMAIL_DOMAINS.filter((domain) => domain.startsWith(domainPart)).map((domain) => `${user}@${domain}`);
@@ -126,7 +130,7 @@ export function LoginPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-8 space-y-5">
             <label className="block">
               <span className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Correo institucional</span>
               <div className="relative">
