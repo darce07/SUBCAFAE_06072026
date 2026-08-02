@@ -116,8 +116,9 @@ export function DashboardLayout() {
   useTableScrollKeyboard();
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, session, userContext, contextError } = useAuth();
+  const { signOut, session, userContext, contextError, refreshUserContext } = useAuth();
   const { closeAllChats } = useChat();
+  const [retryingContext, setRetryingContext] = useState(false);
   const { can, isAdmin } = usePermissions();
   const { theme, toggleTheme, sidebarCollapsed, toggleSidebar, fontSize, accent, density } = useAppStore();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -257,7 +258,26 @@ export function DashboardLayout() {
         </header>
 
         <main className="min-w-0 overflow-x-hidden px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
-          {contextError && <Alert className="mb-4">{contextError}</Alert>}
+          {contextError && (
+            <Alert className="mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span>{contextError}</span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  loading={retryingContext}
+                  onClick={async () => {
+                    setRetryingContext(true);
+                    await refreshUserContext();
+                    setRetryingContext(false);
+                  }}
+                >
+                  Reintentar
+                </Button>
+              </div>
+            </Alert>
+          )}
           {!contextError && userContext && userContext.roles.length === 0 && <Alert variant="warning" className="mb-4">Tu cuenta está autenticada, pero todavía no tiene un rol asignado. Un administrador debe habilitar tu acceso.</Alert>}
           <div className="mb-5 flex min-w-0 flex-wrap items-center gap-1 text-xs text-slate-500">
             <Link to="/dashboard" className="hover:text-teal-700">SIGDAF</Link>

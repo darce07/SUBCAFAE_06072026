@@ -9,7 +9,7 @@ import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
 import { useColumnVisibility } from "../hooks/use-column-visibility";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
-import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import { ColumnsMenu } from "../components/columns-menu";
 import type { Documento } from "../types";
 
@@ -159,6 +159,11 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
                 </tbody>
               </table>
             </div>
+            {!rows.length && (
+              <div className="p-3 sm:p-4">
+                <EmptyState icon={isIncome ? <ArrowUpCircle /> : <ArrowDownCircle />} title={`No se encontraron ${kind.toLowerCase()}s`} description="Ajusta la búsqueda o los filtros para ver otros documentos." />
+              </div>
+            )}
             <div className="flex items-center justify-between gap-3 border-t border-slate-200 p-3 text-sm dark:border-slate-800 sm:p-4">
               <p className="text-xs text-slate-500">Página {page} de {totalPages} · {count} documentos</p>
               <div className="flex gap-2">

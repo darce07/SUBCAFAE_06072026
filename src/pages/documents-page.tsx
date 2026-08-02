@@ -11,7 +11,7 @@ import {
 import { ChevronDown, ChevronsLeft, ChevronsRight, Clipboard, Columns3, Download, Eye, ExternalLink, FilePlus2, Pencil, Search, SlidersHorizontal, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import type { DocumentCreator, Documento } from "../types";
-import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { formatCurrency, formatDate, formatDateTime, formatRelativeTime, getStatusTone } from "../lib/utils";
@@ -488,6 +488,11 @@ export function DocumentsPage() {
               </tbody>
             </table>
             </div>
+            {!documentos.length && (
+              <div className="p-3 sm:p-4">
+                <EmptyState icon={<FilePlus2 />} title="No se encontraron documentos" description="Ajusta la búsqueda o los filtros, o registra un nuevo documento." />
+              </div>
+            )}
           </>
         )}
         <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-200 p-4 text-sm text-slate-500 dark:border-slate-800 sm:flex-row">

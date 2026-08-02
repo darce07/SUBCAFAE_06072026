@@ -5,7 +5,7 @@ import * as Progress from "@radix-ui/react-progress";
 import { useNavigate } from "react-router-dom";
 import { useDocumentos } from "../hooks/use-documentos";
 import { getStatusTone } from "../lib/utils";
-import { Alert, Badge, Button, Card, PageHeader, Select, Skeleton } from "../components/ui";
+import { Alert, Badge, Button, Card, EmptyState, PageHeader, Select, Skeleton } from "../components/ui";
 import type { Documento } from "../types";
 
 export function VerificationPage() {
@@ -74,6 +74,11 @@ export function VerificationPage() {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">{documentos.map((documento) => <tr key={documento.id}><td className="px-4 py-3"><strong>{documento.codigo_documento}</strong><p className="max-w-64 truncate text-xs text-slate-500">{documento.titulo}</p></td><td className="px-4 py-3"><Badge tone={documento.archivo_path ? "green" : "red"}>{documento.archivo_path ? "Sí" : "No"}</Badge></td><td className="px-4 py-3">{documento.archivador?.nombre ?? "Sin asignar"}</td><td className="px-4 py-3"><Badge tone={documento.ruta_historica ? "green" : "amber"}>{documento.ruta_historica ? "Registrada" : "Pendiente"}</Badge></td><td className="px-4 py-3"><Badge tone={documento.estado?.nombre === "Verificado" ? "green" : documento.estado?.nombre === "Observado" ? "orange" : "amber"}>{documento.estado?.nombre ?? "Sin estado"}</Badge></td><td className="px-4 py-3"><Button variant="secondary" size="sm" onClick={() => navigate(`/documentos/${documento.id}`)}>Revisar</Button></td></tr>)}</tbody>
               </table>
             </div>
+            {!documentos.length && (
+              <div className="p-3 sm:p-4">
+                <EmptyState icon={<ClipboardCheck />} title="No hay documentos por verificar" description="No se encontraron documentos para esta página o filtro." />
+              </div>
+            )}
           </>
         )}
         <div className="flex flex-col gap-3 border-t border-slate-200 p-4 text-sm text-slate-500 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">

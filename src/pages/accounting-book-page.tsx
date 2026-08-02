@@ -6,7 +6,7 @@ import { useDebounce } from "../hooks/use-debounce";
 import { useColumnVisibility } from "../hooks/use-column-visibility";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
 import { exportToExcel, exportToPdf } from "../lib/export";
-import { Alert, Badge, Button, Card, Input, PageHeader, Select, Skeleton } from "../components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import { ColumnsMenu } from "../components/columns-menu";
 import type { Documento } from "../types";
 
@@ -101,8 +101,16 @@ export function AccountingBookPage() {
           </div>
         ) : (
           <>
-            <AccountingRows movements={movements} isVisible={columnVisibility.isVisible} />
-            <p className="border-t border-slate-200 p-3 text-xs text-slate-500 dark:border-slate-800 sm:p-4">{movements.length} asientos · saldo acumulado desde el primer registro</p>
+            {movements.length ? (
+              <>
+                <AccountingRows movements={movements} isVisible={columnVisibility.isVisible} />
+                <p className="border-t border-slate-200 p-3 text-xs text-slate-500 dark:border-slate-800 sm:p-4">{movements.length} asientos · saldo acumulado desde el primer registro</p>
+              </>
+            ) : (
+              <div className="p-3 sm:p-4">
+                <EmptyState icon={<FileSpreadsheet />} title="No se encontraron movimientos" description="Ajusta la búsqueda, la categoría o el año para ver otros registros." />
+              </div>
+            )}
           </>
         )}
       </Card>

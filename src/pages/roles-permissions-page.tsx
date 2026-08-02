@@ -79,7 +79,7 @@ export function RolesPermissionsPage() {
   };
 
   if (!isAdmin && !canEdit("usuarios")) {
-    return <Card className="p-8 text-center"><h1 className="text-xl font-bold">Acceso restringido</h1><p className="mt-2 text-sm text-slate-500">No tienes permiso para administrar roles.</p></Card>;
+    return <Card className="p-8 text-center"><h1 className="font-serif text-xl font-bold">Acceso restringido</h1><p className="mt-2 text-sm text-slate-500">No tienes permiso para administrar roles.</p></Card>;
   }
 
   return <div className="space-y-6">
