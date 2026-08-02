@@ -14,6 +14,13 @@ export async function abrirChatSoporte(usuarioId: string): Promise<ChatConversac
   return data as ChatConversacion;
 }
 
+export async function abrirChatPropio(): Promise<ChatConversacion> {
+  if (!supabase) throw new Error("Chat no disponible en modo demo.");
+  const { data, error } = await supabase.rpc("abrir_chat_propio");
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo abrir el chat."));
+  return data as ChatConversacion;
+}
+
 export async function cerrarChatSoporte(conversacionId: string): Promise<SoporteTicket | null> {
   if (!supabase) return null;
   const { data, error } = await supabase.rpc("cerrar_chat_soporte", { p_conversacion_id: conversacionId });

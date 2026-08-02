@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "../auth/auth-context";
 import {
+  abrirChatPropio,
   abrirChatSoporte,
   cerrarChatSoporte,
   getMisConversaciones,
@@ -13,6 +14,7 @@ interface ChatContextValue {
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   openChat: (usuarioId: string) => Promise<void>;
+  openMyChat: () => Promise<void>;
   closeChat: (conversacionId: string) => Promise<void>;
   closeAllChats: () => Promise<void>;
 }
@@ -66,6 +68,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setActiveId(conversacion.id);
   }, []);
 
+  const openMyChat = useCallback(async () => {
+    const conversacion = await abrirChatPropio();
+    setConversaciones((current) => (current.some((item) => item.id === conversacion.id) ? current : [conversacion, ...current]));
+    setActiveId(conversacion.id);
+  }, []);
+
   const closeChat = useCallback(async (conversacionId: string) => {
     await cerrarChatSoporte(conversacionId);
     setConversaciones((current) => current.filter((item) => item.id !== conversacionId));
@@ -80,8 +88,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<ChatContextValue>(
-    () => ({ conversaciones, activeId, setActiveId, openChat, closeChat, closeAllChats }),
-    [conversaciones, activeId, openChat, closeChat, closeAllChats],
+    () => ({ conversaciones, activeId, setActiveId, openChat, openMyChat, closeChat, closeAllChats }),
+    [conversaciones, activeId, openChat, openMyChat, closeChat, closeAllChats],
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

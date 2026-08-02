@@ -18,6 +18,12 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
   return (data ?? []) as AdminUser[];
 }
 
+export async function bloquearUsuario(userId: string, bloqueado: boolean) {
+  if (!supabase) return;
+  const { error } = await supabase.rpc("bloquear_usuario", { p_user_id: userId, p_bloqueado: bloqueado });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo actualizar el acceso del usuario."));
+}
+
 export async function getRoles(): Promise<CatalogItem[]> {
   if (!supabase) return [];
   const { data, error } = await supabase.from("roles").select("id,nombre,descripcion,activo").eq("activo", true).order("nombre");
