@@ -48,7 +48,7 @@ export function UsersPermissionsPage() {
   };
 
   if (!isAdmin && !canEdit("usuarios")) {
-    return <Card className="p-8 text-center"><h1 className="text-xl font-bold">Acceso restringido</h1><p className="mt-2 text-sm text-slate-500">No tienes permiso para administrar usuarios.</p></Card>;
+    return <Card className="p-8 text-center"><h1 className="font-serif text-xl font-bold">Acceso restringido</h1><p className="mt-2 text-sm text-slate-500">No tienes permiso para administrar usuarios.</p></Card>;
   }
 
   const filtered = users.filter((user) => `${user.nombre_completo ?? ""} ${user.email ?? ""}`.toLocaleLowerCase("es").includes(debouncedSearch.toLocaleLowerCase("es")));
