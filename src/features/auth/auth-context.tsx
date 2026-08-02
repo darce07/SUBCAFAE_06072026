@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { toast } from "sonner";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { getCurrentSession, signInWithPassword, signOutSession } from "../../services/auth.service";
 import { getMyUserContext } from "../../services/auth.service";
@@ -79,6 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(demoSessionKey);
         setDemoAuthenticated(false);
         setUserContext(null);
+        // El aviso "se cerrará en 1 minuto" (10s de duración) queda flotando
+        // sobre la pantalla de login si el logout real ocurre mientras
+        // todavía está visible - el Toaster es global, no se desmonta solo
+        // porque cambiemos de ruta.
+        toast.dismiss();
       },
     }),
     [contextError, demoAuthenticated, loading, session, userContext],
