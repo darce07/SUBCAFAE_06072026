@@ -414,7 +414,7 @@ export function EditDocumentPage() {
   };
 
   if (!canEdit("documentos")) {
-    return <Card className="p-8 text-center"><h1 className="text-xl font-bold">Acceso restringido</h1><p className="mt-2 text-sm text-slate-500">No tienes permiso para editar documentos.</p></Card>;
+    return <Card className="p-8 text-center"><h1 className="font-serif text-xl font-bold">Acceso restringido</h1><p className="mt-2 text-sm text-slate-500">No tienes permiso para editar documentos.</p></Card>;
   }
   if (loading) return <DocumentFormSkeleton />;
   if (loadError) return <Card className="p-6 text-sm text-rose-700">{loadError}</Card>;
