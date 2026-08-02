@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { getCurrentSession, signInWithPassword, signOutSession } from "../../services/auth.service";
@@ -27,13 +27,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [userContext, setUserContext] = useState<UserContext | null>(null);
   const [contextError, setContextError] = useState<string | null>(null);
+  // getCurrentSession() y onAuthStateChange disparan refreshUserContext casi
+  // en simultaneo al montar (Supabase emite un evento inicial ademas de
+  // nuestra propia consulta de sesion). Sin este guard, la respuesta que
+  // llega ultimo "gana" aunque corresponda a una llamada mas vieja - un
+  // fallo transitorio tardio podia pisar un exito mas reciente y dejar el
+  // banner de "sesion invalida" pegado con el usuario ya autenticado.
+  const requestIdRef = useRef(0);
 
   const refreshUserContext = async () => {
     if (!supabase) return;
+    const requestId = ++requestIdRef.current;
     try {
+      const context = await getMyUserContext();
+      if (requestId !== requestIdRef.current) return;
+      setUserContext(context);
       setContextError(null);
-      setUserContext(await getMyUserContext());
     } catch (error) {
+      if (requestId !== requestIdRef.current) return;
       setUserContext(null);
       setContextError(error instanceof Error ? error.message : "No se pudo cargar el perfil.");
     }
