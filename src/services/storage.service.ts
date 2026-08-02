@@ -103,7 +103,7 @@ export function validateDocumentoFile(file: File) {
   }
 }
 
-async function validateFileSignature(file: File) {
+export async function validateFileSignature(file: File) {
   const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
   const header = Array.from(bytes).map((byte) => byte.toString(16).padStart(2, "0")).join("");
   const textHeader = new TextDecoder().decode(bytes);

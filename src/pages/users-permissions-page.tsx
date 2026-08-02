@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { Search, UserRoundCog } from "lucide-react";
+import { MessageCircle, Search, UserRoundCog } from "lucide-react";
 import { toast } from "sonner";
 import { assignUserRole, getAdminUsers, getRoles } from "../services/admin.service";
 import type { AdminUser, CatalogItem } from "../types";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
+import { useAuth } from "../features/auth/auth-context";
+import { useChat } from "../features/chat/chat-context";
 
 export function UsersPermissionsPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -16,6 +18,8 @@ export function UsersPermissionsPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search);
   const { canEdit, isAdmin } = usePermissions();
+  const { userContext } = useAuth();
+  const { openChat } = useChat();
 
   const load = async () => {
     setLoading(true);
@@ -74,7 +78,7 @@ export function UsersPermissionsPage() {
       ) : filtered.length === 0 ? <EmptyState icon={<UserRoundCog />} title="Sin usuarios" description={debouncedSearch ? "No se encontraron usuarios para la búsqueda actual." : "Aún no hay cuentas registradas."} /> : <div className="grid divide-y divide-slate-100 dark:divide-slate-800">{filtered.map((user) => {
         const name = user.nombre_completo || user.email?.split("@")[0] || "Usuario";
         const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
-        return <div key={user.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-teal-100 font-bold text-teal-800">{initials}</div><div className="min-w-0 flex-1"><p className="break-words font-semibold">{name}</p><p className="truncate text-xs text-slate-500">{user.email}</p></div><Select className="w-full sm:w-auto" value={user.role_id ?? ""} disabled={savingId === user.id} onChange={(event) => void assign(user.id, event.target.value)}><option value="">Sin rol asignado</option>{roles.map((role) => <option key={role.id} value={role.id}>{role.nombre}</option>)}</Select><Badge tone={user.role_id ? "green" : "amber"}>{user.role_nombre ?? "Sin acceso"}</Badge><Button className="w-full sm:w-auto" variant="secondary" size="sm" disabled><UserRoundCog className="size-4" />Acceso protegido</Button></div>;
+        return <div key={user.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-teal-100 font-bold text-teal-800">{initials}</div><div className="min-w-0 flex-1"><p className="break-words font-semibold">{name}</p><p className="truncate text-xs text-slate-500">{user.email}</p></div><Select className="w-full sm:w-auto" value={user.role_id ?? ""} disabled={savingId === user.id} onChange={(event) => void assign(user.id, event.target.value)}><option value="">Sin rol asignado</option>{roles.map((role) => <option key={role.id} value={role.id}>{role.nombre}</option>)}</Select><Badge tone={user.role_id ? "green" : "amber"}>{user.role_nombre ?? "Sin acceso"}</Badge>{isAdmin && user.id !== userContext?.id && <Button className="w-full sm:w-auto" variant="secondary" size="sm" onClick={() => void openChat(user.id).catch((chatError) => toast.error(chatError instanceof Error ? chatError.message : "No se pudo abrir el chat."))}><MessageCircle className="size-4" />Chat</Button>}<Button className="w-full sm:w-auto" variant="secondary" size="sm" disabled><UserRoundCog className="size-4" />Acceso protegido</Button></div>;
       })}</div>}
     </Card>
   </div>;
