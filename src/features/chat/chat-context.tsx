@@ -18,6 +18,14 @@ interface ChatContextValue {
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
+// Cerrar la pestaña/navegador sin usar "Salir" (o sin esperar el timeout de
+// inactividad) no dispara el cierre del chat - queda abierto en la base y
+// reaparecia al volver a iniciar sesion despues. sessionStorage se borra al
+// cerrar el navegador (pero sobrevive a un F5), asi que sirve para distinguir
+// "sigo en la misma sesion de navegador" de "esto es un login nuevo": si es
+// nuevo y ya hay una conversacion mia abierta, es huerfana de la vez pasada -
+// se cierra sola generando su ticket, en vez de reaparecer.
+const BROWSER_SESSION_FLAG = "sigdaf:chat-browser-session";
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, userContext } = useAuth();
@@ -36,7 +44,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setConversaciones([]);
       return;
     }
-    refresh();
+    const isFreshBrowserSession = !sessionStorage.getItem(BROWSER_SESSION_FLAG);
+    sessionStorage.setItem(BROWSER_SESSION_FLAG, "true");
+
+    void getMisConversaciones().then(async (rows) => {
+      if (isFreshBrowserSession && rows.length) {
+        await Promise.all(rows.map((row) => cerrarChatSoporte(row.id).catch(() => {})));
+        setConversaciones([]);
+        return;
+      }
+      setConversaciones(rows);
+    }).catch(() => {});
+
     const unsubscribe = subscribeToMisConversaciones(refresh);
     return unsubscribe;
   }, [isAuthenticated, userContext, refresh]);
