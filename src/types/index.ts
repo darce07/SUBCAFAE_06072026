@@ -300,6 +300,33 @@ export interface UserContext {
   permisos: string[];
 }
 
+export interface ChatConversacion {
+  id: string;
+  admin_id: string;
+  usuario_id: string;
+  created_at: string;
+  otro_nombre?: string | null;
+}
+
+export interface ChatMensaje {
+  id: string;
+  conversacion_id: string;
+  autor_id: string;
+  contenido: string | null;
+  archivo_path: string | null;
+  archivo_mime: string | null;
+  created_at: string;
+}
+
+export interface SoporteTicket {
+  id: string;
+  usuario_id: string;
+  admin_id: string;
+  transcripcion: Array<{ autor_id: string; contenido: string | null; archivo_path: string | null; archivo_mime: string | null; created_at: string }>;
+  estado: "abierto" | "resuelto";
+  created_at: string;
+}
+
 export interface AdminUser {
   id: string;
   email: string | null;

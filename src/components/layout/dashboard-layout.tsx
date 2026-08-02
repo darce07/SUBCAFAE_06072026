@@ -32,6 +32,8 @@ import {
 import { cn } from "../../lib/utils";
 import { useAppStore } from "../../store/use-app-store";
 import { useAuth } from "../../features/auth/auth-context";
+import { useChat } from "../../features/chat/chat-context";
+import { ChatDrawer } from "../../features/chat/chat-drawer";
 import { usePermissions } from "../../hooks/use-permissions";
 import { useTableScrollKeyboard } from "../../hooks/use-table-scroll-keyboard";
 import { useIdleLogout } from "../../hooks/use-idle-logout";
@@ -115,6 +117,7 @@ export function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, session, userContext, contextError } = useAuth();
+  const { closeAllChats } = useChat();
   const { can, isAdmin } = usePermissions();
   const { theme, toggleTheme, sidebarCollapsed, toggleSidebar, fontSize, accent, density } = useAppStore();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -122,7 +125,7 @@ export function DashboardLayout() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useIdleLogout(
-    () => { void signOut(); toast.error("Sesión cerrada por inactividad (30 min)."); },
+    () => { void closeAllChats().finally(() => void signOut()); toast.error("Sesión cerrada por inactividad (30 min)."); },
     () => toast.warning("Tu sesión se cerrará en 1 minuto por inactividad.", { duration: 10000 }),
   );
 
@@ -246,7 +249,7 @@ export function DashboardLayout() {
             <div className="ml-1 flex items-center gap-3 border-l border-slate-200 pl-3 dark:border-slate-800">
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-semibold">{displayName}</p>
-                <button onClick={() => void signOut()} className="text-xs text-slate-500 hover:text-teal-700">{roleName} · Salir</button>
+                <button onClick={() => void closeAllChats().finally(() => void signOut())} className="text-xs text-slate-500 hover:text-teal-700">{roleName} · Salir</button>
               </div>
               <div className="grid size-10 place-items-center rounded-xl bg-teal-100 text-sm font-bold text-teal-800 dark:bg-teal-950 dark:text-teal-300">{initials}</div>
             </div>
@@ -270,6 +273,7 @@ export function DashboardLayout() {
           </ErrorBoundary>
         </main>
       </div>
+      <ChatDrawer />
     </div>
   );
 }
