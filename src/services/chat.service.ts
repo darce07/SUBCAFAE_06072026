@@ -14,11 +14,46 @@ export async function abrirChatSoporte(usuarioId: string): Promise<ChatConversac
   return data as ChatConversacion;
 }
 
-export async function cerrarChatSoporte(conversacionId: string): Promise<SoporteTicket | null> {
+export interface CerrarChatOpciones {
+  crearTicket?: boolean;
+  titulo?: string;
+  categoria?: SoporteTicket["categoria"];
+  prioridad?: SoporteTicket["prioridad"];
+}
+
+export async function cerrarChatSoporte(conversacionId: string, opciones: CerrarChatOpciones = {}): Promise<SoporteTicket | null> {
   if (!supabase) return null;
-  const { data, error } = await supabase.rpc("cerrar_chat_soporte", { p_conversacion_id: conversacionId });
+  const { data, error } = await supabase.rpc("cerrar_chat_soporte", {
+    p_conversacion_id: conversacionId,
+    p_crear_ticket: opciones.crearTicket ?? true,
+    p_titulo: opciones.titulo ?? null,
+    p_categoria: opciones.categoria ?? "sin_categorizar",
+    p_prioridad: opciones.prioridad ?? "media",
+  });
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo cerrar el chat."));
   return (data as SoporteTicket) ?? null;
+}
+
+export async function getSoporteTickets(): Promise<SoporteTicket[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("soporte_tickets").select("*").order("created_at", { ascending: false });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron cargar los tickets."));
+  return (data ?? []) as SoporteTicket[];
+}
+
+export async function actualizarSoporteTicket(
+  ticketId: string,
+  cambios: { estado?: SoporteTicket["estado"]; categoria?: SoporteTicket["categoria"]; prioridad?: SoporteTicket["prioridad"] },
+): Promise<SoporteTicket> {
+  if (!supabase) throw new Error("No disponible en modo demo.");
+  const { data, error } = await supabase.rpc("actualizar_soporte_ticket", {
+    p_ticket_id: ticketId,
+    p_estado: cambios.estado ?? null,
+    p_categoria: cambios.categoria ?? null,
+    p_prioridad: cambios.prioridad ?? null,
+  });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo actualizar el ticket."));
+  return data as SoporteTicket;
 }
 
 export async function getMisConversaciones(): Promise<ChatConversacion[]> {

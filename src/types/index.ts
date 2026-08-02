@@ -322,8 +322,11 @@ export interface SoporteTicket {
   id: string;
   usuario_id: string;
   admin_id: string;
+  titulo: string | null;
+  categoria: "bug" | "consulta" | "solicitud" | "otro" | "sin_categorizar";
+  prioridad: "baja" | "media" | "alta";
   transcripcion: Array<{ autor_id: string; contenido: string | null; archivo_path: string | null; archivo_mime: string | null; created_at: string }>;
-  estado: "abierto" | "resuelto";
+  estado: "abierto" | "en_progreso" | "resuelto" | "cerrado";
   created_at: string;
 }
 

@@ -3,9 +3,9 @@ import { MessageCircle, Paperclip, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { useChat } from "./chat-context";
 import { useAuth } from "../auth/auth-context";
-import { Button } from "../../components/ui";
-import { enviarMensajeImagen, enviarMensajeTexto, getChatImageUrl, getMensajes, subscribeToMensajes } from "../../services/chat.service";
-import type { ChatMensaje } from "../../types";
+import { Button, Input, Select } from "../../components/ui";
+import { enviarMensajeImagen, enviarMensajeTexto, getChatImageUrl, getMensajes, subscribeToMensajes, type CerrarChatOpciones } from "../../services/chat.service";
+import type { ChatMensaje, SoporteTicket } from "../../types";
 import { formatDateTime } from "../../lib/utils";
 
 export function ChatDrawer() {
@@ -46,7 +46,11 @@ export function ChatDrawer() {
               </div>
               <button type="button" onClick={() => setOpen(false)} className="ml-2 shrink-0 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="size-4" /></button>
             </div>
-            <ChatThread conversacionId={active.id} onClose={() => void closeChat(active.id).then(() => toast.success("Chat cerrado. Se guardó un ticket de soporte."))} />
+            <ChatThread
+              conversacionId={active.id}
+              soyAdmin={active.admin_id === userContext?.id}
+              onClose={(opciones) => void closeChat(active.id, opciones).then(() => toast.success(opciones?.crearTicket === false ? "Chat cerrado sin ticket." : "Chat cerrado. Se guardó un ticket de soporte."))}
+            />
           </div>
         </div>
       )}
@@ -54,11 +58,12 @@ export function ChatDrawer() {
   );
 }
 
-function ChatThread({ conversacionId, onClose }: { conversacionId: string; onClose: () => void }) {
+function ChatThread({ conversacionId, soyAdmin, onClose }: { conversacionId: string; soyAdmin: boolean; onClose: (opciones?: CerrarChatOpciones) => void }) {
   const { userContext } = useAuth();
   const [mensajes, setMensajes] = useState<ChatMensaje[]>([]);
   const [texto, setTexto] = useState("");
   const [sending, setSending] = useState(false);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -126,9 +131,54 @@ function ChatThread({ conversacionId, onClose }: { conversacionId: string; onClo
           />
           <Button type="button" size="icon" loading={sending} disabled={!texto.trim()} onClick={() => void send()}><Send className="size-4" /></Button>
         </div>
-        <button type="button" onClick={onClose} className="mt-2 text-xs font-semibold text-rose-600 hover:underline">Cerrar chat y generar ticket</button>
+        {soyAdmin ? (
+          <button type="button" onClick={() => setShowCloseDialog(true)} className="mt-2 text-xs font-semibold text-rose-600 hover:underline">Cerrar chat...</button>
+        ) : (
+          <button type="button" onClick={() => onClose()} className="mt-2 text-xs font-semibold text-rose-600 hover:underline">Cerrar chat</button>
+        )}
       </div>
+      {showCloseDialog && <CloseChatDialog onCancel={() => setShowCloseDialog(false)} onConfirm={(opciones) => { setShowCloseDialog(false); onClose(opciones); }} />}
     </>
+  );
+}
+
+function CloseChatDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: (opciones: CerrarChatOpciones) => void }) {
+  const [crearTicket, setCrearTicket] = useState(true);
+  const [titulo, setTitulo] = useState("");
+  const [categoria, setCategoria] = useState<SoporteTicket["categoria"]>("sin_categorizar");
+  const [prioridad, setPrioridad] = useState<SoporteTicket["prioridad"]>("media");
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl dark:bg-slate-900">
+        <h3 className="font-bold">Cerrar chat</h3>
+        <label className="mt-3 flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={crearTicket} onChange={(event) => setCrearTicket(event.target.checked)} />
+          Crear ticket de seguimiento con esta conversación
+        </label>
+        {crearTicket && (
+          <div className="mt-3 space-y-2">
+            <Input placeholder="Título breve (opcional)" value={titulo} onChange={(event) => setTitulo(event.target.value)} />
+            <Select value={categoria} onChange={(event) => setCategoria(event.target.value as SoporteTicket["categoria"])}>
+              <option value="sin_categorizar">Sin categorizar</option>
+              <option value="bug">Bug / error</option>
+              <option value="consulta">Consulta</option>
+              <option value="solicitud">Solicitud</option>
+              <option value="otro">Otro</option>
+            </Select>
+            <Select value={prioridad} onChange={(event) => setPrioridad(event.target.value as SoporteTicket["prioridad"])}>
+              <option value="baja">Prioridad baja</option>
+              <option value="media">Prioridad media</option>
+              <option value="alta">Prioridad alta</option>
+            </Select>
+          </div>
+        )}
+        <div className="mt-4 flex justify-end gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={onCancel}>Cancelar</Button>
+          <Button type="button" size="sm" onClick={() => onConfirm({ crearTicket, titulo, categoria, prioridad })}>Cerrar chat</Button>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -14,6 +14,7 @@ import {
   Files,
   Gauge,
   LayoutDashboard,
+  LifeBuoy,
   Menu,
   Moon,
   PanelLeftClose,
@@ -79,6 +80,7 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { label: "Auditoría", href: "/auditoria", icon: ShieldCheck, permission: ["auditoria", "ver"] },
       { label: "Control interno", href: "/control-interno", icon: Gauge, adminOnly: true },
+      { label: "Tickets de soporte", href: "/soporte-tickets", icon: LifeBuoy, adminOnly: true },
       { label: "Catálogos", href: "/catalogos", icon: Boxes, permission: ["catalogos", "ver"] },
       { label: "Usuarios", href: "/usuarios", icon: UserRoundCog, permission: ["usuarios", "ver"] },
       { label: "Roles y permisos", href: "/roles-permisos", icon: ShieldCheck, permission: ["usuarios", "editar"] },
@@ -104,6 +106,7 @@ const pageNames: Record<string, string> = {
   "libro-contable": "Libro contable",
   auditoria: "Auditoría",
   "control-interno": "Control interno",
+  "soporte-tickets": "Tickets de soporte",
   catalogos: "Catálogos",
   configuracion: "Configuración",
   "usuarios-permisos": "Usuarios y permisos",

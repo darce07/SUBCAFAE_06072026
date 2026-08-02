@@ -5,6 +5,7 @@ import {
   cerrarChatSoporte,
   getMisConversaciones,
   subscribeToMisConversaciones,
+  type CerrarChatOpciones,
 } from "../../services/chat.service";
 import type { ChatConversacion } from "../../types";
 
@@ -13,7 +14,7 @@ interface ChatContextValue {
   activeId: string | null;
   setActiveId: (id: string | null) => void;
   openChat: (usuarioId: string) => Promise<void>;
-  closeChat: (conversacionId: string) => Promise<void>;
+  closeChat: (conversacionId: string, opciones?: CerrarChatOpciones) => Promise<void>;
   closeAllChats: () => Promise<void>;
 }
 
@@ -47,8 +48,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setActiveId(conversacion.id);
   }, []);
 
-  const closeChat = useCallback(async (conversacionId: string) => {
-    await cerrarChatSoporte(conversacionId);
+  const closeChat = useCallback(async (conversacionId: string, opciones?: CerrarChatOpciones) => {
+    await cerrarChatSoporte(conversacionId, opciones);
     setConversaciones((current) => current.filter((item) => item.id !== conversacionId));
     setActiveId((current) => (current === conversacionId ? null : current));
   }, []);
