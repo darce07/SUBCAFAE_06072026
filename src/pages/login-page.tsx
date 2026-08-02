@@ -12,6 +12,17 @@ import { Alert, Button, Input } from "../components/ui";
 
 const today = new Date().toLocaleDateString("es-PE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
+const EMAIL_DOMAINS = ["gmail.com", "hotmail.com", "outlook.com", "yahoo.com", "icloud.com"];
+
+function getEmailSuggestions(value: string): string[] {
+  const atIndex = value.indexOf("@");
+  if (atIndex === -1 || !value.slice(0, atIndex)) return [];
+  const user = value.slice(0, atIndex);
+  const domainPart = value.slice(atIndex + 1);
+  if (domainPart.includes(".")) return [];
+  return EMAIL_DOMAINS.filter((domain) => domain.startsWith(domainPart)).map((domain) => `${user}@${domain}`);
+}
+
 const loginSchema = z.object({
   email: z.email("Ingresa un correo válido."),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
@@ -22,17 +33,23 @@ type LoginValues = z.infer<typeof loginSchema>;
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [capsLockOn, setCapsLockOn] = useState(false);
+  const [showEmailSuggestions, setShowEmailSuggestions] = useState(false);
   const { signIn, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: isSupabaseConfigured ? "" : "admin@sigdaf.pe", password: isSupabaseConfigured ? "" : "demo123" },
   });
+  const emailValue = watch("email") ?? "";
+  const emailSuggestions = getEmailSuggestions(emailValue);
+  const { onChange: onEmailChangeRegister, ...emailRegister } = register("email");
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
@@ -114,7 +131,31 @@ export function LoginPage() {
               <span className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Correo institucional</span>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                <Input type="email" autoComplete="email" className="h-12 pl-10" placeholder="nombre@institucion.pe" {...register("email")} />
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  className="h-12 pl-10"
+                  placeholder="nombre@institucion.pe"
+                  {...emailRegister}
+                  onChange={(event) => { void onEmailChangeRegister(event); setShowEmailSuggestions(true); }}
+                  onFocus={() => setShowEmailSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowEmailSuggestions(false), 120)}
+                />
+                {showEmailSuggestions && emailSuggestions.length > 0 && (
+                  <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                    {emailSuggestions.map((suggestion) => (
+                      <li key={suggestion}>
+                        <button
+                          type="button"
+                          className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-teal-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                          onMouseDown={(event) => { event.preventDefault(); setValue("email", suggestion, { shouldValidate: true }); setShowEmailSuggestions(false); }}
+                        >
+                          {suggestion}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               {errors.email && <span className="mt-1 block text-xs text-rose-600">{errors.email.message}</span>}
             </label>
