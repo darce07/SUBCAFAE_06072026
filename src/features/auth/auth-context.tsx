@@ -42,6 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const context = await getMyUserContext();
       if (requestId !== requestIdRef.current) return;
+      if (!context) {
+        // is_authenticated_user() (usado por obtener_mi_contexto) devuelve
+        // vacio cuando profiles.activo = false - la sesion sigue siendo
+        // valida en Supabase pero el admin bloqueo la cuenta.
+        setUserContext(null);
+        toast.error("Tu cuenta fue bloqueada por un administrador.");
+        await signOutSession();
+        localStorage.removeItem(demoSessionKey);
+        setSession(null);
+        return;
+      }
       setUserContext(context);
       setContextError(null);
     } catch (error) {

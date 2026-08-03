@@ -15,6 +15,7 @@ import {
   Gauge,
   LayoutDashboard,
   Menu,
+  MessageCircle,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -117,7 +118,8 @@ export function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, session, userContext, contextError, refreshUserContext } = useAuth();
-  const { closeAllChats } = useChat();
+  const { conversaciones, openMyChat, closeAllChats } = useChat();
+  const [openingChat, setOpeningChat] = useState(false);
   const [retryingContext, setRetryingContext] = useState(false);
   const { can, isAdmin } = usePermissions();
   const { theme, toggleTheme, sidebarCollapsed, toggleSidebar, fontSize, accent, density } = useAppStore();
@@ -243,6 +245,27 @@ export function DashboardLayout() {
             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Cambiar tema">
               {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
             </Button>
+            {!isAdmin && !conversaciones.length && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Contactar soporte"
+                title="Contactar soporte"
+                loading={openingChat}
+                onClick={async () => {
+                  setOpeningChat(true);
+                  try {
+                    await openMyChat();
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "No se pudo abrir el chat.");
+                  } finally {
+                    setOpeningChat(false);
+                  }
+                }}
+              >
+                <MessageCircle className="size-5" />
+              </Button>
+            )}
             <Link to="/notificaciones" className="relative grid size-10 place-items-center rounded-xl text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
               <Bell className="size-5" />
               <span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-950" />
