@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Alert, Button, Card, Input, PageHeader, Select, Badge } from "../components/ui";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { ConfirmDialog } from "../components/confirm-dialog";
-import type { CatalogItem, CatalogTable, CatalogosData, Entidad, EntityDocumentType } from "../types";
+import type { CatalogItem, CatalogTable, CatalogosData, Entidad, EntityDocumentType, PersonalNatural } from "../types";
 import { usePermissions } from "../hooks/use-permissions";
 
 const definitions: Array<{
@@ -23,6 +23,7 @@ const definitions: Array<{
   { table: "catalogo_tipo_movimiento", key: "tiposMovimiento", name: "Tipos de movimiento", description: "Ingreso, egreso o no aplica", color: "bg-rose-500" },
   { table: "catalogo_tipo_operacion", key: "tiposOperacion", name: "Tipos de operación", description: "Detalle económico de movimientos", color: "bg-slate-500" },
   { table: "catalogo_tipo_anexo", key: "tiposAnexo", name: "Tipos de anexo", description: "Clasificación de documentos complementarios", color: "bg-cyan-500" },
+  { table: "personal_natural", key: "personalNatural", name: "Personal natural", description: "Firmantes: nombre, DNI, RUC y fecha de nacimiento", color: "bg-pink-500" },
 ];
 
 type StatusFilter = "todos" | "activos" | "inactivos";
@@ -43,6 +44,9 @@ export function CatalogsPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [entityTypeId, setEntityTypeId] = useState("");
+  const [dni, setDni] = useState("");
+  const [ruc, setRuc] = useState("");
+  const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingRemove, setPendingRemove] = useState<CatalogItem | null>(null);
@@ -58,6 +62,7 @@ export function CatalogsPage() {
     const term = search.trim().toLocaleLowerCase("es");
     return selectedItems.filter((item) => {
       const entity = selectedTable === "entidades" ? item as Entidad : null;
+      const persona = selectedTable === "personal_natural" ? item as PersonalNatural : null;
       const entityTypeName = entity ? catalogos.tiposEntidad.find((type) => type.id === entity.tipo_entidad_id)?.nombre ?? "" : "";
       const searchable = [
         item.nombre,
@@ -65,6 +70,8 @@ export function CatalogsPage() {
         entity?.tipo_documento ?? "",
         entity?.numero_documento ?? "",
         entityTypeName,
+        persona?.dni ?? "",
+        persona?.ruc ?? "",
       ].join(" ").toLocaleLowerCase("es");
       const matchesSearch = !term || searchable.includes(term);
       const matchesStatus =
@@ -94,6 +101,9 @@ export function CatalogsPage() {
     setName("");
     setDescription("");
     setEntityTypeId("");
+    setDni("");
+    setRuc("");
+    setFechaNacimiento("");
     setShowForm(true);
   };
 
@@ -102,6 +112,10 @@ export function CatalogsPage() {
     setName(item.nombre);
     setDescription(item.descripcion ?? "");
     setEntityTypeId("tipo_entidad_id" in item ? String(item.tipo_entidad_id ?? "") : "");
+    const persona = selectedTable === "personal_natural" ? item as PersonalNatural : null;
+    setDni(persona?.dni ?? "");
+    setRuc(persona?.ruc ?? "");
+    setFechaNacimiento(persona?.fecha_nacimiento ?? "");
     setShowForm(true);
   };
 
@@ -111,12 +125,21 @@ export function CatalogsPage() {
       toast.error("El nombre es obligatorio.");
       return;
     }
+    if (selectedTable === "personal_natural" && dni.trim() && !/^\d{8}$/.test(dni.trim())) {
+      toast.error("El DNI debe tener 8 dígitos.");
+      return;
+    }
+    if (selectedTable === "personal_natural" && ruc.trim() && !/^\d{11}$/.test(ruc.trim())) {
+      toast.error("El RUC debe tener 11 dígitos.");
+      return;
+    }
     try {
       setSaving(true);
       const values = {
         nombre: name.trim(),
         descripcion: description.trim() || null,
         ...(selectedTable === "entidades" ? { tipo_entidad_id: entityTypeId || null } : {}),
+        ...(selectedTable === "personal_natural" ? { dni: dni.trim() || null, ruc: ruc.trim() || null, fecha_nacimiento: fechaNacimiento || null } : {}),
       };
       if (editing) await catalogos.update(selectedTable, editing.id, values);
       else await catalogos.create(selectedTable, values);
@@ -210,9 +233,12 @@ export function CatalogsPage() {
           <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">
             {filteredItems.map((item) => {
               const entity = selectedTable === "entidades" ? item as Entidad : null;
+              const persona = selectedTable === "personal_natural" ? item as PersonalNatural : null;
               const identity = entity
                 ? [entity.tipo_documento, entity.numero_documento].filter(Boolean).join(" · ")
-                : "";
+                : persona
+                  ? [persona.dni ? `DNI ${persona.dni}` : null, persona.ruc ? `RUC ${persona.ruc}` : null, persona.fecha_nacimiento].filter(Boolean).join(" · ")
+                  : "";
               return (
                 <div key={item.id} className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 ${!item.activo ? "opacity-70" : ""}`}>
                   <div className="flex items-start justify-between gap-3">
@@ -251,9 +277,12 @@ export function CatalogsPage() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredItems.map((item) => {
                   const entity = selectedTable === "entidades" ? item as Entidad : null;
+                  const persona = selectedTable === "personal_natural" ? item as PersonalNatural : null;
                   const identity = entity
                     ? [entity.tipo_documento, entity.numero_documento].filter(Boolean).join(" · ")
-                    : "";
+                    : persona
+                      ? [persona.dni ? `DNI ${persona.dni}` : null, persona.ruc ? `RUC ${persona.ruc}` : null, persona.fecha_nacimiento].filter(Boolean).join(" · ")
+                      : "";
                   return <tr key={item.id} className={!item.activo ? "opacity-60" : ""}><td className="px-5 py-4 font-semibold">{item.nombre}</td><td className="max-w-md px-5 py-4 text-slate-500">{identity || item.descripcion || "Sin descripción"}</td><td className="px-5 py-4"><Badge tone={item.activo ? "green" : "slate"}>{item.activo ? "Activo" : "Inactivo"}</Badge></td><td className="px-5 py-4"><div className="flex justify-end gap-1">{canEdit("catalogos") && <><Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(item)}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" title={item.activo ? "Desactivar" : "Activar"} onClick={() => void catalogos.toggleActive(selectedTable, item)}><Power className={`size-4 ${item.activo ? "text-rose-600" : "text-emerald-600"}`} /></Button><Button variant="ghost" size="icon" loading={deletingId === item.id} title="Eliminar" onClick={() => setPendingRemove(item)}><Trash2 className="size-4 text-rose-600" /></Button></>}</div></td></tr>;
                 })}
               </tbody>
@@ -270,6 +299,13 @@ export function CatalogsPage() {
               <label><span className="mb-2 block text-sm font-semibold">Nombre *</span><Input value={name} onChange={(event) => setName(event.target.value)} autoFocus /></label>
               <label><span className="mb-2 block text-sm font-semibold">Descripción</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} className="min-h-24 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950" /></label>
               {selectedTable === "entidades" && <label><span className="mb-2 block text-sm font-semibold">Tipo de entidad</span><Select className="w-full" value={entityTypeId} onChange={(event) => setEntityTypeId(event.target.value)}><option value="">Sin tipo</option>{catalogos.tiposEntidad.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></label>}
+              {selectedTable === "personal_natural" && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label><span className="mb-2 block text-sm font-semibold">DNI</span><Input value={dni} onChange={(event) => setDni(event.target.value.replace(/\D/g, "").slice(0, 8))} inputMode="numeric" maxLength={8} placeholder="12345678" /></label>
+                  <label><span className="mb-2 block text-sm font-semibold">RUC</span><Input value={ruc} onChange={(event) => setRuc(event.target.value.replace(/\D/g, "").slice(0, 11))} inputMode="numeric" maxLength={11} placeholder="10123456789" /></label>
+                  <label className="sm:col-span-2"><span className="mb-2 block text-sm font-semibold">Fecha de nacimiento</span><Input type="date" value={fechaNacimiento} onChange={(event) => setFechaNacimiento(event.target.value)} /></label>
+                </div>
+              )}
             </div>
             <div className="mt-6 flex justify-end gap-2"><Button variant="secondary" disabled={saving} onClick={() => setShowForm(false)}>Cancelar</Button><Button loading={saving} onClick={() => void submit()}>Guardar</Button></div>
           </Card>

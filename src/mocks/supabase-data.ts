@@ -28,6 +28,7 @@ export const mockCatalogos: CatalogosData = {
   tiposMovimiento: [item("mov-1", "Ingreso"), item("mov-2", "Egreso"), item("mov-3", "No aplica")],
   tiposOperacion: [item("op-1", "Aporte institucional"), item("op-2", "Pago a proveedor"), item("op-3", "Caja chica"), item("op-4", "Recuperación")],
   tiposAnexo: ["Voucher", "Balance", "Informe", "Informe técnico", "Acta", "Evidencia", "Sustento", "Referencia", "Otro"].map((nombre, index) => item(`anx-${index + 1}`, nombre)),
+  personalNatural: [],
 };
 
 const category = (name: string) => mockCatalogos.categorias.find((value) => value.nombre === name)!;

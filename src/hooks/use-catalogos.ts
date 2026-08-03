@@ -11,6 +11,7 @@ import {
   getTiposMovimiento,
   getTiposOperacion,
   getTiposAnexo,
+  getPersonalNatural,
   setCatalogItemActive,
   updateCatalogItem,
   isSupabaseConfigured,
@@ -28,6 +29,7 @@ const emptyCatalogos: CatalogosData = {
   tiposMovimiento: [],
   tiposOperacion: [],
   tiposAnexo: [],
+  personalNatural: [],
 };
 
 export function useCatalogos(options: { includeEntidades?: boolean } = {}) {
@@ -41,12 +43,12 @@ export function useCatalogos(options: { includeEntidades?: boolean } = {}) {
     setLoading(true);
     setError(null);
     try {
-      const [categorias, tiposEntidad, entidades, tiposCategoria, estadosDocumento, archivadores, tiposMovimiento, tiposOperacion, tiposAnexo] =
+      const [categorias, tiposEntidad, entidades, tiposCategoria, estadosDocumento, archivadores, tiposMovimiento, tiposOperacion, tiposAnexo, personalNatural] =
         await Promise.all([
           getCategorias(), getTiposEntidad(), includeEntidades ? getEntidades() : Promise.resolve([]), getTiposCategoria(),
-          getEstadosDocumento(), getArchivadores(), getTiposMovimiento(), getTiposOperacion(), getTiposAnexo(),
+          getEstadosDocumento(), getArchivadores(), getTiposMovimiento(), getTiposOperacion(), getTiposAnexo(), getPersonalNatural(),
         ]);
-      setData({ categorias, tiposEntidad, entidades, tiposCategoria, estadosDocumento, archivadores, tiposMovimiento, tiposOperacion, tiposAnexo });
+      setData({ categorias, tiposEntidad, entidades, tiposCategoria, estadosDocumento, archivadores, tiposMovimiento, tiposOperacion, tiposAnexo, personalNatural });
       setUsingFallback(!isSupabaseConfigured);
     } catch (loadError) {
       setData(isSupabaseConfigured ? emptyCatalogos : mockCatalogos);
@@ -71,9 +73,10 @@ export function useCatalogos(options: { includeEntidades?: boolean } = {}) {
     catalogo_tipo_movimiento: "tiposMovimiento",
     catalogo_tipo_operacion: "tiposOperacion",
     catalogo_tipo_anexo: "tiposAnexo",
+    personal_natural: "personalNatural",
   };
 
-  const create = async (table: CatalogTable, values: Pick<CatalogItem, "nombre" | "descripcion"> & { tipo_entidad_id?: string | null }) => {
+  const create = async (table: CatalogTable, values: Pick<CatalogItem, "nombre" | "descripcion"> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null }) => {
     if (!isSupabaseConfigured) {
       const key = keyForTable[table];
       const created = {
@@ -82,6 +85,7 @@ export function useCatalogos(options: { includeEntidades?: boolean } = {}) {
         descripcion: values.descripcion,
         activo: true,
         ...("tipo_entidad_id" in values ? { tipo_entidad_id: values.tipo_entidad_id ?? null } : {}),
+        ...(table === "personal_natural" ? { dni: values.dni ?? null, ruc: values.ruc ?? null, fecha_nacimiento: values.fecha_nacimiento ?? null } : {}),
       };
       setData((current) => ({ ...current, [key]: [...current[key], created] }));
       return;
@@ -90,7 +94,7 @@ export function useCatalogos(options: { includeEntidades?: boolean } = {}) {
     await refresh();
   };
 
-  const update = async (table: CatalogTable, id: string, values: Partial<Pick<CatalogItem, "nombre" | "descripcion">>) => {
+  const update = async (table: CatalogTable, id: string, values: Partial<Pick<CatalogItem, "nombre" | "descripcion">> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null }) => {
     if (!isSupabaseConfigured) {
       const key = keyForTable[table];
       setData((current) => ({
