@@ -6,7 +6,7 @@ import { useAuth } from "../auth/auth-context";
 import { Button } from "../../components/ui";
 import { enviarMensajeImagen, enviarMensajeTexto, getChatImageUrl, getMensajes, subscribeToMensajes } from "../../services/chat.service";
 import type { ChatMensaje } from "../../types";
-import { formatDateTime } from "../../lib/utils";
+import { formatDateTime, formatShortName } from "../../lib/utils";
 
 export function ChatDrawer() {
   const { conversaciones, activeId, setActiveId, closeChat } = useChat();
@@ -34,15 +34,20 @@ export function ChatDrawer() {
           <div className="flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl dark:bg-slate-900 sm:h-auto sm:max-h-[85vh] sm:w-[420px] sm:rounded-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 p-3 dark:border-slate-800">
               <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
-                {conversaciones.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveId(item.id)}
-                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${item.id === active.id ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
-                  >
-                    {item.admin_id === userContext?.id ? "Chat abierto" : "Soporte"}
-                  </button>
-                ))}
+                {conversaciones.map((item) => {
+                  const isMine = item.admin_id === userContext?.id;
+                  const otroNombre = isMine ? item.usuario_nombre : item.admin_nombre;
+                  const label = otroNombre ? formatShortName(otroNombre) : (isMine ? "Chat abierto" : "Soporte");
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveId(item.id)}
+                      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${item.id === active.id ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
               <button type="button" onClick={() => setOpen(false)} className="ml-2 shrink-0 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="size-4" /></button>
             </div>

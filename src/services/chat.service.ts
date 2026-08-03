@@ -30,7 +30,7 @@ export async function cerrarChatSoporte(conversacionId: string): Promise<Soporte
 
 export async function getMisConversaciones(): Promise<ChatConversacion[]> {
   if (!supabase) return [];
-  const { data, error } = await supabase.from("chat_conversaciones").select("*").order("created_at", { ascending: false });
+  const { data, error } = await supabase.rpc("obtener_mis_conversaciones");
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron cargar los chats."));
   return (data ?? []) as ChatConversacion[];
 }
