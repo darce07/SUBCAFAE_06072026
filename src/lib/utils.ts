@@ -5,6 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// "Diego Andrés Falcón Ramírez" -> "Diego F." (primer nombre + inicial del
+// primer apellido). Con nombre completo de 2-3 palabras, el penultimo/ultimo
+// termino sigue siendo el primer apellido bajo la convencion peruana
+// (nombre[s] + apellido paterno + apellido materno).
+export function formatShortName(fullName?: string | null): string {
+  const parts = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0];
+  const nombre = parts[0];
+  const apellido = parts.length >= 3 ? parts[parts.length - 2] : parts[1];
+  return `${nombre} ${apellido[0].toLocaleUpperCase("es")}.`;
+}
+
 export const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-PE", {
     style: "currency",
