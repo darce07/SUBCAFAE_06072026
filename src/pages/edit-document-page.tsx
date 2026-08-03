@@ -22,7 +22,7 @@ import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo, deleteDocumentoAnexo, getDocumentoAnexos, updateDocumentoAnexo } from "../services/anexos.service";
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview, removeDocumentoFile, uploadDocumentoAnexoFile } from "../services/storage.service";
 import { getDocumentoFirmantes, sincronizarDocumentoFirmantes } from "../services/firmantes.service";
-import type { DocumentoAnexo, PendingDocumentoAnexo } from "../types";
+import type { DocumentoAnexo, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
 import { findMatchingEntity, validateEntityDocument } from "../lib/entity-document";
 
@@ -74,7 +74,7 @@ type FormValues = z.infer<typeof schema>;
 export function EditDocumentPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const catalogos = useCatalogos({ includeEntidades: false });
+  const catalogos = useCatalogos({ includeEntidades: true });
   const { session, userContext } = useAuth();
   const watermarkUsuario = userContext?.nombreCompleto ?? userContext?.email ?? "usuario del sistema";
   const { can, canEdit } = usePermissions();
@@ -88,6 +88,10 @@ export function EditDocumentPage() {
   const [entityDraft, setEntityDraft] = useState<EntityDraft>({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
   const [anexos, setAnexos] = useState<DocumentoAnexo[]>([]);
   const [pendingAnexos, setPendingAnexos] = useState<PendingDocumentoAnexo[]>([]);
+  const [emisorId, setEmisorId] = useState<string[]>([]);
+  const [emisorRepresenta, setEmisorRepresenta] = useState<string | null>(null);
+  const [receptorId, setReceptorId] = useState<string[]>([]);
+  const [receptorRepresenta, setReceptorRepresenta] = useState<string | null>(null);
   const [firmanteIds, setFirmanteIds] = useState<string[]>([]);
   const [editingAnexo, setEditingAnexo] = useState<DocumentoAnexo | null>(null);
   const [editAnexoFile, setEditAnexoFile] = useState<File | null>(null);
@@ -166,7 +170,15 @@ export function EditDocumentPage() {
   useEffect(() => {
     if (!id) return;
     void getDocumentoFirmantes(id)
-      .then((firmantes) => setFirmanteIds(firmantes.map((firmante) => firmante.personal_natural_id)))
+      .then((firmantes) => {
+        const emisor = firmantes.find((firmante) => firmante.rol === "emisor");
+        const receptor = firmantes.find((firmante) => firmante.rol === "receptor");
+        setEmisorId(emisor ? [emisor.personal_natural_id] : []);
+        setEmisorRepresenta(emisor?.representa_entidad_id ?? null);
+        setReceptorId(receptor ? [receptor.personal_natural_id] : []);
+        setReceptorRepresenta(receptor?.representa_entidad_id ?? null);
+        setFirmanteIds(firmantes.filter((firmante) => firmante.rol === "firmante").map((firmante) => firmante.personal_natural_id));
+      })
       .catch((error) => toast.error(error instanceof Error ? error.message : "No se pudieron cargar los firmantes."));
   }, [id]);
 
@@ -299,7 +311,12 @@ export function EditDocumentPage() {
         periodoMes: values.periodo_mes ? Number(values.periodo_mes) : null,
         periodoAnio: values.periodo_anio ? Number(values.periodo_anio) : null,
       });
-      await sincronizarDocumentoFirmantes(id, firmanteIds);
+      const firmantesPayload: SincronizarFirmanteInput[] = [
+        ...emisorId.map((personalNaturalId) => ({ personalNaturalId, rol: "emisor" as const, representaEntidadId: emisorRepresenta })),
+        ...receptorId.map((personalNaturalId) => ({ personalNaturalId, rol: "receptor" as const, representaEntidadId: receptorRepresenta })),
+        ...firmanteIds.map((personalNaturalId) => ({ personalNaturalId, rol: "firmante" as const, representaEntidadId: null })),
+      ];
+      await sincronizarDocumentoFirmantes(id, firmantesPayload);
       if (pendingAnexos.length) {
         if (pendingAnexos.some((anexo) => !anexo.tipoAnexoId || anexo.titulo.trim().length < 2)) {
           toast.error("Completa el título y tipo de todos los anexos antes de guardar.");
@@ -503,7 +520,39 @@ export function EditDocumentPage() {
               />
             </Field>
             <Field label="Descripción" className="md:col-span-2"><textarea className="min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950" {...register("descripcion")} /></Field>
-            <Field label="Quién firmó (opcional)" className="md:col-span-2" hint="Personas que firmaron el documento. Podés elegir varias.">
+            <Field label="Emisor / remitente (opcional)" hint="Quién emite o remite el documento.">
+              <FirmantesCombobox
+                single
+                personas={catalogos.personalNatural}
+                selectedIds={emisorId}
+                onChange={setEmisorId}
+                entidades={catalogos.entidades}
+                representaEntidadId={emisorRepresenta}
+                onRepresentaEntidadChange={setEmisorRepresenta}
+                onCreate={async (command) => {
+                  const created = await createOrGetPersonalNatural(command);
+                  await catalogos.refresh();
+                  return created;
+                }}
+              />
+            </Field>
+            <Field label="Receptor (opcional)" hint="A quién va dirigido el documento.">
+              <FirmantesCombobox
+                single
+                personas={catalogos.personalNatural}
+                selectedIds={receptorId}
+                onChange={setReceptorId}
+                entidades={catalogos.entidades}
+                representaEntidadId={receptorRepresenta}
+                onRepresentaEntidadChange={setReceptorRepresenta}
+                onCreate={async (command) => {
+                  const created = await createOrGetPersonalNatural(command);
+                  await catalogos.refresh();
+                  return created;
+                }}
+              />
+            </Field>
+            <Field label="Otros firmantes (opcional)" className="md:col-span-2" hint="Otras personas que firmaron el documento (participantes, testigos, etc). Podés elegir varias.">
               <FirmantesCombobox
                 personas={catalogos.personalNatural}
                 selectedIds={firmanteIds}

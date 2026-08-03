@@ -1,19 +1,29 @@
 import { useMemo, useState } from "react";
 import { Plus, Search, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
-import { Input } from "./ui";
-import type { CreatePersonalNaturalCommand, PersonalNatural } from "../types";
+import { Input, Select } from "./ui";
+import type { CatalogItem, CreatePersonalNaturalCommand, PersonalNatural } from "../types";
 
 export function FirmantesCombobox({
   personas,
   selectedIds,
   onChange,
   onCreate,
+  single = false,
+  entidades,
+  representaEntidadId = null,
+  onRepresentaEntidadChange,
 }: {
   personas: PersonalNatural[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   onCreate: (command: CreatePersonalNaturalCommand) => Promise<PersonalNatural>;
+  // single=true: selecciona una sola persona (reemplaza en vez de acumular) -
+  // para Emisor/Receptor, que son roles de uno solo por documento.
+  single?: boolean;
+  entidades?: CatalogItem[];
+  representaEntidadId?: string | null;
+  onRepresentaEntidadChange?: (entidadId: string | null) => void;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -38,19 +48,22 @@ export function FirmantesCombobox({
   const exactMatch = personas.some((persona) => persona.nombre.trim().toLocaleLowerCase("es") === term);
 
   const addPersona = (persona: PersonalNatural) => {
-    onChange([...selectedIds, persona.id]);
+    onChange(single ? [persona.id] : [...selectedIds, persona.id]);
     setQuery("");
     setOpen(false);
   };
 
-  const removePersona = (id: string) => onChange(selectedIds.filter((selectedId) => selectedId !== id));
+  const removePersona = (id: string) => {
+    onChange(selectedIds.filter((selectedId) => selectedId !== id));
+    onRepresentaEntidadChange?.(null);
+  };
 
   const createNew = async () => {
     if (creating) return;
     setCreating(true);
     try {
       const created = await onCreate({ nombre: query.trim().toLocaleUpperCase("es"), dni: dni.trim() || null, ruc: ruc.trim() || null, fechaNacimiento: fechaNacimiento || null, cargo: cargo.trim() || null });
-      onChange([...selectedIds, created.id]);
+      onChange(single ? [created.id] : [...selectedIds, created.id]);
       setQuery("");
       setDni("");
       setRuc("");
@@ -76,18 +89,29 @@ export function FirmantesCombobox({
           ))}
         </div>
       )}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-400" />
-        <Input
-          value={query}
-          onFocus={() => setOpen(true)}
-          onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
-          className="pl-9"
-          placeholder="Buscar o escribir el nombre de quien firmó..."
-          autoComplete="off"
-        />
-      </div>
-      {open && (
+      {single && selected.length > 0 && entidades && (
+        <label>
+          <span className="mb-1 block text-xs font-semibold text-slate-500">Firmó en representación de (opcional)</span>
+          <Select className="w-full" value={representaEntidadId ?? ""} onChange={(event) => onRepresentaEntidadChange?.(event.target.value || null)}>
+            <option value="">No aplica</option>
+            {entidades.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+          </Select>
+        </label>
+      )}
+      {(!single || selected.length === 0) && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            value={query}
+            onFocus={() => setOpen(true)}
+            onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
+            className="pl-9"
+            placeholder="Buscar o escribir el nombre de quien firmó..."
+            autoComplete="off"
+          />
+        </div>
+      )}
+      {open && (!single || selected.length === 0) && (
         <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           {filtered.map((persona) => (
             <button type="button" key={persona.id} onClick={() => addPersona(persona)} className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800">

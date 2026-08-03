@@ -23,7 +23,7 @@ import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo } from "../services/anexos.service";
 import { uploadDocumentoAnexoFile } from "../services/storage.service";
 import { sincronizarDocumentoFirmantes } from "../services/firmantes.service";
-import type { DocumentoHashMatch, PendingDocumentoAnexo } from "../types";
+import type { DocumentoHashMatch, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
 import { findMatchingEntity, validateEntityDocument } from "../lib/entity-document";
 
@@ -132,12 +132,16 @@ export function NewDocumentPage() {
   const [idempotencyKey, setIdempotencyKey] = useState(() => initialDraft?.idempotencyKey ?? crypto.randomUUID());
   const [entityDraft, setEntityDraft] = useState<EntityDraft>(initialDraft?.entityDraft ?? { nombre: "", tipoDocumento: "", numeroDocumento: "" });
   const [pendingAnexos, setPendingAnexos] = useState<PendingDocumentoAnexo[]>([]);
+  const [emisorId, setEmisorId] = useState<string[]>([]);
+  const [emisorRepresenta, setEmisorRepresenta] = useState<string | null>(null);
+  const [receptorId, setReceptorId] = useState<string[]>([]);
+  const [receptorRepresenta, setReceptorRepresenta] = useState<string | null>(null);
   const [firmanteIds, setFirmanteIds] = useState<string[]>([]);
   const [savingAnexos, setSavingAnexos] = useState(false);
   const [archivoHash, setArchivoHash] = useState<string | null>(null);
   const [hashMatches, setHashMatches] = useState<DocumentoHashMatch[]>([]);
   const submissionInFlight = useRef(false);
-  const catalogos = useCatalogos({ includeEntidades: false });
+  const catalogos = useCatalogos({ includeEntidades: true });
   const { upload, uploading, progress } = useUploadDocumento();
   const { session } = useAuth();
   const { canCreate } = usePermissions();
@@ -298,6 +302,10 @@ export function NewDocumentPage() {
     setPreviewOpen(false);
     setEntityDraft({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
     setPendingAnexos([]);
+    setEmisorId([]);
+    setEmisorRepresenta(null);
+    setReceptorId([]);
+    setReceptorRepresenta(null);
     setFirmanteIds([]);
     setArchivoHash(null);
     setHashMatches([]);
@@ -451,8 +459,13 @@ export function NewDocumentPage() {
           });
         }
       }
-      if (firmanteIds.length) {
-        await sincronizarDocumentoFirmantes(documento.id, firmanteIds);
+      const firmantesPayload: SincronizarFirmanteInput[] = [
+        ...emisorId.map((personalNaturalId) => ({ personalNaturalId, rol: "emisor" as const, representaEntidadId: emisorRepresenta })),
+        ...receptorId.map((personalNaturalId) => ({ personalNaturalId, rol: "receptor" as const, representaEntidadId: receptorRepresenta })),
+        ...firmanteIds.map((personalNaturalId) => ({ personalNaturalId, rol: "firmante" as const, representaEntidadId: null })),
+      ];
+      if (firmantesPayload.length) {
+        await sincronizarDocumentoFirmantes(documento.id, firmantesPayload);
       }
       toast.success(isSupabaseConfigured ? "Documento guardado correctamente." : "Documento validado en modo demostración.");
       reset(blankValues);
@@ -461,7 +474,11 @@ export function NewDocumentPage() {
       setPreviewOpen(false);
       setEntityDraft({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
       setPendingAnexos([]);
-      setFirmanteIds([]);
+      setEmisorId([]);
+    setEmisorRepresenta(null);
+    setReceptorId([]);
+    setReceptorRepresenta(null);
+    setFirmanteIds([]);
       setArchivoHash(null);
       setHashMatches([]);
       setIdempotencyKey(crypto.randomUUID());
@@ -521,7 +538,39 @@ export function NewDocumentPage() {
               </Field>
               <Field label="Título del archivo *" error={errors.titulo?.message} className="md:col-span-2"><Input placeholder="Ej. Factura por servicio de mantenimiento" {...register("titulo")} /></Field>
               <Field label="Descripción" className="md:col-span-2"><textarea className="min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 dark:border-slate-700 dark:bg-slate-950" {...register("descripcion")} /></Field>
-              <Field label="Quién firmó (opcional)" className="md:col-span-2" hint="Personas que firmaron el documento. Podés elegir varias.">
+              <Field label="Emisor / remitente (opcional)" hint="Quién emite o remite el documento.">
+                <FirmantesCombobox
+                  single
+                  personas={catalogos.personalNatural}
+                  selectedIds={emisorId}
+                  onChange={setEmisorId}
+                  entidades={catalogos.entidades}
+                  representaEntidadId={emisorRepresenta}
+                  onRepresentaEntidadChange={setEmisorRepresenta}
+                  onCreate={async (command) => {
+                    const created = await createOrGetPersonalNatural(command);
+                    await catalogos.refresh();
+                    return created;
+                  }}
+                />
+              </Field>
+              <Field label="Receptor (opcional)" hint="A quién va dirigido el documento.">
+                <FirmantesCombobox
+                  single
+                  personas={catalogos.personalNatural}
+                  selectedIds={receptorId}
+                  onChange={setReceptorId}
+                  entidades={catalogos.entidades}
+                  representaEntidadId={receptorRepresenta}
+                  onRepresentaEntidadChange={setReceptorRepresenta}
+                  onCreate={async (command) => {
+                    const created = await createOrGetPersonalNatural(command);
+                    await catalogos.refresh();
+                    return created;
+                  }}
+                />
+              </Field>
+              <Field label="Otros firmantes (opcional)" className="md:col-span-2" hint="Otras personas que firmaron el documento (participantes, testigos, etc). Podés elegir varias.">
                 <FirmantesCombobox
                   personas={catalogos.personalNatural}
                   selectedIds={firmanteIds}

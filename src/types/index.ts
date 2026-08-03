@@ -47,12 +47,22 @@ export interface CreatePersonalNaturalCommand {
   cargo: string | null;
 }
 
+export type FirmanteRol = "emisor" | "receptor" | "firmante";
+
 export interface DocumentoFirmante {
   id: string;
   documento_id: string;
   personal_natural_id: string;
+  rol: FirmanteRol;
+  representa_entidad_id: string | null;
   created_at: string;
   personal_natural?: PersonalNatural;
+}
+
+export interface SincronizarFirmanteInput {
+  personalNaturalId: string;
+  rol: FirmanteRol;
+  representaEntidadId: string | null;
 }
 
 export interface CreateEntityCommand {
