@@ -1,6 +1,6 @@
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
 import { mockCatalogos } from "../mocks/supabase-data";
-import type { CatalogItem, CatalogTable, CreateEntityCommand, Entidad } from "../types";
+import type { CatalogItem, CatalogTable, CreateEntityCommand, CreatePersonalNaturalCommand, Entidad, PersonalNatural } from "../types";
 import { getSupabaseErrorMessage } from "../lib/supabase-error";
 import { normalizeEntityDocumentNumber, validateEntityDocument } from "../lib/entity-document";
 
@@ -55,10 +55,58 @@ export const getArchivadores = () => getCatalog("catalogo_archivadores", mockCat
 export const getTiposMovimiento = () => getCatalog("catalogo_tipo_movimiento", mockCatalogos.tiposMovimiento);
 export const getTiposOperacion = () => getCatalog("catalogo_tipo_operacion", mockCatalogos.tiposOperacion);
 export const getTiposAnexo = () => getCatalog("catalogo_tipo_anexo", mockCatalogos.tiposAnexo);
+export const getPersonalNatural = () => getCatalog<PersonalNatural>("personal_natural", mockCatalogos.personalNatural);
+
+export async function searchPersonalNatural(search = "", limit = 5): Promise<PersonalNatural[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 5);
+  const normalizedSearch = search.trim().replace(/[,()%]/g, " ");
+  if (!supabase) {
+    const term = normalizedSearch.toLocaleLowerCase("es");
+    return mockCatalogos.personalNatural
+      .filter((persona) => persona.activo)
+      .filter((persona) => !term || [persona.nombre, persona.dni ?? "", persona.ruc ?? ""]
+        .some((value) => value.toLocaleLowerCase("es").includes(term)))
+      .slice(0, safeLimit);
+  }
+  let query = supabase
+    .from("personal_natural")
+    .select("*")
+    .eq("activo", true)
+    .order("nombre", { ascending: true })
+    .limit(safeLimit);
+  if (normalizedSearch) {
+    query = query.or(`nombre.ilike.%${normalizedSearch}%,dni.ilike.%${normalizedSearch}%,ruc.ilike.%${normalizedSearch}%`);
+  }
+  const { data, error } = await query;
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron buscar los firmantes."));
+  return (data ?? []) as PersonalNatural[];
+}
+
+export async function createOrGetPersonalNatural(command: CreatePersonalNaturalCommand): Promise<PersonalNatural> {
+  if (!supabase) {
+    return {
+      id: crypto.randomUUID(),
+      nombre: command.nombre.trim(),
+      descripcion: null,
+      activo: true,
+      dni: command.dni,
+      ruc: command.ruc,
+      fecha_nacimiento: command.fechaNacimiento,
+    };
+  }
+  const { data, error } = await supabase.rpc("crear_o_obtener_personal_natural", {
+    p_nombre: command.nombre,
+    p_dni: command.dni,
+    p_ruc: command.ruc,
+    p_fecha_nacimiento: command.fechaNacimiento,
+  });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo registrar el firmante."));
+  return data as PersonalNatural;
+}
 
 export async function createCatalogItem(
   table: CatalogTable,
-  values: Pick<CatalogItem, "nombre" | "descripcion"> & { tipo_entidad_id?: string | null },
+  values: Pick<CatalogItem, "nombre" | "descripcion"> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null },
 ) {
   const nombre = values.nombre.trim();
   if (nombre.length < 2) throw new Error("El nombre debe tener al menos 2 caracteres.");
@@ -84,7 +132,7 @@ export async function createCatalogItem(
 export async function updateCatalogItem(
   table: CatalogTable,
   id: string,
-  values: Partial<Pick<CatalogItem, "nombre" | "descripcion" | "activo">> & { tipo_entidad_id?: string | null },
+  values: Partial<Pick<CatalogItem, "nombre" | "descripcion" | "activo">> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null },
 ) {
   if (values.nombre !== undefined && values.nombre.trim().length < 2) {
     throw new Error("El nombre debe tener al menos 2 caracteres.");
