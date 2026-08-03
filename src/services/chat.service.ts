@@ -28,6 +28,13 @@ export async function cerrarChatSoporte(conversacionId: string): Promise<Soporte
   return (data as SoporteTicket) ?? null;
 }
 
+export async function actualizarEstadoTicket(ticketId: string, estado: SoporteTicket["estado"]): Promise<SoporteTicket> {
+  if (!supabase) throw new Error("No disponible en modo demo.");
+  const { data, error } = await supabase.rpc("actualizar_estado_ticket_soporte", { p_ticket_id: ticketId, p_estado: estado });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo actualizar el ticket."));
+  return data as SoporteTicket;
+}
+
 export async function getTicketsSoporte(): Promise<SoporteTicketAdmin[]> {
   if (!supabase) return [];
   const { data, error } = await supabase.rpc("listar_tickets_soporte");
@@ -37,7 +44,7 @@ export async function getTicketsSoporte(): Promise<SoporteTicketAdmin[]> {
 
 export async function getMisConversaciones(): Promise<ChatConversacion[]> {
   if (!supabase) return [];
-  const { data, error } = await supabase.from("chat_conversaciones").select("*").order("created_at", { ascending: false });
+  const { data, error } = await supabase.rpc("obtener_mis_conversaciones");
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron cargar los chats."));
   return (data ?? []) as ChatConversacion[];
 }

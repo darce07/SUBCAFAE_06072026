@@ -327,7 +327,8 @@ export interface ChatConversacion {
   admin_id: string;
   usuario_id: string;
   created_at: string;
-  otro_nombre?: string | null;
+  admin_nombre?: string | null;
+  usuario_nombre?: string | null;
 }
 
 export interface ChatMensaje {
