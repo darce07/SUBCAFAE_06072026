@@ -76,7 +76,7 @@ export function useCatalogos(options: { includeEntidades?: boolean } = {}) {
     personal_natural: "personalNatural",
   };
 
-  const create = async (table: CatalogTable, values: Pick<CatalogItem, "nombre" | "descripcion"> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null }) => {
+  const create = async (table: CatalogTable, values: Pick<CatalogItem, "nombre" | "descripcion"> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null; cargo?: string | null }) => {
     if (!isSupabaseConfigured) {
       const key = keyForTable[table];
       const created = {
@@ -85,7 +85,7 @@ export function useCatalogos(options: { includeEntidades?: boolean } = {}) {
         descripcion: values.descripcion,
         activo: true,
         ...("tipo_entidad_id" in values ? { tipo_entidad_id: values.tipo_entidad_id ?? null } : {}),
-        ...(table === "personal_natural" ? { dni: values.dni ?? null, ruc: values.ruc ?? null, fecha_nacimiento: values.fecha_nacimiento ?? null } : {}),
+        ...(table === "personal_natural" ? { dni: values.dni ?? null, ruc: values.ruc ?? null, fecha_nacimiento: values.fecha_nacimiento ?? null, cargo: values.cargo ?? null } : {}),
       };
       setData((current) => ({ ...current, [key]: [...current[key], created] }));
       return;
@@ -94,7 +94,7 @@ export function useCatalogos(options: { includeEntidades?: boolean } = {}) {
     await refresh();
   };
 
-  const update = async (table: CatalogTable, id: string, values: Partial<Pick<CatalogItem, "nombre" | "descripcion">> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null }) => {
+  const update = async (table: CatalogTable, id: string, values: Partial<Pick<CatalogItem, "nombre" | "descripcion">> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null; cargo?: string | null }) => {
     if (!isSupabaseConfigured) {
       const key = keyForTable[table];
       setData((current) => ({

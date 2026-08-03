@@ -36,6 +36,7 @@ export interface PersonalNatural extends CatalogItem {
   dni: string | null;
   ruc: string | null;
   fecha_nacimiento: string | null;
+  cargo: string | null;
 }
 
 export interface CreatePersonalNaturalCommand {
@@ -43,6 +44,7 @@ export interface CreatePersonalNaturalCommand {
   dni: string | null;
   ruc: string | null;
   fechaNacimiento: string | null;
+  cargo: string | null;
 }
 
 export interface DocumentoFirmante {
