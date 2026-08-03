@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { CSSProperties } from "react";
-import { MessageSquareText, X } from "lucide-react";
-import { Alert, Badge, Card, EmptyState, PageHeader, Skeleton } from "../components/ui";
+import { CheckCircle2, MessageSquareText, RotateCcw, X } from "lucide-react";
+import { toast } from "sonner";
+import { Alert, Badge, Button, Card, EmptyState, PageHeader, Skeleton } from "../components/ui";
 import { usePermissions } from "../hooks/use-permissions";
-import { getChatImageUrl, getTicketsSoporte } from "../services/chat.service";
+import { actualizarEstadoTicket, getChatImageUrl, getTicketsSoporte } from "../services/chat.service";
 import type { SoporteTicketAdmin } from "../types";
 import { formatDateTime } from "../lib/utils";
 
@@ -24,6 +25,7 @@ export function SoporteTicketsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewing, setViewing] = useState<SoporteTicketAdmin | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -32,6 +34,22 @@ export function SoporteTicketsPage() {
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar los tickets."))
       .finally(() => setLoading(false));
   }, [isAdmin]);
+
+  const toggleEstado = async (ticket: SoporteTicketAdmin) => {
+    if (updatingId) return;
+    const nuevoEstado = ticket.estado === "abierto" ? "resuelto" : "abierto";
+    setUpdatingId(ticket.id);
+    try {
+      await actualizarEstadoTicket(ticket.id, nuevoEstado);
+      setTickets((current) => current.map((item) => item.id === ticket.id ? { ...item, estado: nuevoEstado } : item));
+      setViewing((current) => current && current.id === ticket.id ? { ...current, estado: nuevoEstado } : current);
+      toast.success(nuevoEstado === "resuelto" ? "Ticket marcado como resuelto." : "Ticket reabierto.");
+    } catch (updateError) {
+      toast.error(updateError instanceof Error ? updateError.message : "No se pudo actualizar el ticket.");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   if (!isAdmin) {
     return <Card className="p-8 text-center"><h1 className="font-serif text-xl font-bold">Acceso restringido</h1><p className="mt-2 text-sm text-slate-500">Solo un administrador puede ver los tickets de soporte.</p></Card>;
@@ -55,11 +73,13 @@ export function SoporteTicketsPage() {
         ) : (
           <div className="grid divide-y divide-slate-100 dark:divide-slate-800">
             {tickets.map((ticket) => (
-              <button
+              <div
                 key={ticket.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => setViewing(ticket)}
-                className="flex flex-col gap-2 p-4 text-left transition hover:bg-slate-50 dark:hover:bg-slate-900 sm:flex-row sm:items-center sm:justify-between"
+                onKeyDown={(event) => { if (event.key === "Enter") setViewing(ticket); }}
+                className="flex cursor-pointer flex-col gap-2 p-4 text-left transition hover:bg-slate-50 dark:hover:bg-slate-900 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -70,8 +90,18 @@ export function SoporteTicketsPage() {
                     Atendido por {ticket.admin_nombre || ticket.admin_email || "administrador"} · {ticket.transcripcion.length} mensaje{ticket.transcripcion.length === 1 ? "" : "s"}
                   </p>
                 </div>
-                <span className="shrink-0 text-xs text-slate-400">{formatDateTime(ticket.created_at)}</span>
-              </button>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="text-xs text-slate-400">{formatDateTime(ticket.created_at)}</span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={updatingId === ticket.id}
+                    onClick={(event) => { event.stopPropagation(); void toggleEstado(ticket); }}
+                  >
+                    {ticket.estado === "abierto" ? <><CheckCircle2 className="size-4" />Marcar resuelto</> : <><RotateCcw className="size-4" />Reabrir</>}
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -85,10 +115,20 @@ export function SoporteTicketsPage() {
             >
               <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-800">
                 <div className="min-w-0">
-                  <Dialog.Title className="truncate font-bold">{viewing?.usuario_nombre || viewing?.usuario_email || "Ticket de soporte"}</Dialog.Title>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Dialog.Title className="truncate font-bold">{viewing?.usuario_nombre || viewing?.usuario_email || "Ticket de soporte"}</Dialog.Title>
+                    {viewing && <Badge tone={estadoTone[viewing.estado]}>{estadoLabel[viewing.estado]}</Badge>}
+                  </div>
                   <Dialog.Description className="text-xs text-slate-500">{viewing ? formatDateTime(viewing.created_at) : ""}</Dialog.Description>
                 </div>
-                <Dialog.Close aria-label="Cerrar" className="shrink-0 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="size-4" /></Dialog.Close>
+                <div className="flex shrink-0 items-center gap-2">
+                  {viewing && (
+                    <Button variant="secondary" size="sm" loading={updatingId === viewing.id} onClick={() => void toggleEstado(viewing)}>
+                      {viewing.estado === "abierto" ? <><CheckCircle2 className="size-4" />Marcar resuelto</> : <><RotateCcw className="size-4" />Reabrir</>}
+                    </Button>
+                  )}
+                  <Dialog.Close aria-label="Cerrar" className="rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="size-4" /></Dialog.Close>
+                </div>
               </div>
               <div className="flex-1 space-y-3 overflow-y-auto p-4">
                 {viewing?.transcripcion.map((mensaje, index) => (
