@@ -12,22 +12,49 @@ export function ChatDrawer() {
   const { conversaciones, activeId, setActiveId, closeChat } = useChat();
   const { userContext } = useAuth();
   const [open, setOpen] = useState(false);
+  const [minimized, setMinimized] = useState(false);
 
   if (!conversaciones.length) return null;
 
   const active = conversaciones.find((item) => item.id === activeId) ?? conversaciones[0];
 
-  return (
-    <>
+  if (minimized) {
+    return (
       <button
         type="button"
-        onClick={() => { setOpen((value) => !value); setActiveId(active.id); }}
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-teal-600 px-4 py-3 text-sm font-bold text-white shadow-xl transition hover:bg-teal-700"
+        aria-label="Mostrar chat de soporte"
+        title={`Chat de soporte (${conversaciones.length} abierto${conversaciones.length === 1 ? "" : "s"}) - sigue activo, no se cerró`}
+        onClick={() => setMinimized(false)}
+        className="fixed bottom-5 right-5 z-40 grid size-11 place-items-center rounded-full bg-teal-600 text-white shadow-xl transition hover:bg-teal-700"
       >
         <MessageCircle className="size-5" />
-        Chat de soporte
-        <span className="grid size-5 place-items-center rounded-full bg-white text-xs font-black text-teal-700">{conversaciones.length}</span>
+        <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-slate-900 text-[10px] font-black text-white ring-2 ring-white dark:ring-slate-950">{conversaciones.length}</span>
       </button>
+    );
+  }
+
+  return (
+    <>
+      <div className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => { setOpen((value) => !value); setActiveId(active.id); }}
+          className="flex items-center gap-2 rounded-full bg-teal-600 px-4 py-3 text-sm font-bold text-white shadow-xl transition hover:bg-teal-700"
+        >
+          <MessageCircle className="size-5" />
+          Chat de soporte
+          <span className="grid size-5 place-items-center rounded-full bg-white text-xs font-black text-teal-700">{conversaciones.length}</span>
+        </button>
+        <button
+          type="button"
+          aria-label="Minimizar chat de soporte"
+          title="Minimizar (el chat sigue abierto, no se genera ticket)"
+          onClick={() => { setMinimized(true); setOpen(false); }}
+          className="rounded-full bg-slate-700 p-2.5 text-white shadow-xl transition hover:bg-slate-600"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-end bg-black/20 p-0 sm:items-stretch sm:p-5">

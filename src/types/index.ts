@@ -327,6 +327,13 @@ export interface SoporteTicket {
   created_at: string;
 }
 
+export interface SoporteTicketAdmin extends SoporteTicket {
+  usuario_nombre: string | null;
+  usuario_email: string | null;
+  admin_nombre: string | null;
+  admin_email: string | null;
+}
+
 export interface AdminUser {
   id: string;
   email: string | null;

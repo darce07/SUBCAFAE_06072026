@@ -1,7 +1,7 @@
 import { supabase } from "../lib/supabase";
 import { getSupabaseErrorMessage } from "../lib/supabase-error";
 import { validateFileSignature } from "./storage.service";
-import type { ChatConversacion, ChatMensaje, SoporteTicket } from "../types";
+import type { ChatConversacion, ChatMensaje, SoporteTicket, SoporteTicketAdmin } from "../types";
 
 const BUCKET = "chat-temporal";
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
@@ -26,6 +26,13 @@ export async function cerrarChatSoporte(conversacionId: string): Promise<Soporte
   const { data, error } = await supabase.rpc("cerrar_chat_soporte", { p_conversacion_id: conversacionId });
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo cerrar el chat."));
   return (data as SoporteTicket) ?? null;
+}
+
+export async function getTicketsSoporte(): Promise<SoporteTicketAdmin[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc("listar_tickets_soporte");
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron cargar los tickets de soporte."));
+  return (data ?? []) as SoporteTicketAdmin[];
 }
 
 export async function getMisConversaciones(): Promise<ChatConversacion[]> {
