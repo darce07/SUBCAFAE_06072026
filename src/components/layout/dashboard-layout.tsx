@@ -15,6 +15,7 @@ import {
   Gauge,
   LayoutDashboard,
   Menu,
+  MessageCircle,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -83,6 +84,7 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
       { label: "Usuarios", href: "/usuarios", icon: UserRoundCog, permission: ["usuarios", "ver"] },
       { label: "Roles y permisos", href: "/roles-permisos", icon: ShieldCheck, permission: ["usuarios", "editar"] },
       { label: "Respaldos", href: "/respaldos", icon: DatabaseBackup, permission: ["sistema", "respaldar"] },
+      { label: "Tickets de soporte", href: "/tickets-soporte", icon: MessageCircle, adminOnly: true },
       { label: "Configuración", href: "/configuracion", icon: Settings, permission: ["configuracion", "ver"] },
     ],
   },
@@ -110,6 +112,7 @@ const pageNames: Record<string, string> = {
   usuarios: "Usuarios",
   "roles-permisos": "Roles y permisos",
   notificaciones: "Notificaciones",
+  "tickets-soporte": "Tickets de soporte",
 };
 
 export function DashboardLayout() {
