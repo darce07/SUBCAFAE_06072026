@@ -139,7 +139,7 @@ export function CatalogsPage() {
     try {
       setSaving(true);
       const values = {
-        nombre: name.trim(),
+        nombre: selectedTable === "personal_natural" ? name.trim().toLocaleUpperCase("es") : name.trim(),
         descripcion: description.trim() || null,
         ...(selectedTable === "entidades" ? { tipo_entidad_id: entityTypeId || null } : {}),
         ...(selectedTable === "personal_natural" ? { dni: dni.trim() || null, ruc: ruc.trim() || null, fecha_nacimiento: fechaNacimiento || null, cargo: cargo.trim() || null } : {}),

@@ -49,7 +49,7 @@ export function FirmantesCombobox({
     if (creating) return;
     setCreating(true);
     try {
-      const created = await onCreate({ nombre: query.trim(), dni: dni.trim() || null, ruc: ruc.trim() || null, fechaNacimiento: fechaNacimiento || null, cargo: cargo.trim() || null });
+      const created = await onCreate({ nombre: query.trim().toLocaleUpperCase("es"), dni: dni.trim() || null, ruc: ruc.trim() || null, fechaNacimiento: fechaNacimiento || null, cargo: cargo.trim() || null });
       onChange([...selectedIds, created.id]);
       setQuery("");
       setDni("");
