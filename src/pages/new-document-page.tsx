@@ -13,13 +13,16 @@ import { isSupabaseConfigured } from "../lib/supabase";
 import { hashFile } from "../lib/file-hash";
 import { usePermissions } from "../hooks/use-permissions";
 import { EntityCombobox, type EntityDraft } from "../components/entity-combobox";
+import { FirmantesCombobox } from "../components/firmantes-combobox";
+import { MonthYearPicker } from "../components/month-year-picker";
 import { Field, SectionTitle } from "../components/form-field";
-import { createOrGetEntidad } from "../services/catalogos.service";
+import { createOrGetEntidad, createOrGetPersonalNatural } from "../services/catalogos.service";
 import { DocumentAttachmentsSection } from "../components/document-attachments-section";
 import { TextFilePreview } from "../components/text-file-preview";
 import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo } from "../services/anexos.service";
 import { uploadDocumentoAnexoFile } from "../services/storage.service";
+import { sincronizarDocumentoFirmantes } from "../services/firmantes.service";
 import type { DocumentoHashMatch, PendingDocumentoAnexo } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
 import { findMatchingEntity, validateEntityDocument } from "../lib/entity-document";
@@ -129,6 +132,7 @@ export function NewDocumentPage() {
   const [idempotencyKey, setIdempotencyKey] = useState(() => initialDraft?.idempotencyKey ?? crypto.randomUUID());
   const [entityDraft, setEntityDraft] = useState<EntityDraft>(initialDraft?.entityDraft ?? { nombre: "", tipoDocumento: "", numeroDocumento: "" });
   const [pendingAnexos, setPendingAnexos] = useState<PendingDocumentoAnexo[]>([]);
+  const [firmanteIds, setFirmanteIds] = useState<string[]>([]);
   const [savingAnexos, setSavingAnexos] = useState(false);
   const [archivoHash, setArchivoHash] = useState<string | null>(null);
   const [hashMatches, setHashMatches] = useState<DocumentoHashMatch[]>([]);
@@ -294,6 +298,7 @@ export function NewDocumentPage() {
     setPreviewOpen(false);
     setEntityDraft({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
     setPendingAnexos([]);
+    setFirmanteIds([]);
     setArchivoHash(null);
     setHashMatches([]);
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -446,6 +451,9 @@ export function NewDocumentPage() {
           });
         }
       }
+      if (firmanteIds.length) {
+        await sincronizarDocumentoFirmantes(documento.id, firmanteIds);
+      }
       toast.success(isSupabaseConfigured ? "Documento guardado correctamente." : "Documento validado en modo demostración.");
       reset(blankValues);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -453,6 +461,7 @@ export function NewDocumentPage() {
       setPreviewOpen(false);
       setEntityDraft({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
       setPendingAnexos([]);
+      setFirmanteIds([]);
       setArchivoHash(null);
       setHashMatches([]);
       setIdempotencyKey(crypto.randomUUID());
@@ -505,13 +514,25 @@ export function NewDocumentPage() {
                 error={errors.periodo_mes?.message ?? errors.periodo_anio?.message}
                 info="Úsalo solo si el documento se aprobó, emitió o publicó en un mes/año distinto al de su fecha — por ejemplo, si demoró en salir o corresponde a un periodo anterior."
               >
-                <Input type="month" min={`${minDocumentYear}-01`} max={`${maxDocumentYear}-12`} value={periodoValue} onChange={(event) => onPeriodoChange(event.target.value)} />
+                <MonthYearPicker value={periodoValue} onChange={onPeriodoChange} minYear={minDocumentYear} maxYear={maxDocumentYear} />
               </Field>
               <Field label="Estado *" error={errors.estado_id?.message}>
                 <Select className="w-full" {...register("estado_id")}><option value="">Seleccionar estado</option>{catalogos.estadosDocumento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
               </Field>
               <Field label="Título del archivo *" error={errors.titulo?.message} className="md:col-span-2"><Input placeholder="Ej. Factura por servicio de mantenimiento" {...register("titulo")} /></Field>
               <Field label="Descripción" className="md:col-span-2"><textarea className="min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 dark:border-slate-700 dark:bg-slate-950" {...register("descripcion")} /></Field>
+              <Field label="Quién firmó (opcional)" className="md:col-span-2" hint="Personas que firmaron el documento. Podés elegir varias.">
+                <FirmantesCombobox
+                  personas={catalogos.personalNatural}
+                  selectedIds={firmanteIds}
+                  onChange={setFirmanteIds}
+                  onCreate={async (command) => {
+                    const created = await createOrGetPersonalNatural(command);
+                    await catalogos.refresh();
+                    return created;
+                  }}
+                />
+              </Field>
             </div>
           </Card>
 

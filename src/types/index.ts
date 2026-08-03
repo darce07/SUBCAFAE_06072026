@@ -32,6 +32,27 @@ export interface Entidad extends CatalogItem {
 
 export type EntityDocumentType = "DNI" | "CE" | "PASAPORTE" | "RUC" | "OTRO";
 
+export interface PersonalNatural extends CatalogItem {
+  dni: string | null;
+  ruc: string | null;
+  fecha_nacimiento: string | null;
+}
+
+export interface CreatePersonalNaturalCommand {
+  nombre: string;
+  dni: string | null;
+  ruc: string | null;
+  fechaNacimiento: string | null;
+}
+
+export interface DocumentoFirmante {
+  id: string;
+  documento_id: string;
+  personal_natural_id: string;
+  created_at: string;
+  personal_natural?: PersonalNatural;
+}
+
 export interface CreateEntityCommand {
   tipoEntidadId: string;
   nombre: string;
@@ -48,7 +69,8 @@ export type CatalogTable =
   | "catalogo_archivadores"
   | "catalogo_tipo_movimiento"
   | "catalogo_tipo_operacion"
-  | "catalogo_tipo_anexo";
+  | "catalogo_tipo_anexo"
+  | "personal_natural";
 
 export interface Documento {
   id: string;
@@ -425,6 +447,7 @@ export interface CatalogosData {
   tiposMovimiento: CatalogItem[];
   tiposOperacion: CatalogItem[];
   tiposAnexo: CatalogItem[];
+  personalNatural: PersonalNatural[];
 }
 
 export interface FinancialMovement {

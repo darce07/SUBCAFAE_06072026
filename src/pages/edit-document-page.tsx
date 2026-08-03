@@ -13,12 +13,15 @@ import { usePermissions } from "../hooks/use-permissions";
 import { useUploadDocumento } from "../hooks/use-upload-documento";
 import { editDocumento, getDocumentoById } from "../services/documentos.service";
 import { EntityCombobox, type EntityDraft } from "../components/entity-combobox";
+import { FirmantesCombobox } from "../components/firmantes-combobox";
+import { MonthYearPicker } from "../components/month-year-picker";
 import { Field, SectionTitle } from "../components/form-field";
-import { createOrGetEntidad } from "../services/catalogos.service";
+import { createOrGetEntidad, createOrGetPersonalNatural } from "../services/catalogos.service";
 import { DocumentAttachmentsSection } from "../components/document-attachments-section";
 import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo, deleteDocumentoAnexo, getDocumentoAnexos, updateDocumentoAnexo } from "../services/anexos.service";
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview, removeDocumentoFile, uploadDocumentoAnexoFile } from "../services/storage.service";
+import { getDocumentoFirmantes, sincronizarDocumentoFirmantes } from "../services/firmantes.service";
 import type { DocumentoAnexo, PendingDocumentoAnexo } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
 import { findMatchingEntity, validateEntityDocument } from "../lib/entity-document";
@@ -85,6 +88,7 @@ export function EditDocumentPage() {
   const [entityDraft, setEntityDraft] = useState<EntityDraft>({ nombre: "", tipoDocumento: "", numeroDocumento: "" });
   const [anexos, setAnexos] = useState<DocumentoAnexo[]>([]);
   const [pendingAnexos, setPendingAnexos] = useState<PendingDocumentoAnexo[]>([]);
+  const [firmanteIds, setFirmanteIds] = useState<string[]>([]);
   const [editingAnexo, setEditingAnexo] = useState<DocumentoAnexo | null>(null);
   const [editAnexoFile, setEditAnexoFile] = useState<File | null>(null);
   const [viewer, setViewer] = useState<{ title: string; objectUrl: string; signedUrl: string; mimeType: string | null } | null>(null);
@@ -157,6 +161,13 @@ export function EditDocumentPage() {
       .then(setAnexos)
       .catch((error) => toast.error(error instanceof Error ? error.message : "No se pudieron cargar los anexos."))
       .finally(() => setLoadingAnexos(false));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    void getDocumentoFirmantes(id)
+      .then((firmantes) => setFirmanteIds(firmantes.map((firmante) => firmante.personal_natural_id)))
+      .catch((error) => toast.error(error instanceof Error ? error.message : "No se pudieron cargar los firmantes."));
   }, [id]);
 
   const periodoMes = watch("periodo_mes");
@@ -288,6 +299,7 @@ export function EditDocumentPage() {
         periodoMes: values.periodo_mes ? Number(values.periodo_mes) : null,
         periodoAnio: values.periodo_anio ? Number(values.periodo_anio) : null,
       });
+      await sincronizarDocumentoFirmantes(id, firmanteIds);
       if (pendingAnexos.length) {
         if (pendingAnexos.some((anexo) => !anexo.tipoAnexoId || anexo.titulo.trim().length < 2)) {
           toast.error("Completa el título y tipo de todos los anexos antes de guardar.");
@@ -457,7 +469,7 @@ export function EditDocumentPage() {
               error={errors.periodo_mes?.message ?? errors.periodo_anio?.message}
               info="Úsalo solo si el documento se aprobó, emitió o publicó en un mes/año distinto al de su fecha — por ejemplo, si demoró en salir o corresponde a un periodo anterior."
             >
-              <Input type="month" min={`${minDocumentYear}-01`} max={`${maxDocumentYear}-12`} value={periodoValue} onChange={(event) => onPeriodoChange(event.target.value)} />
+              <MonthYearPicker value={periodoValue} onChange={onPeriodoChange} minYear={minDocumentYear} maxYear={maxDocumentYear} />
             </Field>
             <Field label="Estado *" error={errors.estado_id?.message}><Select className="w-full" {...register("estado_id")}>{catalogos.estadosDocumento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
             <Field label="Título *" error={errors.titulo?.message} className="md:col-span-2"><Input {...register("titulo")} /></Field>
@@ -491,6 +503,18 @@ export function EditDocumentPage() {
               />
             </Field>
             <Field label="Descripción" className="md:col-span-2"><textarea className="min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950" {...register("descripcion")} /></Field>
+            <Field label="Quién firmó (opcional)" className="md:col-span-2" hint="Personas que firmaron el documento. Podés elegir varias.">
+              <FirmantesCombobox
+                personas={catalogos.personalNatural}
+                selectedIds={firmanteIds}
+                onChange={setFirmanteIds}
+                onCreate={async (command) => {
+                  const created = await createOrGetPersonalNatural(command);
+                  await catalogos.refresh();
+                  return created;
+                }}
+              />
+            </Field>
             <Field label="Ruta histórica" className="md:col-span-2"><textarea className="min-h-24 w-full rounded-xl border border-slate-200 bg-white p-3 font-mono text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950" {...register("ruta_historica")} /></Field>
           </div>
         </Card>
