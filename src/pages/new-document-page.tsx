@@ -26,9 +26,6 @@ import { findMatchingEntity, validateEntityDocument } from "../lib/entity-docume
 
 const minDocumentYear = 2000;
 const maxDocumentYear = new Date().getFullYear() + 1;
-const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-const periodYears = Array.from({ length: maxDocumentYear - minDocumentYear + 1 }, (_, index) => maxDocumentYear - index);
-
 function isValidDocumentDate(value: string) {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return false;
@@ -157,6 +154,19 @@ export function NewDocumentPage() {
   });
 
   const date = watch("fecha_documento");
+  const periodoMes = watch("periodo_mes");
+  const periodoAnio = watch("periodo_anio");
+  const periodoValue = periodoMes && periodoAnio ? `${periodoAnio}-${String(periodoMes).padStart(2, "0")}` : "";
+  const onPeriodoChange = (value: string) => {
+    if (!value) {
+      setValue("periodo_mes", "", { shouldDirty: true });
+      setValue("periodo_anio", "", { shouldDirty: true });
+      return;
+    }
+    const [anio, mes] = value.split("-");
+    setValue("periodo_mes", String(Number(mes)), { shouldDirty: true });
+    setValue("periodo_anio", anio, { shouldDirty: true });
+  };
   const selectedFile = watch("archivo");
   const selectedCategoryId = watch("categoria_id");
   const selectedEntityType = watch("tipo_entidad_id");
@@ -483,24 +493,19 @@ export function NewDocumentPage() {
                   {catalogos.categorias.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
                 </Select>
               </Field>
-              <Field label="Fecha *" error={errors.fecha_documento?.message}>
+              <Field
+                label="Fecha *"
+                error={errors.fecha_documento?.message}
+                info="Es la fecha que trae el propio documento (la de su registro o emisión formal), no el periodo al que se refiere su contenido."
+              >
                 <div className="relative"><CalendarDays className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input type="date" min={`${minDocumentYear}-01-01`} max={`${maxDocumentYear}-12-31`} className="pl-9" {...register("fecha_documento")} /></div>
               </Field>
               <Field
-                label="Mes del periodo (opcional)"
-                error={errors.periodo_mes?.message}
-                hint="El mes al que se refiere el documento (ej. el mes facturado), si aplica — no la fecha del documento."
+                label="Periodo (opcional)"
+                error={errors.periodo_mes?.message ?? errors.periodo_anio?.message}
+                info="Úsalo solo si el documento se aprobó, emitió o publicó en un mes/año distinto al de su fecha — por ejemplo, si demoró en salir o corresponde a un periodo anterior."
               >
-                <Select className="w-full" {...register("periodo_mes")}>
-                  <option value="">Sin periodo</option>
-                  {monthNames.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}
-                </Select>
-              </Field>
-              <Field label="Año del periodo (opcional)" error={errors.periodo_anio?.message}>
-                <Select className="w-full" {...register("periodo_anio")}>
-                  <option value="">Sin periodo</option>
-                  {periodYears.map((year) => <option key={year} value={year}>{year}</option>)}
-                </Select>
+                <Input type="month" min={`${minDocumentYear}-01`} max={`${maxDocumentYear}-12`} value={periodoValue} onChange={(event) => onPeriodoChange(event.target.value)} />
               </Field>
               <Field label="Estado *" error={errors.estado_id?.message}>
                 <Select className="w-full" {...register("estado_id")}><option value="">Seleccionar estado</option>{catalogos.estadosDocumento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
