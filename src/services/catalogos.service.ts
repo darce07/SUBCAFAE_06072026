@@ -92,6 +92,7 @@ export async function createOrGetPersonalNatural(command: CreatePersonalNaturalC
       dni: command.dni,
       ruc: command.ruc,
       fecha_nacimiento: command.fechaNacimiento,
+      cargo: command.cargo,
     };
   }
   const { data, error } = await supabase.rpc("crear_o_obtener_personal_natural", {
@@ -99,6 +100,7 @@ export async function createOrGetPersonalNatural(command: CreatePersonalNaturalC
     p_dni: command.dni,
     p_ruc: command.ruc,
     p_fecha_nacimiento: command.fechaNacimiento,
+    p_cargo: command.cargo,
   });
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo registrar el firmante."));
   return data as PersonalNatural;
@@ -106,7 +108,7 @@ export async function createOrGetPersonalNatural(command: CreatePersonalNaturalC
 
 export async function createCatalogItem(
   table: CatalogTable,
-  values: Pick<CatalogItem, "nombre" | "descripcion"> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null },
+  values: Pick<CatalogItem, "nombre" | "descripcion"> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null; cargo?: string | null },
 ) {
   const nombre = values.nombre.trim();
   if (nombre.length < 2) throw new Error("El nombre debe tener al menos 2 caracteres.");
@@ -132,7 +134,7 @@ export async function createCatalogItem(
 export async function updateCatalogItem(
   table: CatalogTable,
   id: string,
-  values: Partial<Pick<CatalogItem, "nombre" | "descripcion" | "activo">> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null },
+  values: Partial<Pick<CatalogItem, "nombre" | "descripcion" | "activo">> & { tipo_entidad_id?: string | null; dni?: string | null; ruc?: string | null; fecha_nacimiento?: string | null; cargo?: string | null },
 ) {
   if (values.nombre !== undefined && values.nombre.trim().length < 2) {
     throw new Error("El nombre debe tener al menos 2 caracteres.");

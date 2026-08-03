@@ -47,6 +47,7 @@ export function CatalogsPage() {
   const [dni, setDni] = useState("");
   const [ruc, setRuc] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
+  const [cargo, setCargo] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingRemove, setPendingRemove] = useState<CatalogItem | null>(null);
@@ -104,6 +105,7 @@ export function CatalogsPage() {
     setDni("");
     setRuc("");
     setFechaNacimiento("");
+    setCargo("");
     setShowForm(true);
   };
 
@@ -116,6 +118,7 @@ export function CatalogsPage() {
     setDni(persona?.dni ?? "");
     setRuc(persona?.ruc ?? "");
     setFechaNacimiento(persona?.fecha_nacimiento ?? "");
+    setCargo(persona?.cargo ?? "");
     setShowForm(true);
   };
 
@@ -139,7 +142,7 @@ export function CatalogsPage() {
         nombre: name.trim(),
         descripcion: description.trim() || null,
         ...(selectedTable === "entidades" ? { tipo_entidad_id: entityTypeId || null } : {}),
-        ...(selectedTable === "personal_natural" ? { dni: dni.trim() || null, ruc: ruc.trim() || null, fecha_nacimiento: fechaNacimiento || null } : {}),
+        ...(selectedTable === "personal_natural" ? { dni: dni.trim() || null, ruc: ruc.trim() || null, fecha_nacimiento: fechaNacimiento || null, cargo: cargo.trim() || null } : {}),
       };
       if (editing) await catalogos.update(selectedTable, editing.id, values);
       else await catalogos.create(selectedTable, values);
@@ -237,7 +240,7 @@ export function CatalogsPage() {
               const identity = entity
                 ? [entity.tipo_documento, entity.numero_documento].filter(Boolean).join(" · ")
                 : persona
-                  ? [persona.dni ? `DNI ${persona.dni}` : null, persona.ruc ? `RUC ${persona.ruc}` : null, persona.fecha_nacimiento].filter(Boolean).join(" · ")
+                  ? [persona.cargo, persona.dni ? `DNI ${persona.dni}` : null, persona.ruc ? `RUC ${persona.ruc}` : null, persona.fecha_nacimiento].filter(Boolean).join(" · ")
                   : "";
               return (
                 <div key={item.id} className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 ${!item.activo ? "opacity-70" : ""}`}>
@@ -281,7 +284,7 @@ export function CatalogsPage() {
                   const identity = entity
                     ? [entity.tipo_documento, entity.numero_documento].filter(Boolean).join(" · ")
                     : persona
-                      ? [persona.dni ? `DNI ${persona.dni}` : null, persona.ruc ? `RUC ${persona.ruc}` : null, persona.fecha_nacimiento].filter(Boolean).join(" · ")
+                      ? [persona.cargo, persona.dni ? `DNI ${persona.dni}` : null, persona.ruc ? `RUC ${persona.ruc}` : null, persona.fecha_nacimiento].filter(Boolean).join(" · ")
                       : "";
                   return <tr key={item.id} className={!item.activo ? "opacity-60" : ""}><td className="px-5 py-4 font-semibold">{item.nombre}</td><td className="max-w-md px-5 py-4 text-slate-500">{identity || item.descripcion || "Sin descripción"}</td><td className="px-5 py-4"><Badge tone={item.activo ? "green" : "slate"}>{item.activo ? "Activo" : "Inactivo"}</Badge></td><td className="px-5 py-4"><div className="flex justify-end gap-1">{canEdit("catalogos") && <><Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(item)}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" title={item.activo ? "Desactivar" : "Activar"} onClick={() => void catalogos.toggleActive(selectedTable, item)}><Power className={`size-4 ${item.activo ? "text-rose-600" : "text-emerald-600"}`} /></Button><Button variant="ghost" size="icon" loading={deletingId === item.id} title="Eliminar" onClick={() => setPendingRemove(item)}><Trash2 className="size-4 text-rose-600" /></Button></>}</div></td></tr>;
                 })}
@@ -304,6 +307,7 @@ export function CatalogsPage() {
                   <label><span className="mb-2 block text-sm font-semibold">DNI</span><Input value={dni} onChange={(event) => setDni(event.target.value.replace(/\D/g, "").slice(0, 8))} inputMode="numeric" maxLength={8} placeholder="12345678" /></label>
                   <label><span className="mb-2 block text-sm font-semibold">RUC</span><Input value={ruc} onChange={(event) => setRuc(event.target.value.replace(/\D/g, "").slice(0, 11))} inputMode="numeric" maxLength={11} placeholder="10123456789" /></label>
                   <label className="sm:col-span-2"><span className="mb-2 block text-sm font-semibold">Fecha de nacimiento</span><Input type="date" value={fechaNacimiento} onChange={(event) => setFechaNacimiento(event.target.value)} /></label>
+                  <label className="sm:col-span-2"><span className="mb-2 block text-sm font-semibold">Cargo</span><Input value={cargo} onChange={(event) => setCargo(event.target.value)} placeholder="Ej. Gerente, Presidente..." /></label>
                 </div>
               )}
             </div>

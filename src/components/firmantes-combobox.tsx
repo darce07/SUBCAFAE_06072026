@@ -20,6 +20,7 @@ export function FirmantesCombobox({
   const [dni, setDni] = useState("");
   const [ruc, setRuc] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
+  const [cargo, setCargo] = useState("");
   const [creating, setCreating] = useState(false);
 
   const term = query.trim().toLocaleLowerCase("es");
@@ -48,12 +49,13 @@ export function FirmantesCombobox({
     if (creating) return;
     setCreating(true);
     try {
-      const created = await onCreate({ nombre: query.trim(), dni: dni.trim() || null, ruc: ruc.trim() || null, fechaNacimiento: fechaNacimiento || null });
+      const created = await onCreate({ nombre: query.trim(), dni: dni.trim() || null, ruc: ruc.trim() || null, fechaNacimiento: fechaNacimiento || null, cargo: cargo.trim() || null });
       onChange([...selectedIds, created.id]);
       setQuery("");
       setDni("");
       setRuc("");
       setFechaNacimiento("");
+      setCargo("");
       setOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo registrar el firmante.");
@@ -92,7 +94,7 @@ export function FirmantesCombobox({
               <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950"><UserRound className="size-4" /></div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{persona.nombre}</p>
-                <p className="text-xs text-slate-500">{[persona.dni ? `DNI ${persona.dni}` : null, persona.ruc ? `RUC ${persona.ruc}` : null].filter(Boolean).join(" · ") || "Sin documento registrado"}</p>
+                <p className="text-xs text-slate-500">{[persona.cargo, persona.dni ? `DNI ${persona.dni}` : null, persona.ruc ? `RUC ${persona.ruc}` : null].filter(Boolean).join(" · ") || "Sin documento registrado"}</p>
               </div>
             </button>
           ))}
@@ -103,6 +105,7 @@ export function FirmantesCombobox({
               <div className="grid gap-2 sm:grid-cols-2">
                 <label><span className="mb-1 block text-xs font-semibold">DNI (opcional)</span><Input value={dni} onChange={(event) => setDni(event.target.value.replace(/\D/g, "").slice(0, 8))} inputMode="numeric" maxLength={8} placeholder="12345678" /></label>
                 <label><span className="mb-1 block text-xs font-semibold">RUC (opcional)</span><Input value={ruc} onChange={(event) => setRuc(event.target.value.replace(/\D/g, "").slice(0, 11))} inputMode="numeric" maxLength={11} placeholder="10123456789" /></label>
+                <label className="sm:col-span-2"><span className="mb-1 block text-xs font-semibold">Cargo (opcional)</span><Input value={cargo} onChange={(event) => setCargo(event.target.value)} placeholder="Ej. Gerente, Presidente..." /></label>
                 <label className="sm:col-span-2"><span className="mb-1 block text-xs font-semibold">Fecha de nacimiento (opcional)</span><Input type="date" value={fechaNacimiento} onChange={(event) => setFechaNacimiento(event.target.value)} /></label>
               </div>
               <button type="button" disabled={creating} onClick={() => void createNew()} className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 p-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:opacity-60">
