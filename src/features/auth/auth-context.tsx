@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { getCurrentSession, signInWithPassword, signOutSession } from "../../services/auth.service";
 import { getMyUserContext } from "../../services/auth.service";
+import { CHAT_SESSION_FLAG } from "../../lib/session-flags";
 import type { UserContext } from "../../types";
 
 interface AuthContextValue {
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.error("Tu cuenta fue bloqueada por un administrador.");
         await signOutSession();
         localStorage.removeItem(demoSessionKey);
+        sessionStorage.removeItem(CHAT_SESSION_FLAG);
         setSession(null);
         return;
       }
@@ -100,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         if (supabase) await signOutSession();
         localStorage.removeItem(demoSessionKey);
+        sessionStorage.removeItem(CHAT_SESSION_FLAG);
         setDemoAuthenticated(false);
         setUserContext(null);
         // El aviso "se cerrará en 1 minuto" (10s de duración) queda flotando

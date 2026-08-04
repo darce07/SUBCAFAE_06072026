@@ -4,9 +4,11 @@ import {
   abrirChatPropio,
   abrirChatSoporte,
   cerrarChatSoporte,
+  descartarChatSoporte,
   getMisConversaciones,
   subscribeToMisConversaciones,
 } from "../../services/chat.service";
+import { CHAT_SESSION_FLAG } from "../../lib/session-flags";
 import type { ChatConversacion } from "../../types";
 
 interface ChatContextValue {
@@ -20,14 +22,6 @@ interface ChatContextValue {
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
-// Cerrar la pestaña/navegador sin usar "Salir" (o sin esperar el timeout de
-// inactividad) no dispara el cierre del chat - queda abierto en la base y
-// reaparecia al volver a iniciar sesion despues. sessionStorage se borra al
-// cerrar el navegador (pero sobrevive a un F5), asi que sirve para distinguir
-// "sigo en la misma sesion de navegador" de "esto es un login nuevo": si es
-// nuevo y ya hay una conversacion mia abierta, es huerfana de la vez pasada -
-// se cierra sola generando su ticket, en vez de reaparecer.
-const BROWSER_SESSION_FLAG = "sigdaf:chat-browser-session";
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, userContext } = useAuth();
@@ -46,12 +40,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setConversaciones([]);
       return;
     }
-    const isFreshBrowserSession = !sessionStorage.getItem(BROWSER_SESSION_FLAG);
-    sessionStorage.setItem(BROWSER_SESSION_FLAG, "true");
+    const isFreshLogin = !sessionStorage.getItem(CHAT_SESSION_FLAG);
+    sessionStorage.setItem(CHAT_SESSION_FLAG, "true");
 
     void getMisConversaciones().then(async (rows) => {
-      if (isFreshBrowserSession && rows.length) {
-        await Promise.all(rows.map((row) => cerrarChatSoporte(row.id).catch(() => {})));
+      if (isFreshLogin && rows.length) {
+        // Nadie lo cerro explicitamente antes de este login - se descarta
+        // sin generar ticket (chat temporal por diseno, no cada charla
+        // amerita quedar archivada).
+        await Promise.all(rows.map((row) => descartarChatSoporte(row.id).catch(() => {})));
         setConversaciones([]);
         return;
       }
