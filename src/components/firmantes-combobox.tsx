@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Select } from "./ui";
@@ -32,6 +32,16 @@ export function FirmantesCombobox({
   const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [cargo, setCargo] = useState("");
   const [creating, setCreating] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
 
   const term = query.trim().toLocaleLowerCase("es");
   const selected = useMemo(
@@ -78,7 +88,7 @@ export function FirmantesCombobox({
   };
 
   return (
-    <div className="space-y-3">
+    <div ref={containerRef} className="space-y-3">
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {selected.map((persona) => (
