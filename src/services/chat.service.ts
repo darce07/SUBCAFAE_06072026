@@ -28,6 +28,12 @@ export async function cerrarChatSoporte(conversacionId: string): Promise<Soporte
   return (data as SoporteTicket) ?? null;
 }
 
+export async function descartarChatSoporte(conversacionId: string): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.rpc("descartar_chat_soporte", { p_conversacion_id: conversacionId });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo descartar el chat."));
+}
+
 export async function actualizarEstadoTicket(ticketId: string, estado: SoporteTicket["estado"]): Promise<SoporteTicket> {
   if (!supabase) throw new Error("No disponible en modo demo.");
   const { data, error } = await supabase.rpc("actualizar_estado_ticket_soporte", { p_ticket_id: ticketId, p_estado: estado });
