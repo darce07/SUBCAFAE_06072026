@@ -187,7 +187,13 @@ export function NewDocumentPage() {
     const [anio, mes, dia] = date.split("-").map(Number);
     return { anio, mes, dia };
   }, [date]);
-  const entitySearch = useEntitySearch(selectedEntityType ?? "", entityDraft.nombre);
+  // La busqueda de entidad es global (no se filtra por tipo): si el
+  // documento ya tiene un tipo asignado, restringir la busqueda a ese tipo
+  // ocultaba entidades reales que estan catalogadas bajo otro tipo (ej.
+  // buscar "BBVA" sin resultados porque el documento ya tenia otro tipo de
+  // entidad precargado). El tipo se autocompleta igual al elegir un
+  // resultado (ver onEntityTypeChange en EntityCombobox).
+  const entitySearch = useEntitySearch("", entityDraft.nombre);
   const selectedEntityTypeName = catalogos.tiposEntidad.find((item) => item.id === selectedEntityType)?.nombre;
   const selectedEntityRequiresIdentity = ["persona natural", "proveedor", "trabajador"].includes(selectedEntityTypeName?.toLocaleLowerCase("es") ?? "");
 
