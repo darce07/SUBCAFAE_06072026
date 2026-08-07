@@ -199,7 +199,8 @@ export function EditDocumentPage() {
   const selectedEntityId = watch("entidad_id");
   const selectedMovementId = watch("tipo_movimiento_id");
   const selectedFile = watch("archivo");
-  const entitySearch = useEntitySearch(selectedEntityType ?? "", entityDraft.nombre);
+  // Busqueda global, no filtrada por tipo - ver comentario en new-document-page.tsx.
+  const entitySearch = useEntitySearch("", entityDraft.nombre);
   const movement = catalogos.tiposMovimiento.find((item) => item.id === selectedMovementId);
   const selectedEntityTypeName = catalogos.tiposEntidad.find((item) => item.id === selectedEntityType)?.nombre;
   const selectedEntityRequiresIdentity = ["persona natural", "proveedor", "trabajador"].includes(selectedEntityTypeName?.toLocaleLowerCase("es") ?? "");
