@@ -508,7 +508,15 @@ export interface AuditEvent {
 // Módulo aislado del inventario físico de bienes/muebles. No comparte
 // tablas, catálogos ni UI con `documentos`/`catalogos`.
 
-export type EstadoInventarioItem = "nuevo" | "usado_buen_estado" | "usado_mal_estado" | "mal_estado";
+export type EstadoInventarioItem =
+  | "nuevo"
+  | "usado_buen_estado"
+  | "usado_mal_estado"
+  | "mal_estado"
+  | "en_reparacion"
+  | "prestado"
+  | "de_baja"
+  | "perdido";
 
 export interface InventarioArea {
   id: string;
