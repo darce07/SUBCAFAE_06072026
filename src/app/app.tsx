@@ -26,12 +26,18 @@ const SettingsPage = lazy(() => import("../pages/settings-page").then((module) =
 const NotificationsPage = lazy(() => import("../pages/notifications-page").then((module) => ({ default: module.NotificationsPage })));
 const BackupsPage = lazy(() => import("../pages/backups-page").then((module) => ({ default: module.BackupsPage })));
 const SoporteTicketsPage = lazy(() => import("../pages/soporte-tickets-page").then((module) => ({ default: module.SoporteTicketsPage })));
+const InventarioListPage = lazy(() => import("../pages/inventario/inventario-list-page").then((module) => ({ default: module.InventarioListPage })));
+const InventarioFormPage = lazy(() => import("../pages/inventario/inventario-form-page").then((module) => ({ default: module.InventarioFormPage })));
+const InventarioDetailPage = lazy(() => import("../pages/inventario/inventario-detail-page").then((module) => ({ default: module.InventarioDetailPage })));
+const InventarioPublicPage = lazy(() => import("../pages/inventario/inventario-public-page").then((module) => ({ default: module.InventarioPublicPage })));
 
 export function App() {
   return (
     <Suspense fallback={<div className="grid min-h-screen place-items-center bg-slate-50 dark:bg-slate-950"><LoaderCircle className="size-8 animate-spin text-teal-600" /></div>}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* Vista pública de invitado (escaneo de QR físico): sin auth, sin DashboardLayout. */}
+        <Route path="/i/:qrToken" element={<InventarioPublicPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
@@ -59,6 +65,10 @@ export function App() {
             <Route path="/notificaciones" element={<NotificationsPage />} />
             <Route path="/respaldos" element={<BackupsPage />} />
             <Route path="/tickets-soporte" element={<SoporteTicketsPage />} />
+            <Route path="/inventario" element={<InventarioListPage />} />
+            <Route path="/inventario/nuevo" element={<InventarioFormPage />} />
+            <Route path="/inventario/:id" element={<InventarioDetailPage />} />
+            <Route path="/inventario/:id/editar" element={<InventarioFormPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

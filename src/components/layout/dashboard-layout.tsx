@@ -17,6 +17,7 @@ import {
   Menu,
   MessageCircle,
   Moon,
+  PackageSearch,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -76,6 +77,12 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
     ],
   },
   {
+    label: "Inventariado interno",
+    items: [
+      { label: "Inventariado Interno", href: "/inventario", icon: PackageSearch, permission: ["inventario", "ver"] },
+    ],
+  },
+  {
     label: "Administración",
     items: [
       { label: "Auditoría", href: "/auditoria", icon: ShieldCheck, permission: ["auditoria", "ver"] },
@@ -113,6 +120,7 @@ const pageNames: Record<string, string> = {
   "roles-permisos": "Roles y permisos",
   notificaciones: "Notificaciones",
   "tickets-soporte": "Tickets de soporte",
+  inventario: "Inventariado Interno",
 };
 
 export function DashboardLayout() {
