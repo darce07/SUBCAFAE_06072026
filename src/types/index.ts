@@ -503,3 +503,53 @@ export interface AuditEvent {
   newValue: string;
   device: string;
 }
+
+// --- Inventariado Interno ---------------------------------------------
+// Módulo aislado del inventario físico de bienes/muebles. No comparte
+// tablas, catálogos ni UI con `documentos`/`catalogos`.
+
+export type EstadoInventarioItem = "nuevo" | "usado_buen_estado" | "usado_mal_estado" | "mal_estado";
+
+export interface InventarioArea {
+  id: string;
+  nombre: string;
+  activo: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface InventarioFoto {
+  id: string;
+  item_id: string;
+  storage_path: string;
+  created_at: string;
+}
+
+export interface InventarioItem {
+  id: string;
+  codigo_barras: string;
+  qr_token: string;
+  nombre: string;
+  descripcion: string | null;
+  color: string | null;
+  cantidad: number;
+  estado: EstadoInventarioItem;
+  area_id: string | null;
+  activo: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  area?: InventarioArea | null;
+  fotos?: InventarioFoto[];
+}
+
+/** Forma segura para invitados: nunca expone id, codigo_barras ni created_by. */
+export interface InventarioItemPublico {
+  nombre: string;
+  descripcion: string | null;
+  color: string | null;
+  estado: EstadoInventarioItem;
+  area_nombre: string | null;
+  cantidad: number;
+  fotos: string[];
+}

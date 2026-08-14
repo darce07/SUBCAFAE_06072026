@@ -19,6 +19,7 @@ const moduleLabels: Record<string, string> = {
   usuarios: "Usuarios",
   configuracion: "Configuración",
   sistema: "Sistema",
+  inventario: "Inventariado interno",
 };
 
 export function RolesPermissionsPage() {
