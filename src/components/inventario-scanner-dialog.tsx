@@ -25,27 +25,34 @@ export function InventarioScannerDialog({
     setStarting(true);
     setError(null);
 
-    void import("html5-qrcode").then(async ({ Html5Qrcode }) => {
-      if (cancelled) return;
-      const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID);
-      scannerRef.current = scanner;
-      try {
-        await scanner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 260, height: 160 } },
-          (decodedText) => {
-            onDetected(decodedText);
-          },
-          () => {},
-        );
-        if (!cancelled) setStarting(false);
-      } catch {
+    void import("html5-qrcode")
+      .then(async ({ Html5Qrcode }) => {
+        if (cancelled) return;
+        const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID);
+        scannerRef.current = scanner;
+        try {
+          await scanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 260, height: 160 } },
+            (decodedText) => {
+              onDetected(decodedText);
+            },
+            () => {},
+          );
+          if (!cancelled) setStarting(false);
+        } catch {
+          if (!cancelled) {
+            setError("No se pudo acceder a la cámara. Verifica los permisos del navegador.");
+            setStarting(false);
+          }
+        }
+      })
+      .catch(() => {
         if (!cancelled) {
-          setError("No se pudo acceder a la cámara. Verifica los permisos del navegador.");
+          setError("No se pudo cargar el lector de códigos.");
           setStarting(false);
         }
-      }
-    });
+      });
 
     return () => {
       cancelled = true;
@@ -77,13 +84,17 @@ export function InventarioScannerDialog({
               Apunta la cámara al código de barras pegado en el ítem.
             </Dialog.Description>
             {error && <Alert className="mb-3">{error}</Alert>}
-            <div className="relative overflow-hidden rounded-xl bg-slate-950">
+            {/* html5-qrcode necesita que este contenedor tenga tamaño real
+                (no display:none) desde antes de start() - si arranca oculto,
+                la cámara se activa pero el video nunca se ve. El spinner va
+                superpuesto encima en vez de ocultar el contenedor. */}
+            <div className="relative min-h-56 overflow-hidden rounded-xl bg-slate-950">
+              <div id={SCANNER_ELEMENT_ID} className="w-full" />
               {starting && !error && (
-                <div className="flex h-56 items-center justify-center text-slate-400">
+                <div className="absolute inset-0 flex items-center justify-center text-slate-400">
                   <LoaderCircle className="size-6 animate-spin" />
                 </div>
               )}
-              <div id={SCANNER_ELEMENT_ID} className={starting ? "hidden" : "w-full"} />
             </div>
           </Dialog.Content>
         </Dialog.Overlay>
