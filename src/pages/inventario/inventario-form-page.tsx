@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ImagePlus, LoaderCircle, MapPin, Save, X } from "lucide-react";
+import { Camera, ImagePlus, LoaderCircle, MapPin, Save, X } from "lucide-react";
 import { Alert, Button, Card, EmptyState, Input, PageHeader, Select } from "../../components/ui";
 import { Field } from "../../components/form-field";
 import { InventarioAreasDialog } from "../../components/inventario-areas-dialog";
@@ -24,7 +24,8 @@ export function InventarioFormPage() {
   const { canCreate, canEdit } = usePermissions();
   const { areas, create: createArea, toggleActive: toggleAreaActive } = useInventarioAreas();
   const { create, update } = useInventarioItems();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(isEdit);
   const [item, setItem] = useState<InventarioItem | null>(null);
@@ -36,6 +37,10 @@ export function InventarioFormPage() {
   const [areaId, setAreaId] = useState("");
   const [activo, setActivo] = useState(true);
   const [fotos, setFotos] = useState<InventarioFoto[]>([]);
+  // Antes de guardar el item todavia no hay item_id para el storage path, asi
+  // que las fotos elegidas quedan en memoria (con su preview) y se suben
+  // recien despues de crear el registro - igual que los anexos de documentos.
+  const [pendingFiles, setPendingFiles] = useState<{ file: File; previewUrl: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [areasDialogOpen, setAreasDialogOpen] = useState(false);
@@ -73,24 +78,40 @@ export function InventarioFormPage() {
 
   const onFilesSelected = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    if (!isEdit || !id) {
-      toast.error("Guarda el ítem primero para poder adjuntar fotos.");
-      return;
-    }
-    setUploading(true);
-    try {
-      for (const file of Array.from(files)) {
-        const foto = await uploadInventarioFoto(id, file);
-        setFotos((current) => [...current, foto]);
+    if (isEdit && id) {
+      setUploading(true);
+      try {
+        for (const file of Array.from(files)) {
+          const foto = await uploadInventarioFoto(id, file);
+          setFotos((current) => [...current, foto]);
+        }
+        toast.success("Fotos subidas correctamente.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "No se pudo subir alguna de las fotos.");
+      } finally {
+        setUploading(false);
       }
-      toast.success("Fotos subidas correctamente.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo subir alguna de las fotos.");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    } else {
+      setPendingFiles((current) => [
+        ...current,
+        ...Array.from(files).map((file) => ({ file, previewUrl: URL.createObjectURL(file) })),
+      ]);
     }
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
   };
+
+  const onRemovePendingFile = (index: number) => {
+    setPendingFiles((current) => {
+      URL.revokeObjectURL(current[index].previewUrl);
+      return current.filter((_, itemIndex) => itemIndex !== index);
+    });
+  };
+
+  useEffect(() => () => {
+    pendingFiles.forEach((pending) => URL.revokeObjectURL(pending.previewUrl));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onRemoveFoto = async (foto: InventarioFoto) => {
     try {
@@ -127,7 +148,20 @@ export function InventarioFormPage() {
         navigate(`/inventario/${id}`);
       } else {
         const created = await create(input);
-        toast.success("Ítem creado. Ya puedes adjuntar fotos y descargar su código/QR.");
+        if (pendingFiles.length) {
+          setUploading(true);
+          try {
+            for (const pending of pendingFiles) {
+              await uploadInventarioFoto(created.id, pending.file);
+              URL.revokeObjectURL(pending.previewUrl);
+            }
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "El ítem se guardó, pero alguna foto no se pudo subir.");
+          } finally {
+            setUploading(false);
+          }
+        }
+        toast.success("Ítem creado.");
         navigate(`/inventario/${created.id}`);
       }
     } catch (error) {
@@ -191,7 +225,7 @@ export function InventarioFormPage() {
 
         <div>
           <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Fotos</p>
-          {!isEdit && <Alert variant="info" className="mb-3">Guarda el ítem primero; luego podrás adjuntar fotos desde esta misma pantalla.</Alert>}
+          {!isEdit && pendingFiles.length === 0 && <Alert variant="info" className="mb-3">Las fotos que elijas acá se suben al guardar el ítem.</Alert>}
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
             {fotos.map((foto) => (
               <div key={foto.id} className="group relative aspect-square overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
@@ -206,18 +240,40 @@ export function InventarioFormPage() {
                 </button>
               </div>
             ))}
-            {isEdit && (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="grid aspect-square place-items-center rounded-xl border border-dashed border-slate-300 text-slate-400 transition hover:border-teal-400 hover:text-teal-600 disabled:opacity-50 dark:border-slate-700"
-              >
-                {uploading ? <LoaderCircle className="size-5 animate-spin" /> : <ImagePlus className="size-5" />}
-              </button>
-            )}
+            {pendingFiles.map((pending, index) => (
+              <div key={pending.previewUrl} className="group relative aspect-square overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+                <img src={pending.previewUrl} alt="Foto pendiente de guardar" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  aria-label="Quitar foto"
+                  onClick={() => onRemovePendingFile(index)}
+                  className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-slate-950/70 text-white opacity-0 transition group-hover:opacity-100"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={uploading}
+              title="Tomar foto"
+              className="grid aspect-square place-items-center rounded-xl border border-dashed border-slate-300 text-slate-400 transition hover:border-teal-400 hover:text-teal-600 disabled:opacity-50 dark:border-slate-700"
+            >
+              {uploading ? <LoaderCircle className="size-5 animate-spin" /> : <Camera className="size-5" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              disabled={uploading}
+              title="Elegir de galería"
+              className="grid aspect-square place-items-center rounded-xl border border-dashed border-slate-300 text-slate-400 transition hover:border-teal-400 hover:text-teal-600 disabled:opacity-50 dark:border-slate-700"
+            >
+              {uploading ? <LoaderCircle className="size-5 animate-spin" /> : <ImagePlus className="size-5" />}
+            </button>
           </div>
-          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(event) => void onFilesSelected(event.target.files)} />
+          <input ref={cameraInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden onChange={(event) => void onFilesSelected(event.target.files)} />
+          <input ref={galleryInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(event) => void onFilesSelected(event.target.files)} />
         </div>
 
         <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
