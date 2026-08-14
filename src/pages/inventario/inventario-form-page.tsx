@@ -195,7 +195,17 @@ export function InventarioFormPage() {
             <Input value={color} onChange={(event) => setColor(event.target.value)} placeholder="Ej. Negro" />
           </Field>
           <Field label="Cantidad *">
-            <Input type="number" min={1} value={cantidad} onChange={(event) => setCantidad(Math.max(1, Number(event.target.value) || 1))} />
+            {/* No clampear en cada tecla: forzar min=1 en el onChange hacia
+                el valor anterior + 1 caracter apenas se borraba, dando la
+                sensacion de que solo se podia "concatenar" sin poder editar
+                ni borrar. El clamp real va en onBlur. */}
+            <Input
+              type="number"
+              min={1}
+              value={cantidad === 0 ? "" : cantidad}
+              onChange={(event) => setCantidad(event.target.value === "" ? 0 : Number(event.target.value))}
+              onBlur={() => setCantidad((current) => Math.max(1, current || 1))}
+            />
           </Field>
           <Field label="Estado *">
             <Select value={estado} onChange={(event) => setEstado(event.target.value as EstadoInventarioItem)}>
