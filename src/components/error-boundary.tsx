@@ -37,6 +37,11 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="mt-2 text-sm text-slate-500">
               Esta sección tuvo un error inesperado. Recargar la página suele resolverlo.
             </p>
+            {/* Mensaje tecnico visible para poder reportarlo sin necesitar
+                F12 - antes solo quedaba en la consola del navegador. */}
+            <p className="mt-3 break-words rounded-lg bg-slate-50 p-2 text-left font-mono text-xs text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+              {this.state.error.message || "Error sin mensaje."}
+            </p>
             <Button className="mt-5" onClick={() => window.location.reload()}>Recargar página</Button>
           </div>
         </div>

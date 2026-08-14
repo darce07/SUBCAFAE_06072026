@@ -33,16 +33,20 @@ export function InventarioDetailPage() {
     if (!item) return;
     let cancelled = false;
 
-    void import("jsbarcode").then(({ default: JsBarcode }) => {
-      if (cancelled || !barcodeRef.current) return;
-      JsBarcode(barcodeRef.current, item.codigo_barras, { format: "CODE128", displayValue: true, height: 60, margin: 8 });
-    });
+    void import("jsbarcode")
+      .then(({ default: JsBarcode }) => {
+        if (cancelled || !barcodeRef.current) return;
+        JsBarcode(barcodeRef.current, item.codigo_barras, { format: "CODE128", displayValue: true, height: 60, margin: 8 });
+      })
+      .catch(() => { if (!cancelled) toast.error("No se pudo generar el código de barras."); });
 
-    void import("qrcode").then((QRCode) => {
-      if (cancelled || !qrRef.current) return;
-      const publicUrl = `${window.location.origin}/i/${item.qr_token}`;
-      void QRCode.toCanvas(qrRef.current, publicUrl, { width: 180, margin: 1 });
-    });
+    void import("qrcode")
+      .then((QRCode) => {
+        if (cancelled || !qrRef.current) return;
+        const publicUrl = `${window.location.origin}/i/${item.qr_token}`;
+        return QRCode.toCanvas(qrRef.current, publicUrl, { width: 180, margin: 1 });
+      })
+      .catch(() => { if (!cancelled) toast.error("No se pudo generar el código QR."); });
 
     return () => { cancelled = true; };
   }, [item]);
