@@ -656,6 +656,7 @@ export function EditDocumentPage() {
 function FileViewerModal({ preview, onClose }: { preview: { title: string; objectUrl: string; signedUrl: string; mimeType: string | null }; onClose: () => void }) {
   const isImage = preview.mimeType?.startsWith("image/");
   const isPdf = preview.mimeType === "application/pdf";
+  const isWord = preview.mimeType === "application/msword" || preview.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
   const title = preview.title;
   const url = preview.objectUrl;
   return (
@@ -673,6 +674,8 @@ function FileViewerModal({ preview, onClose }: { preview: { title: string; objec
             <img src={url} alt={title} className="max-h-full rounded-xl object-contain" />
           ) : isPdf ? (
             <iframe src={url} title={title} className="h-full w-full rounded-xl bg-white" />
+          ) : isWord ? (
+            <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(preview.signedUrl)}`} title={title} className="h-full w-full rounded-xl bg-white" />
           ) : (
             <div className="max-w-md rounded-2xl bg-white p-6 text-center shadow-sm dark:bg-slate-900">
               <FilePenLine className="mx-auto mb-3 size-10 text-teal-700" />
