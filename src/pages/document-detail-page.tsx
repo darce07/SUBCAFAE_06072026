@@ -253,6 +253,7 @@ function FileViewerModal({ preview, onClose }: { preview: { title: string; objec
   const isImage = preview.mimeType?.startsWith("image/");
   const isPdf = preview.mimeType === "application/pdf";
   const isText = preview.mimeType?.startsWith("text/");
+  const isWord = preview.mimeType === "application/msword" || preview.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
   const url = preview.objectUrl;
   const title = preview.title;
   return (
@@ -266,7 +267,7 @@ function FileViewerModal({ preview, onClose }: { preview: { title: string; objec
           <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => window.open(preview.signedUrl, "_blank", "noopener,noreferrer")}><ExternalLink className="size-4" />Abrir en nueva pestaña</Button><button onClick={onClose} className="rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="size-5" /></button></div>
         </div>
         <div className="grid min-h-0 flex-1 place-items-center bg-slate-100 p-3 dark:bg-slate-950">
-          {isImage ? <img src={url} alt={title} className="max-h-full rounded-xl object-contain" /> : isPdf ? <iframe src={url} title={title} className="h-full w-full rounded-xl bg-white" /> : isText ? <TextFilePreview url={url} /> : <div className="max-w-md rounded-2xl bg-white p-6 text-center shadow-sm dark:bg-slate-900"><FileText className="mx-auto mb-3 size-10 text-teal-700" /><h3 className="font-bold">Vista previa no disponible</h3><p className="mt-2 text-sm text-slate-500">Este tipo de archivo puede descargarse para revisarlo con una aplicación compatible.</p></div>}
+          {isImage ? <img src={url} alt={title} className="max-h-full rounded-xl object-contain" /> : isPdf ? <iframe src={url} title={title} className="h-full w-full rounded-xl bg-white" /> : isWord ? <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(preview.signedUrl)}`} title={title} className="h-full w-full rounded-xl bg-white" /> : isText ? <TextFilePreview url={url} /> : <div className="max-w-md rounded-2xl bg-white p-6 text-center shadow-sm dark:bg-slate-900"><FileText className="mx-auto mb-3 size-10 text-teal-700" /><h3 className="font-bold">Vista previa no disponible</h3><p className="mt-2 text-sm text-slate-500">Este tipo de archivo puede descargarse para revisarlo con una aplicación compatible.</p></div>}
         </div>
       </div>
     </div>
