@@ -104,9 +104,9 @@ export function InventarioListPage() {
                 className="cursor-pointer overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg"
                 onClick={() => navigate(`/inventario/${item.id}`)}
               >
-                <div className="grid h-32 place-items-center bg-slate-100 dark:bg-slate-800">
+                <div className="relative grid h-32 place-items-center overflow-hidden bg-slate-100 dark:bg-slate-800">
                   {thumb ? (
-                    <img src={thumb} alt={item.nombre} className="h-full w-full object-cover" />
+                    <img src={thumb} alt={item.nombre} className="absolute inset-0 h-full w-full object-cover" />
                   ) : (
                     <Package className="size-8 text-slate-400" />
                   )}
