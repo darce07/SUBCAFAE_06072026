@@ -82,9 +82,9 @@ export function InventarioDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
           <Card className="overflow-hidden">
-            <div className="grid h-72 place-items-center bg-slate-100 dark:bg-slate-800">
+            <div className="relative grid h-72 place-items-center overflow-hidden bg-slate-100 dark:bg-slate-800">
               {fotos.length > 0 ? (
-                <img src={getInventarioFotoPublicUrl(fotos[activePhoto].storage_path)} alt={item.nombre} className="h-full w-full object-contain" />
+                <img src={getInventarioFotoPublicUrl(fotos[activePhoto].storage_path)} alt={item.nombre} className="absolute inset-0 h-full w-full object-contain" />
               ) : (
                 <Package className="size-12 text-slate-400" />
               )}
