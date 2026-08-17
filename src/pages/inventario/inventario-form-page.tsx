@@ -69,6 +69,17 @@ export function InventarioFormPage() {
     return () => { cancelled = true; };
   }, [id, isEdit]);
 
+  // Este efecto tiene que ir ANTES de los "return" condicionales de abajo
+  // (acceso restringido / cargando / no encontrado) - un hook no puede
+  // llamarse solo quando esas condiciones son falsas, porque entonces la
+  // cantidad de hooks difiere entre renders (React error #310). Esto
+  // rompia la edicion de items reales: el primer render de "loading"
+  // cortaba antes de llegar a este efecto, el siguiente ya no.
+  useEffect(() => () => {
+    pendingFiles.forEach((pending) => URL.revokeObjectURL(pending.previewUrl));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (!allowed) {
     return <Card className="p-8 text-center"><h1 className="font-serif text-xl font-bold">Acceso restringido</h1><p className="mt-2 text-sm text-slate-500">No tienes permiso para {isEdit ? "editar" : "crear"} ítems de inventario.</p></Card>;
   }
@@ -107,11 +118,6 @@ export function InventarioFormPage() {
       return current.filter((_, itemIndex) => itemIndex !== index);
     });
   };
-
-  useEffect(() => () => {
-    pendingFiles.forEach((pending) => URL.revokeObjectURL(pending.previewUrl));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const onRemoveFoto = async (foto: InventarioFoto) => {
     try {
