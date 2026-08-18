@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Search, UserRound, X } from "lucide-react";
+import { Building2, Plus, Search, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Select } from "./ui";
 import type { CatalogItem, CreatePersonalNaturalCommand, PersonalNatural } from "../types";
@@ -13,6 +13,9 @@ export function FirmantesCombobox({
   entidades,
   representaEntidadId = null,
   onRepresentaEntidadChange,
+  allowDirectEntidad = false,
+  entidadSelectedId = null,
+  onEntidadSelect,
 }: {
   personas: PersonalNatural[];
   selectedIds: string[];
@@ -24,6 +27,12 @@ export function FirmantesCombobox({
   entidades?: CatalogItem[];
   representaEntidadId?: string | null;
   onRepresentaEntidadChange?: (entidadId: string | null) => void;
+  // allowDirectEntidad: además de personas, permite elegir una entidad
+  // (institución) directamente como el firmante, sin pasar por una persona
+  // que la represente. Solo tiene sentido junto con single=true.
+  allowDirectEntidad?: boolean;
+  entidadSelectedId?: string | null;
+  onEntidadSelect?: (entidadId: string | null) => void;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -57,10 +66,33 @@ export function FirmantesCombobox({
   );
   const exactMatch = personas.some((persona) => persona.nombre.trim().toLocaleLowerCase("es") === term);
 
+  const entidadSeleccionada = useMemo(
+    () => (allowDirectEntidad ? entidades?.find((item) => item.id === entidadSelectedId) ?? null : null),
+    [allowDirectEntidad, entidades, entidadSelectedId],
+  );
+  const filteredEntidades = useMemo(
+    () => (allowDirectEntidad ? (entidades ?? [])
+      .filter((item) => item.activo)
+      .filter((item) => !term || item.nombre.toLocaleLowerCase("es").includes(term))
+      .slice(0, 5) : []),
+    [allowDirectEntidad, entidades, term],
+  );
+
   const addPersona = (persona: PersonalNatural) => {
     onChange(single ? [persona.id] : [...selectedIds, persona.id]);
     setQuery("");
     setOpen(false);
+  };
+
+  const selectEntidad = (entidad: CatalogItem) => {
+    onEntidadSelect?.(entidad.id);
+    onChange([]);
+    setQuery("");
+    setOpen(false);
+  };
+
+  const removeEntidad = () => {
+    onEntidadSelect?.(null);
   };
 
   const removePersona = (id: string) => {
@@ -89,7 +121,7 @@ export function FirmantesCombobox({
 
   return (
     <div ref={containerRef} className="space-y-3">
-      {selected.length > 0 && (
+      {(selected.length > 0 || entidadSeleccionada) && (
         <div className="flex flex-wrap gap-2">
           {selected.map((persona) => (
             <span key={persona.id} className="inline-flex items-center gap-2 rounded-full bg-teal-50 py-1.5 pl-3 pr-2 text-xs font-semibold text-teal-800 dark:bg-teal-950/40 dark:text-teal-200">
@@ -97,6 +129,12 @@ export function FirmantesCombobox({
               <button type="button" aria-label={`Quitar a ${persona.nombre}`} onClick={() => removePersona(persona.id)} className="rounded-full p-0.5 hover:bg-teal-100 dark:hover:bg-teal-900"><X className="size-3" /></button>
             </span>
           ))}
+          {entidadSeleccionada && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 py-1.5 pl-3 pr-2 text-xs font-semibold text-blue-800 dark:bg-blue-950/40 dark:text-blue-200">
+              <Building2 className="size-3" />{entidadSeleccionada.nombre}
+              <button type="button" aria-label={`Quitar a ${entidadSeleccionada.nombre}`} onClick={removeEntidad} className="rounded-full p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900"><X className="size-3" /></button>
+            </span>
+          )}
         </div>
       )}
       {single && selected.length > 0 && entidades && (
@@ -108,7 +146,7 @@ export function FirmantesCombobox({
           </Select>
         </label>
       )}
-      {(!single || selected.length === 0) && (
+      {(!single || (selected.length === 0 && !entidadSeleccionada)) && (
         <div className="relative">
           <Search className="absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-400" />
           <Input
@@ -116,13 +154,22 @@ export function FirmantesCombobox({
             onFocus={() => setOpen(true)}
             onChange={(event) => { setQuery(event.target.value); setOpen(true); }}
             className="pl-9"
-            placeholder="Buscar o escribir el nombre de quien firmó..."
+            placeholder={allowDirectEntidad ? "Buscar persona o entidad (institución)..." : "Buscar o escribir el nombre de quien firmó..."}
             autoComplete="off"
           />
         </div>
       )}
-      {open && (!single || selected.length === 0) && (
+      {open && (!single || (selected.length === 0 && !entidadSeleccionada)) && (
         <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          {filteredEntidades.map((entidad) => (
+            <button type="button" key={entidad.id} onClick={() => selectEntidad(entidad)} className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800">
+              <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950"><Building2 className="size-4" /></div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{entidad.nombre}</p>
+                <p className="text-xs text-slate-500">Entidad / institución</p>
+              </div>
+            </button>
+          ))}
           {filtered.map((persona) => (
             <button type="button" key={persona.id} onClick={() => addPersona(persona)} className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800">
               <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950"><UserRound className="size-4" /></div>
@@ -132,7 +179,7 @@ export function FirmantesCombobox({
               </div>
             </button>
           ))}
-          {!filtered.length && !term && <p className="p-3 text-center text-xs text-slate-400">Escribí para buscar un firmante registrado.</p>}
+          {!filtered.length && !filteredEntidades.length && !term && <p className="p-3 text-center text-xs text-slate-400">Escribí para buscar un firmante registrado.</p>}
           {term.length >= 3 && !exactMatch && (
             <div className="mt-1 space-y-3 border-t border-slate-100 p-3 dark:border-slate-800">
               <p className="text-xs font-semibold text-teal-800 dark:text-teal-300">Registrar “{query.trim()}” como nuevo firmante</p>

@@ -134,8 +134,10 @@ export function NewDocumentPage() {
   const [pendingAnexos, setPendingAnexos] = useState<PendingDocumentoAnexo[]>([]);
   const [emisorId, setEmisorId] = useState<string[]>([]);
   const [emisorRepresenta, setEmisorRepresenta] = useState<string | null>(null);
+  const [emisorEntidadId, setEmisorEntidadId] = useState<string | null>(null);
   const [receptorId, setReceptorId] = useState<string[]>([]);
   const [receptorRepresenta, setReceptorRepresenta] = useState<string | null>(null);
+  const [receptorEntidadId, setReceptorEntidadId] = useState<string | null>(null);
   const [firmanteIds, setFirmanteIds] = useState<string[]>([]);
   const [savingAnexos, setSavingAnexos] = useState(false);
   const [archivoHash, setArchivoHash] = useState<string | null>(null);
@@ -466,9 +468,11 @@ export function NewDocumentPage() {
         }
       }
       const firmantesPayload: SincronizarFirmanteInput[] = [
-        ...emisorId.map((personalNaturalId) => ({ personalNaturalId, rol: "emisor" as const, representaEntidadId: emisorRepresenta })),
-        ...receptorId.map((personalNaturalId) => ({ personalNaturalId, rol: "receptor" as const, representaEntidadId: receptorRepresenta })),
-        ...firmanteIds.map((personalNaturalId) => ({ personalNaturalId, rol: "firmante" as const, representaEntidadId: null })),
+        ...emisorId.map((personalNaturalId) => ({ personalNaturalId, entidadId: null, rol: "emisor" as const, representaEntidadId: emisorRepresenta })),
+        ...(emisorEntidadId ? [{ personalNaturalId: null, entidadId: emisorEntidadId, rol: "emisor" as const, representaEntidadId: null }] : []),
+        ...receptorId.map((personalNaturalId) => ({ personalNaturalId, entidadId: null, rol: "receptor" as const, representaEntidadId: receptorRepresenta })),
+        ...(receptorEntidadId ? [{ personalNaturalId: null, entidadId: receptorEntidadId, rol: "receptor" as const, representaEntidadId: null }] : []),
+        ...firmanteIds.map((personalNaturalId) => ({ personalNaturalId, entidadId: null, rol: "firmante" as const, representaEntidadId: null })),
       ];
       if (firmantesPayload.length) {
         await sincronizarDocumentoFirmantes(documento.id, firmantesPayload);
@@ -544,7 +548,7 @@ export function NewDocumentPage() {
               </Field>
               <Field label="Título del archivo *" error={errors.titulo?.message} className="md:col-span-2"><Input placeholder="Ej. Factura por servicio de mantenimiento" {...register("titulo")} /></Field>
               <Field label="Descripción" className="md:col-span-2"><textarea className="min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 dark:border-slate-700 dark:bg-slate-950" {...register("descripcion")} /></Field>
-              <Field label="Emisor / remitente (opcional)" hint="Quién emite o remite el documento.">
+              <Field label="Emisor / remitente (opcional)" hint="Quién emite o remite el documento: una persona, o directamente una entidad.">
                 <FirmantesCombobox
                   single
                   personas={catalogos.personalNatural}
@@ -553,6 +557,9 @@ export function NewDocumentPage() {
                   entidades={catalogos.entidades}
                   representaEntidadId={emisorRepresenta}
                   onRepresentaEntidadChange={setEmisorRepresenta}
+                  allowDirectEntidad
+                  entidadSelectedId={emisorEntidadId}
+                  onEntidadSelect={setEmisorEntidadId}
                   onCreate={async (command) => {
                     const created = await createOrGetPersonalNatural(command);
                     await catalogos.refresh();
@@ -560,7 +567,7 @@ export function NewDocumentPage() {
                   }}
                 />
               </Field>
-              <Field label="Receptor (opcional)" hint="A quién va dirigido el documento.">
+              <Field label="Receptor (opcional)" hint="A quién va dirigido el documento: una persona, o directamente una entidad.">
                 <FirmantesCombobox
                   single
                   personas={catalogos.personalNatural}
@@ -569,6 +576,9 @@ export function NewDocumentPage() {
                   entidades={catalogos.entidades}
                   representaEntidadId={receptorRepresenta}
                   onRepresentaEntidadChange={setReceptorRepresenta}
+                  allowDirectEntidad
+                  entidadSelectedId={receptorEntidadId}
+                  onEntidadSelect={setReceptorEntidadId}
                   onCreate={async (command) => {
                     const created = await createOrGetPersonalNatural(command);
                     await catalogos.refresh();
