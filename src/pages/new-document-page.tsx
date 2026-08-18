@@ -632,7 +632,7 @@ export function NewDocumentPage() {
                   onRefresh={() => void refreshEntitySection()}
                 />
               </Field>
-              <Field label="Tipo de categoría"><Select className="w-full" {...register("tipo_categoria_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposCategoria, watch("tipo_categoria_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
+              <Field label="Tipo de gestión" info="No es el tipo de documento — es la naturaleza de la gestión que realizó la entidad o persona emisora/receptora (ej. Contable, Tesorería, Legal)."><Select className="w-full" {...register("tipo_categoria_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposCategoria, watch("tipo_categoria_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
               <Field label="Naturaleza del documento" hint="¿Mueve dinero? Si es un oficio, memo o resolución, elige “No aplica”.">
                 <Select className="w-full" {...register("tipo_movimiento_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposMovimiento, watch("tipo_movimiento_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select>
               </Field>

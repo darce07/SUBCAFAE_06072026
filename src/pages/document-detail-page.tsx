@@ -165,7 +165,7 @@ export function DocumentDetailPage() {
             </div>
             <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-6 sm:gap-5 dark:border-slate-800">
               <Info label="Categoría" value={documento.categoria?.nombre} />
-              <Info label="Tipo de categoría" value={documento.tipo_categoria?.nombre} />
+              <Info label="Tipo de gestión" value={documento.tipo_categoria?.nombre} />
               <Info label="Tipo de entidad" value={documento.tipo_entidad?.nombre} />
               <Info label="Entidad" value={documento.entidad?.nombre} />
               <Info label="Ingreso / Egreso" value={documento.tipo_movimiento?.nombre} />
@@ -279,7 +279,7 @@ const auditLabels: Record<string, string> = {
   categoria_id: "Categoría",
   tipo_entidad_id: "Tipo de entidad",
   entidad_id: "Entidad",
-  tipo_categoria_id: "Tipo de categoría",
+  tipo_categoria_id: "Tipo de gestión",
   estado_id: "Estado",
   titulo: "Título",
   descripcion: "Descripción",
