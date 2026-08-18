@@ -52,15 +52,18 @@ export type FirmanteRol = "emisor" | "receptor" | "firmante";
 export interface DocumentoFirmante {
   id: string;
   documento_id: string;
-  personal_natural_id: string;
+  personal_natural_id: string | null;
+  entidad_id: string | null;
   rol: FirmanteRol;
   representa_entidad_id: string | null;
   created_at: string;
   personal_natural?: PersonalNatural;
+  entidad?: Entidad;
 }
 
 export interface SincronizarFirmanteInput {
-  personalNaturalId: string;
+  personalNaturalId: string | null;
+  entidadId: string | null;
   rol: FirmanteRol;
   representaEntidadId: string | null;
 }

@@ -6,7 +6,7 @@ export async function getDocumentoFirmantes(documentoId: string): Promise<Docume
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("documento_firmantes")
-    .select("*, personal_natural(*)")
+    .select("*, personal_natural(*), entidad:entidades(*)")
     .eq("documento_id", documentoId)
     .order("created_at", { ascending: true });
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron cargar los firmantes."));
@@ -19,6 +19,7 @@ export async function sincronizarDocumentoFirmantes(documentoId: string, firmant
     p_documento_id: documentoId,
     p_firmantes: firmantes.map((firmante) => ({
       personal_natural_id: firmante.personalNaturalId,
+      entidad_id: firmante.entidadId,
       rol: firmante.rol,
       representa_entidad_id: firmante.representaEntidadId,
     })),

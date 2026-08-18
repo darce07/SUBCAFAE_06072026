@@ -90,8 +90,10 @@ export function EditDocumentPage() {
   const [pendingAnexos, setPendingAnexos] = useState<PendingDocumentoAnexo[]>([]);
   const [emisorId, setEmisorId] = useState<string[]>([]);
   const [emisorRepresenta, setEmisorRepresenta] = useState<string | null>(null);
+  const [emisorEntidadId, setEmisorEntidadId] = useState<string | null>(null);
   const [receptorId, setReceptorId] = useState<string[]>([]);
   const [receptorRepresenta, setReceptorRepresenta] = useState<string | null>(null);
+  const [receptorEntidadId, setReceptorEntidadId] = useState<string | null>(null);
   const [firmanteIds, setFirmanteIds] = useState<string[]>([]);
   const [editingAnexo, setEditingAnexo] = useState<DocumentoAnexo | null>(null);
   const [editAnexoFile, setEditAnexoFile] = useState<File | null>(null);
@@ -173,11 +175,18 @@ export function EditDocumentPage() {
       .then((firmantes) => {
         const emisor = firmantes.find((firmante) => firmante.rol === "emisor");
         const receptor = firmantes.find((firmante) => firmante.rol === "receptor");
-        setEmisorId(emisor ? [emisor.personal_natural_id] : []);
+        setEmisorId(emisor?.personal_natural_id ? [emisor.personal_natural_id] : []);
         setEmisorRepresenta(emisor?.representa_entidad_id ?? null);
-        setReceptorId(receptor ? [receptor.personal_natural_id] : []);
+        setEmisorEntidadId(emisor?.entidad_id ?? null);
+        setReceptorId(receptor?.personal_natural_id ? [receptor.personal_natural_id] : []);
         setReceptorRepresenta(receptor?.representa_entidad_id ?? null);
-        setFirmanteIds(firmantes.filter((firmante) => firmante.rol === "firmante").map((firmante) => firmante.personal_natural_id));
+        setReceptorEntidadId(receptor?.entidad_id ?? null);
+        setFirmanteIds(
+          firmantes
+            .filter((firmante) => firmante.rol === "firmante")
+            .map((firmante) => firmante.personal_natural_id)
+            .filter((personalNaturalId): personalNaturalId is string => personalNaturalId !== null),
+        );
       })
       .catch((error) => toast.error(error instanceof Error ? error.message : "No se pudieron cargar los firmantes."));
   }, [id]);
@@ -313,9 +322,11 @@ export function EditDocumentPage() {
         periodoAnio: values.periodo_anio ? Number(values.periodo_anio) : null,
       });
       const firmantesPayload: SincronizarFirmanteInput[] = [
-        ...emisorId.map((personalNaturalId) => ({ personalNaturalId, rol: "emisor" as const, representaEntidadId: emisorRepresenta })),
-        ...receptorId.map((personalNaturalId) => ({ personalNaturalId, rol: "receptor" as const, representaEntidadId: receptorRepresenta })),
-        ...firmanteIds.map((personalNaturalId) => ({ personalNaturalId, rol: "firmante" as const, representaEntidadId: null })),
+        ...emisorId.map((personalNaturalId) => ({ personalNaturalId, entidadId: null, rol: "emisor" as const, representaEntidadId: emisorRepresenta })),
+        ...(emisorEntidadId ? [{ personalNaturalId: null, entidadId: emisorEntidadId, rol: "emisor" as const, representaEntidadId: null }] : []),
+        ...receptorId.map((personalNaturalId) => ({ personalNaturalId, entidadId: null, rol: "receptor" as const, representaEntidadId: receptorRepresenta })),
+        ...(receptorEntidadId ? [{ personalNaturalId: null, entidadId: receptorEntidadId, rol: "receptor" as const, representaEntidadId: null }] : []),
+        ...firmanteIds.map((personalNaturalId) => ({ personalNaturalId, entidadId: null, rol: "firmante" as const, representaEntidadId: null })),
       ];
       await sincronizarDocumentoFirmantes(id, firmantesPayload);
       if (pendingAnexos.length) {
@@ -521,7 +532,7 @@ export function EditDocumentPage() {
               />
             </Field>
             <Field label="Descripción" className="md:col-span-2"><textarea className="min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950" {...register("descripcion")} /></Field>
-            <Field label="Emisor / remitente (opcional)" hint="Quién emite o remite el documento.">
+            <Field label="Emisor / remitente (opcional)" hint="Quién emite o remite el documento: una persona, o directamente una entidad.">
               <FirmantesCombobox
                 single
                 personas={catalogos.personalNatural}
@@ -530,6 +541,9 @@ export function EditDocumentPage() {
                 entidades={catalogos.entidades}
                 representaEntidadId={emisorRepresenta}
                 onRepresentaEntidadChange={setEmisorRepresenta}
+                allowDirectEntidad
+                entidadSelectedId={emisorEntidadId}
+                onEntidadSelect={setEmisorEntidadId}
                 onCreate={async (command) => {
                   const created = await createOrGetPersonalNatural(command);
                   await catalogos.refresh();
@@ -537,7 +551,7 @@ export function EditDocumentPage() {
                 }}
               />
             </Field>
-            <Field label="Receptor (opcional)" hint="A quién va dirigido el documento.">
+            <Field label="Receptor (opcional)" hint="A quién va dirigido el documento: una persona, o directamente una entidad.">
               <FirmantesCombobox
                 single
                 personas={catalogos.personalNatural}
@@ -546,6 +560,9 @@ export function EditDocumentPage() {
                 entidades={catalogos.entidades}
                 representaEntidadId={receptorRepresenta}
                 onRepresentaEntidadChange={setReceptorRepresenta}
+                allowDirectEntidad
+                entidadSelectedId={receptorEntidadId}
+                onEntidadSelect={setReceptorEntidadId}
                 onCreate={async (command) => {
                   const created = await createOrGetPersonalNatural(command);
                   await catalogos.refresh();
