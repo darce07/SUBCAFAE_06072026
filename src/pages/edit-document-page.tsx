@@ -22,9 +22,20 @@ import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo, deleteDocumentoAnexo, getDocumentoAnexos, updateDocumentoAnexo } from "../services/anexos.service";
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview, removeDocumentoFile, uploadDocumentoAnexoFile } from "../services/storage.service";
 import { getDocumentoFirmantes, sincronizarDocumentoFirmantes } from "../services/firmantes.service";
-import type { DocumentoAnexo, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
+import type { CatalogItem, DocumentoAnexo, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
 import { findMatchingEntity, validateEntityDocument } from "../lib/entity-document";
+
+// Un documento puede haberse guardado con un valor de catálogo que luego se
+// desactivó (ej. una categoría dada de baja). Si el <select> solo lista
+// catálogos activos, ese <option> no existe y el campo se ve vacío aunque el
+// dato sigue guardado — se agrega el valor seleccionado aunque esté inactivo.
+function selectableOptions(items: CatalogItem[], selectedId: string | null | undefined) {
+  const active = items.filter((item) => item.activo);
+  if (!selectedId || active.some((item) => item.id === selectedId)) return active;
+  const current = items.find((item) => item.id === selectedId);
+  return current ? [...active, current] : active;
+}
 
 const minDocumentYear = 2000;
 const maxDocumentYear = new Date().getFullYear() + 1;
@@ -492,7 +503,7 @@ export function EditDocumentPage() {
               </div>
               {!canChangeDate && <span className="mt-1 block text-xs text-amber-700">Tu rol actual no permite modificar la fecha.</span>}
             </Field>
-            <Field label="Categoría *" error={errors.categoria_id?.message}><Select className="w-full" {...register("categoria_id")}>{catalogos.categorias.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
+            <Field label="Categoría *" error={errors.categoria_id?.message}><Select className="w-full" {...register("categoria_id")}>{selectableOptions(catalogos.categorias, watch("categoria_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
             <Field
               label="Periodo (opcional)"
               error={errors.periodo_mes?.message ?? errors.periodo_anio?.message}
@@ -500,7 +511,7 @@ export function EditDocumentPage() {
             >
               <MonthYearPicker value={periodoValue} onChange={onPeriodoChange} minYear={minDocumentYear} maxYear={maxDocumentYear} />
             </Field>
-            <Field label="Estado *" error={errors.estado_id?.message}><Select className="w-full" {...register("estado_id")}>{catalogos.estadosDocumento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
+            <Field label="Estado *" error={errors.estado_id?.message}><Select className="w-full" {...register("estado_id")}>{selectableOptions(catalogos.estadosDocumento, watch("estado_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
             <Field label="Título *" error={errors.titulo?.message} className="md:col-span-2"><Input {...register("titulo")} /></Field>
             <input type="hidden" {...register("tipo_entidad_id")} />
             <Field label="Entidad" className="md:col-span-2" hint="Buscá por nombre o RUC — el tipo se completa solo al elegirla.">
@@ -520,10 +531,10 @@ export function EditDocumentPage() {
                 onRefresh={() => void refreshEntitySection()}
               />
             </Field>
-            <Field label="Tipo de categoría"><Select className="w-full" {...register("tipo_categoria_id")}><option value="">No especificado</option>{catalogos.tiposCategoria.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
-            <Field label="Archivador"><Select className="w-full" {...register("archivador_id")}><option value="">Sin archivador</option>{catalogos.archivadores.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
-            <Field label="Tipo de movimiento"><Select className="w-full" {...register("tipo_movimiento_id")}><option value="">No especificado</option>{catalogos.tiposMovimiento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
-            <Field label="Tipo de operación"><Select className="w-full" disabled={noAplica} {...register("tipo_operacion_id")}><option value="">No especificada</option>{catalogos.tiposOperacion.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
+            <Field label="Tipo de categoría"><Select className="w-full" {...register("tipo_categoria_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposCategoria, watch("tipo_categoria_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
+            <Field label="Archivador"><Select className="w-full" {...register("archivador_id")}><option value="">Sin archivador</option>{selectableOptions(catalogos.archivadores, watch("archivador_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
+            <Field label="Tipo de movimiento"><Select className="w-full" {...register("tipo_movimiento_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposMovimiento, selectedMovementId).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
+            <Field label="Tipo de operación"><Select className="w-full" disabled={noAplica} {...register("tipo_operacion_id")}><option value="">No especificada</option>{selectableOptions(catalogos.tiposOperacion, watch("tipo_operacion_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
             <Field label="Monto" error={errors.monto?.message}>
               <Controller
                 name="monto"

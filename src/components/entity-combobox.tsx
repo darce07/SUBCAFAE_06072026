@@ -58,6 +58,15 @@ export function EntityCombobox({
   const selectedRule = draft.tipoDocumento ? entityDocumentRules[draft.tipoDocumento] : null;
   const exactMatch = entities.some((entity) => entity.nombre.trim().toLocaleLowerCase("es") === normalizedSearch);
   const typeNameById = (id: string | null) => tiposEntidad.find((item) => item.id === id)?.nombre;
+  // Un documento puede tener un tipo de entidad que ya fue desactivado en
+  // Catálogos; si el <select> solo lista tipos activos, ese <option> no
+  // existe y el campo se ve vacío aunque el dato sigue guardado.
+  const tiposEntidadOptions = useMemo(() => {
+    const active = tiposEntidad.filter((item) => item.activo);
+    if (!entityTypeId || active.some((item) => item.id === entityTypeId)) return active;
+    const current = tiposEntidad.find((item) => item.id === entityTypeId);
+    return current ? [...active, current] : active;
+  }, [tiposEntidad, entityTypeId]);
 
   const updateName = (nombre: string) => {
     onChange("");
@@ -126,7 +135,7 @@ export function EntityCombobox({
     {selected ? <div className="flex flex-wrap items-center gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"><Check className="size-4" /><strong>Entidad seleccionada:</strong> {selected.nombre}{entityTypeName && <Badge tone="green">{entityTypeName}</Badge>}{selected.tipo_documento && <Badge tone="green">{selected.tipo_documento} {selected.numero_documento}</Badge>}</div> : draft.nombre.trim().length >= 3 ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">Entidad nueva: elegí su tipo abajo para poder registrarla.</div> : null}
     {!selected && draft.nombre.trim().length >= 3 && (
       <div className="grid gap-3 sm:grid-cols-2">
-        <label><span className="mb-2 block text-xs font-semibold">Tipo de entidad *</span><Select className="w-full" value={entityTypeId} onChange={(event) => onEntityTypeChange(event.target.value)}><option value="">Seleccionar tipo</option>{tiposEntidad.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></label>
+        <label><span className="mb-2 block text-xs font-semibold">Tipo de entidad *</span><Select className="w-full" value={entityTypeId} onChange={(event) => onEntityTypeChange(event.target.value)}><option value="">Seleccionar tipo</option>{tiposEntidadOptions.map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></label>
         <label><span className="mb-2 block text-xs font-semibold">Tipo de documento {requiresIdentity ? "*" : ""}</span><Select className="w-full" value={draft.tipoDocumento} onChange={(event) => onDraftChange({ ...draft, tipoDocumento: event.target.value as EntityDocumentType | "", numeroDocumento: normalizeEntityDocumentNumber(event.target.value as EntityDocumentType | "", draft.numeroDocumento) })}><option value="">Sin documento</option><option value="DNI">DNI</option><option value="CE">Carné de extranjería</option><option value="PASAPORTE">Pasaporte</option><option value="RUC">RUC</option><option value="OTRO">Otro</option></Select></label>
         <label className="sm:col-span-2"><span className="mb-2 block text-xs font-semibold">Número de documento {requiresIdentity ? "*" : ""}</span><Input value={draft.numeroDocumento} onChange={(event) => onDraftChange({ ...draft, numeroDocumento: normalizeEntityDocumentNumber(draft.tipoDocumento, event.target.value) })} inputMode={selectedRule?.inputMode ?? "text"} maxLength={selectedRule?.maxLength ?? 30} placeholder={selectedRule?.placeholder ?? "Número de identificación"} />{documentError && <span className="mt-1 block text-xs text-rose-600">{documentError}</span>}</label>
       </div>
