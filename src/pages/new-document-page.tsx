@@ -23,9 +23,19 @@ import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo } from "../services/anexos.service";
 import { uploadDocumentoAnexoFile } from "../services/storage.service";
 import { sincronizarDocumentoFirmantes } from "../services/firmantes.service";
-import type { DocumentoHashMatch, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
+import type { CatalogItem, DocumentoHashMatch, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
 import { findMatchingEntity, validateEntityDocument } from "../lib/entity-document";
+
+// Un borrador restaurado puede traer un valor de catálogo que ya se
+// desactivó desde entonces. Si el <select> solo lista catálogos activos,
+// ese <option> no existe y el campo se ve vacío aunque el valor siga ahí.
+function selectableOptions(items: CatalogItem[], selectedId: string | null | undefined) {
+  const active = items.filter((item) => item.activo);
+  if (!selectedId || active.some((item) => item.id === selectedId)) return active;
+  const current = items.find((item) => item.id === selectedId);
+  return current ? [...active, current] : active;
+}
 
 const minDocumentYear = 2000;
 const maxDocumentYear = new Date().getFullYear() + 1;
@@ -526,7 +536,7 @@ export function NewDocumentPage() {
               <Field label="Categoría *" error={errors.categoria_id?.message}>
                 <Select className="w-full" disabled={catalogos.loading} {...register("categoria_id")}>
                   <option value="">Seleccionar categoría</option>
-                  {catalogos.categorias.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                  {selectableOptions(catalogos.categorias, watch("categoria_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}
                 </Select>
               </Field>
               <Field
@@ -544,7 +554,7 @@ export function NewDocumentPage() {
                 <MonthYearPicker value={periodoValue} onChange={onPeriodoChange} minYear={minDocumentYear} maxYear={maxDocumentYear} />
               </Field>
               <Field label="Estado *" error={errors.estado_id?.message}>
-                <Select className="w-full" {...register("estado_id")}><option value="">Seleccionar estado</option>{catalogos.estadosDocumento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
+                <Select className="w-full" {...register("estado_id")}><option value="">Seleccionar estado</option>{selectableOptions(catalogos.estadosDocumento, watch("estado_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select>
               </Field>
               <Field label="Título del archivo *" error={errors.titulo?.message} className="md:col-span-2"><Input placeholder="Ej. Factura por servicio de mantenimiento" {...register("titulo")} /></Field>
               <Field label="Descripción" className="md:col-span-2"><textarea className="min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 dark:border-slate-700 dark:bg-slate-950" {...register("descripcion")} /></Field>
@@ -622,9 +632,9 @@ export function NewDocumentPage() {
                   onRefresh={() => void refreshEntitySection()}
                 />
               </Field>
-              <Field label="Tipo de categoría"><Select className="w-full" {...register("tipo_categoria_id")}><option value="">No especificado</option>{catalogos.tiposCategoria.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
+              <Field label="Tipo de categoría"><Select className="w-full" {...register("tipo_categoria_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposCategoria, watch("tipo_categoria_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
               <Field label="Naturaleza del documento" hint="¿Mueve dinero? Si es un oficio, memo o resolución, elige “No aplica”.">
-                <Select className="w-full" {...register("tipo_movimiento_id")}><option value="">No especificado</option>{catalogos.tiposMovimiento.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
+                <Select className="w-full" {...register("tipo_movimiento_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposMovimiento, watch("tipo_movimiento_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select>
               </Field>
               {!isNoAplica && (
                 <>
@@ -635,7 +645,7 @@ export function NewDocumentPage() {
                       render={({ field }) => <MontoInput value={field.value} onChange={field.onChange} />}
                     />
                   </Field>
-                  <Field label="Tipo de operación" error={errors.tipo_operacion_id?.message}><Select className="w-full" {...register("tipo_operacion_id")}><option value="">Seleccionar operación</option>{catalogos.tiposOperacion.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
+                  <Field label="Tipo de operación" error={errors.tipo_operacion_id?.message}><Select className="w-full" {...register("tipo_operacion_id")}><option value="">Seleccionar operación</option>{selectableOptions(catalogos.tiposOperacion, watch("tipo_operacion_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
                 </>
               )}
             </div>
@@ -644,7 +654,7 @@ export function NewDocumentPage() {
           <Card className="p-5 sm:p-6">
             <SectionTitle icon={<MapPin />} title="Archivo y trazabilidad" description="Ubicación física y ruta histórica importada" />
             <div className="grid gap-5 md:grid-cols-2">
-              <Field label="Archivador"><Select className="w-full" {...register("archivador_id")}><option value="">Sin archivador</option>{catalogos.archivadores.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select></Field>
+              <Field label="Archivador"><Select className="w-full" {...register("archivador_id")}><option value="">Sin archivador</option>{selectableOptions(catalogos.archivadores, watch("archivador_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
               <Field label="Ruta histórica" className="md:col-span-2">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                   <span>El navegador no entrega la ruta completa del archivo; pega aquí la ruta local real si la necesitas.</span>
