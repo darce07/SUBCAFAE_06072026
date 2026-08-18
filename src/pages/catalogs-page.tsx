@@ -17,7 +17,7 @@ const definitions: Array<{
   { table: "catalogo_categorias", key: "categorias", name: "Categorías", description: "Clasificación principal de documentos", color: "bg-teal-500" },
   { table: "catalogo_tipo_entidad", key: "tiposEntidad", name: "Tipos de entidad", description: "Persona natural, jurídica o pública", color: "bg-blue-500" },
   { table: "entidades", key: "entidades", name: "Entidades", description: "Contrapartes vinculadas a documentos", color: "bg-violet-500" },
-  { table: "catalogo_tipo_categoria", key: "tiposCategoria", name: "Tipos de categoría", description: "Agrupación administrativa y financiera", color: "bg-amber-500" },
+  { table: "catalogo_tipo_categoria", key: "tiposCategoria", name: "Tipos de gestión", description: "Naturaleza de la gestión de la entidad/persona emisora o receptora", color: "bg-amber-500" },
   { table: "catalogo_estado_documento", key: "estadosDocumento", name: "Estados", description: "Ciclo de vida documental", color: "bg-emerald-500" },
   { table: "catalogo_archivadores", key: "archivadores", name: "Archivadores", description: "Ubicaciones para la custodia física", color: "bg-orange-500" },
   { table: "catalogo_tipo_movimiento", key: "tiposMovimiento", name: "Tipos de movimiento", description: "Ingreso, egreso o no aplica", color: "bg-rose-500" },
