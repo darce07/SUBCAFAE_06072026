@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
-import { CalendarDays, ExternalLink, FilePenLine, LoaderCircle, Paperclip, Save, UploadCloud, X } from "lucide-react";
+import { CalendarDays, ExternalLink, FilePenLine, FileText, Landmark, LoaderCircle, MapPin, Paperclip, Save, UploadCloud, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button, Card, Input, PageHeader, Select } from "../components/ui";
@@ -494,10 +494,12 @@ export function EditDocumentPage() {
         title="Editar documento"
         description="Actualiza únicamente los metadatos permitidos. Cada cambio queda registrado en auditoría."
       />
-      <form onSubmit={handleSubmit(setConfirmValues)} className="space-y-6">
-        <Card className="p-5 sm:p-6">
-          <SectionTitle icon={<FilePenLine />} title="Datos editables" description="La información de control del registro permanece protegida." />
-          <div className="grid gap-5 md:grid-cols-2">
+      <form onSubmit={handleSubmit(setConfirmValues)} className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
+        <div className="space-y-6">
+          <Card className="p-5 sm:p-6">
+            <SectionTitle icon={<FileText />} title="Información documental" description="Clasificación y datos principales" />
+            <div className="grid gap-5 md:grid-cols-2">
+            <Field label="Categoría *" error={errors.categoria_id?.message}><Select className="w-full" {...register("categoria_id")}>{selectableOptions(catalogos.categorias, watch("categoria_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
             <Field
               label="Fecha del documento *"
               error={errors.fecha_documento?.message}
@@ -509,7 +511,6 @@ export function EditDocumentPage() {
               </div>
               {!canChangeDate && <span className="mt-1 block text-xs text-amber-700">Tu rol actual no permite modificar la fecha.</span>}
             </Field>
-            <Field label="Categoría *" error={errors.categoria_id?.message}><Select className="w-full" {...register("categoria_id")}>{selectableOptions(catalogos.categorias, watch("categoria_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
             <Field
               label="Periodo (opcional)"
               error={errors.periodo_mes?.message ?? errors.periodo_anio?.message}
@@ -519,35 +520,6 @@ export function EditDocumentPage() {
             </Field>
             <Field label="Estado *" error={errors.estado_id?.message}><Select className="w-full" {...register("estado_id")}>{selectableOptions(catalogos.estadosDocumento, watch("estado_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
             <Field label="Título *" error={errors.titulo?.message} className="md:col-span-2"><Input {...register("titulo")} /></Field>
-            <input type="hidden" {...register("tipo_entidad_id")} />
-            <Field label="Entidad" className="md:col-span-2" hint="Buscá por nombre o RUC — el tipo se completa solo al elegirla.">
-              <input type="hidden" {...register("entidad_id")} />
-              <EntityCombobox
-                entities={entitySearch.entities}
-                entityTypeId={selectedEntityType ?? ""}
-                entityTypeName={selectedEntityTypeName}
-                tiposEntidad={catalogos.tiposEntidad}
-                onEntityTypeChange={(id) => setValue("tipo_entidad_id", id, { shouldDirty: true })}
-                value={selectedEntityId ?? ""}
-                draft={entityDraft}
-                onChange={(entityId) => setValue("entidad_id", entityId, { shouldDirty: true })}
-                onDraftChange={setEntityDraft}
-                loading={entitySearch.loading}
-                error={entitySearch.error}
-                onRefresh={() => void refreshEntitySection()}
-              />
-            </Field>
-            <Field label="Tipo de gestión" info="No es el tipo de documento — es la naturaleza de la gestión que realizó la entidad o persona emisora/receptora (ej. Contable, Tesorería, Legal)."><Select className="w-full" {...register("tipo_categoria_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposCategoria, watch("tipo_categoria_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
-            <Field label="Archivador"><Select className="w-full" {...register("archivador_id")}><option value="">Sin archivador</option>{selectableOptions(catalogos.archivadores, watch("archivador_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
-            <Field label="Tipo de movimiento"><Select className="w-full" {...register("tipo_movimiento_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposMovimiento, selectedMovementId).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
-            <Field label="Tipo de operación"><Select className="w-full" disabled={noAplica} {...register("tipo_operacion_id")}><option value="">No especificada</option>{selectableOptions(catalogos.tiposOperacion, watch("tipo_operacion_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
-            <Field label="Monto" error={errors.monto?.message}>
-              <Controller
-                name="monto"
-                control={control}
-                render={({ field }) => <MontoInput value={field.value} onChange={field.onChange} disabled={noAplica} />}
-              />
-            </Field>
             <Field label="Descripción" className="md:col-span-2"><textarea className="min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950" {...register("descripcion")} /></Field>
             <Field label="Emisor / remitente (opcional)" hint="Quién emite o remite el documento: una persona, o directamente una entidad.">
               <FirmantesCombobox
@@ -599,20 +571,54 @@ export function EditDocumentPage() {
                 }}
               />
             </Field>
+            </div>
+          </Card>
+          <Card className="p-5 sm:p-6">
+            <SectionTitle icon={<Landmark />} title="Entidad y operación" description="Relación administrativa y económica" />
+            <div className="grid gap-5 md:grid-cols-2">
+            <input type="hidden" {...register("tipo_entidad_id")} />
+            <Field label="Entidad" className="md:col-span-2" hint="Buscá por nombre o RUC — el tipo se completa solo al elegirla.">
+              <input type="hidden" {...register("entidad_id")} />
+              <EntityCombobox
+                entities={entitySearch.entities}
+                entityTypeId={selectedEntityType ?? ""}
+                entityTypeName={selectedEntityTypeName}
+                tiposEntidad={catalogos.tiposEntidad}
+                onEntityTypeChange={(id) => setValue("tipo_entidad_id", id, { shouldDirty: true })}
+                value={selectedEntityId ?? ""}
+                draft={entityDraft}
+                onChange={(entityId) => setValue("entidad_id", entityId, { shouldDirty: true })}
+                onDraftChange={setEntityDraft}
+                loading={entitySearch.loading}
+                error={entitySearch.error}
+                onRefresh={() => void refreshEntitySection()}
+              />
+            </Field>
+            <Field label="Tipo de gestión" info="No es el tipo de documento — es la naturaleza de la gestión que realizó la entidad o persona emisora/receptora (ej. Contable, Tesorería, Legal)."><Select className="w-full" {...register("tipo_categoria_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposCategoria, watch("tipo_categoria_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
+            <Field label="Naturaleza del documento" hint="¿Mueve dinero? Si es un oficio, memo o resolución, elige “No aplica”."><Select className="w-full" {...register("tipo_movimiento_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposMovimiento, selectedMovementId).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
+              {!noAplica && (
+                <>
+            <Field label="Monto" error={errors.monto?.message}>
+              <Controller
+                name="monto"
+                control={control}
+                render={({ field }) => <MontoInput value={field.value} onChange={field.onChange} />}
+              />
+            </Field>
+            <Field label="Tipo de operación"><Select className="w-full" {...register("tipo_operacion_id")}><option value="">No especificada</option>{selectableOptions(catalogos.tiposOperacion, watch("tipo_operacion_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
+                </>
+              )}
+            </div>
+          </Card>
+          <Card className="p-5 sm:p-6">
+            <SectionTitle icon={<MapPin />} title="Archivo y trazabilidad" description="Ubicación física del documento" />
+            <div className="grid gap-5 md:grid-cols-2">
+            <Field label="Archivador"><Select className="w-full" {...register("archivador_id")}><option value="">Sin archivador</option>{selectableOptions(catalogos.archivadores, watch("archivador_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
             {/* La Ruta histórica está oculta por ahora, pero se conserva: sin este campo
                 registrado, al guardar se perdería la ruta que ya tiene el documento. */}
             <input type="hidden" {...register("ruta_historica")} />
-          </div>
-        </Card>
-        <Card className="p-5 sm:p-6">
-          <div className="mb-4 flex items-center gap-2"><Paperclip className="size-4 text-teal-700" /><h2 className="font-bold">Reemplazar archivo digital</h2></div>
-          <p className="mb-4 break-all text-xs text-slate-500">Actual: {currentPath ?? "Sin archivo"}</p>
-          <label className="flex cursor-pointer items-center gap-4 rounded-2xl border-2 border-dashed border-slate-300 p-5 transition hover:border-teal-500 dark:border-slate-700">
-            <UploadCloud className="size-7 text-teal-600" />
-            <div><p className="text-sm font-semibold">{selectedFile?.name ?? "Seleccionar un archivo nuevo"}</p><p className="text-xs text-slate-500">Es opcional. El archivo anterior conserva su trazabilidad en auditoría.</p></div>
-            <input type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp" onChange={(event) => setValue("archivo", event.target.files?.[0])} />
-          </label>
-        </Card>
+            </div>
+          </Card>
         <DocumentAttachmentsSection
           tiposAnexo={catalogos.tiposAnexo}
           existing={anexos}
@@ -633,6 +639,16 @@ export function EditDocumentPage() {
           <Button type="button" variant="secondary" onClick={() => navigate(`/documentos/${id}`)}>Cancelar</Button>
           <Button type="submit" loading={isSubmitting || uploading || savingAnexos}><Save className="size-4" />Revisar cambios</Button>
         </div>
+        </div>
+        <Card className="h-fit p-5 xl:sticky xl:top-28">
+          <div className="mb-4 flex items-center gap-2"><Paperclip className="size-4 text-teal-700" /><h2 className="font-bold">Reemplazar archivo digital</h2></div>
+          <p className="mb-4 break-all text-xs text-slate-500">Actual: {currentPath ?? "Sin archivo"}</p>
+          <label className="flex cursor-pointer items-center gap-4 rounded-2xl border-2 border-dashed border-slate-300 p-5 transition hover:border-teal-500 dark:border-slate-700">
+            <UploadCloud className="size-7 text-teal-600" />
+            <div><p className="text-sm font-semibold">{selectedFile?.name ?? "Seleccionar un archivo nuevo"}</p><p className="text-xs text-slate-500">Es opcional. El archivo anterior conserva su trazabilidad en auditoría.</p></div>
+            <input type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp" onChange={(event) => setValue("archivo", event.target.files?.[0])} />
+          </label>
+        </Card>
       </form>
       {confirmValues && (
         <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-sm sm:p-4">
