@@ -313,6 +313,31 @@ export interface DashboardFilters {
   mes?: number;
 }
 
+export interface SindicatoResumen {
+  id: string;
+  nombre: string;
+  totalDocumentos: number;
+  totalIngresos: number;
+  totalEgresos: number;
+  balance: number;
+  ultimaFecha: string | null;
+}
+
+export interface BalanceSindicatos {
+  sindicatos: SindicatoResumen[];
+  aniosDisponibles: number[];
+}
+
+export interface BalanceSindicato {
+  sindicato: { id: string; nombre: string; activo: boolean };
+  totalDocumentos: number;
+  totalIngresos: number;
+  totalEgresos: number;
+  balance: number;
+  balanceMensual: Array<{ month: string; ingresos: number; egresos: number; balance: number }>;
+  aniosDisponibles: number[];
+}
+
 export interface ControlInternoUsuario {
   usuario_id: string;
   usuario_nombre: string | null;

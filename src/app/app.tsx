@@ -26,6 +26,8 @@ const SettingsPage = lazy(() => import("../pages/settings-page").then((module) =
 const NotificationsPage = lazy(() => import("../pages/notifications-page").then((module) => ({ default: module.NotificationsPage })));
 const BackupsPage = lazy(() => import("../pages/backups-page").then((module) => ({ default: module.BackupsPage })));
 const SoporteTicketsPage = lazy(() => import("../pages/soporte-tickets-page").then((module) => ({ default: module.SoporteTicketsPage })));
+const SindicatosPage = lazy(() => import("../pages/sindicatos-page").then((module) => ({ default: module.SindicatosPage })));
+const SindicatoDetailPage = lazy(() => import("../pages/sindicato-detail-page").then((module) => ({ default: module.SindicatoDetailPage })));
 const InventarioListPage = lazy(() => import("../pages/inventario/inventario-list-page").then((module) => ({ default: module.InventarioListPage })));
 const InventarioFormPage = lazy(() => import("../pages/inventario/inventario-form-page").then((module) => ({ default: module.InventarioFormPage })));
 const InventarioDetailPage = lazy(() => import("../pages/inventario/inventario-detail-page").then((module) => ({ default: module.InventarioDetailPage })));
@@ -55,6 +57,8 @@ export function App() {
             <Route path="/finanzas/egresos" element={<FinancePage kind="Egreso" />} />
             <Route path="/finanzas/balance" element={<BalancePage />} />
             <Route path="/libro-contable" element={<AccountingBookPage />} />
+            <Route path="/sindicatos" element={<SindicatosPage />} />
+            <Route path="/sindicatos/:id" element={<SindicatoDetailPage />} />
             <Route path="/auditoria" element={<AuditPage />} />
             <Route path="/control-interno" element={<ControlInternoPage />} />
             <Route path="/catalogos" element={<CatalogsPage />} />

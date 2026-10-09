@@ -18,6 +18,7 @@ import {
   MessageCircle,
   Moon,
   PackageSearch,
+  UsersRound,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -74,6 +75,7 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
       { label: "Egresos", href: "/finanzas/egresos", icon: WalletCards, permission: ["finanzas", "ver"] },
       { label: "Balance", href: "/finanzas/balance", icon: SlidersHorizontal, permission: ["finanzas", "ver"] },
       { label: "Libro contable", href: "/libro-contable", icon: BookOpen, permission: ["finanzas", "ver"] },
+      { label: "Sindicatos", href: "/sindicatos", icon: UsersRound, permission: ["finanzas", "ver"] },
     ],
   },
   {
@@ -121,6 +123,7 @@ const pageNames: Record<string, string> = {
   notificaciones: "Notificaciones",
   "tickets-soporte": "Tickets de soporte",
   inventario: "Inventariado Interno",
+  sindicatos: "Sindicatos",
 };
 
 export function DashboardLayout() {
