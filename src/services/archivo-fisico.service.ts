@@ -6,6 +6,8 @@ import type { Documento, PaginatedResult } from "../types";
 export interface ArchivoFisicoFilters {
   search?: string;
   archivadorId?: string;
+  // Orden por fecha del documento: "desc" (más nuevo primero, por defecto) o "asc".
+  orderDirection?: "asc" | "desc";
   page?: number;
   pageSize?: number;
 }
@@ -43,7 +45,10 @@ export async function getArchivoFisicoDocumentos(filters: ArchivoFisicoFilters =
     .select(archivoFisicoSelect, { count: "exact" })
     .eq("activo", true)
     .not("archivador_id", "is", null)
-    .order("fecha_documento", { ascending: false })
+    .order("fecha_documento", { ascending: filters.orderDirection === "asc" })
+    // Desempate fijo: con fechas iguales el orden no debe cambiar entre páginas.
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true })
     .range((page - 1) * pageSize, page * pageSize - 1);
 
   query = applyArchivoFisicoFilters(query, filters);
