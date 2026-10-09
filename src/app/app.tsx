@@ -25,6 +25,7 @@ const SettingsPage = lazy(() => import("../pages/settings-page").then((module) =
 const NotificationsPage = lazy(() => import("../pages/notifications-page").then((module) => ({ default: module.NotificationsPage })));
 const BackupsPage = lazy(() => import("../pages/backups-page").then((module) => ({ default: module.BackupsPage })));
 const SoporteTicketsPage = lazy(() => import("../pages/soporte-tickets-page").then((module) => ({ default: module.SoporteTicketsPage })));
+const DocumentoVisorPage = lazy(() => import("../pages/documento-visor-page").then((module) => ({ default: module.DocumentoVisorPage })));
 const SindicatosPage = lazy(() => import("../pages/sindicatos-page").then((module) => ({ default: module.SindicatosPage })));
 const SindicatoDetailPage = lazy(() => import("../pages/sindicato-detail-page").then((module) => ({ default: module.SindicatoDetailPage })));
 const InventarioListPage = lazy(() => import("../pages/inventario/inventario-list-page").then((module) => ({ default: module.InventarioListPage })));
@@ -40,6 +41,8 @@ export function App() {
         {/* Vista pública de invitado (escaneo de QR físico): sin auth, sin DashboardLayout. */}
         <Route path="/i/:qrToken" element={<InventarioPublicPage />} />
         <Route element={<ProtectedRoute />}>
+          {/* Visor para comparar: ventana propia, sin menú lateral. */}
+          <Route path="/documentos/:id/visor" element={<DocumentoVisorPage />} />
           <Route element={<DashboardLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
