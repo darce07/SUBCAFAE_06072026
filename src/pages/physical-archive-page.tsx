@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { Archive, FileQuestion, FolderArchive, LoaderCircle, Search, Trash2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
@@ -273,6 +272,17 @@ export function PhysicalArchivePage() {
   );
 }
 
+// Abre el documento en una ventana propia (archivo + datos) para poder
+// compararlo; cada documento usa su propia ventana, así se pueden poner dos
+// juntos. Si el navegador bloquea la ventana emergente, se abre en la misma.
+function openDocumentViewer(id: string) {
+  const width = Math.min(1280, window.screen.availWidth - 80);
+  const height = Math.min(860, window.screen.availHeight - 80);
+  const opened = window.open(`/documentos/${id}/visor`, `visor-${id}`, `popup=yes,width=${width},height=${height},left=40,top=40`);
+  if (!opened) window.location.assign(`/documentos/${id}/visor`);
+  else opened.focus();
+}
+
 function ArchiveDocumentList({
   documentos,
   isVisible,
@@ -292,7 +302,6 @@ function ArchiveDocumentList({
   pageSome: boolean;
   onTogglePage: () => void;
 }) {
-  const navigate = useNavigate();
   return (
     <>
       <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">
@@ -300,7 +309,7 @@ function ArchiveDocumentList({
           <ArchiveDocumentCard
             key={documento.id}
             documento={documento}
-            onClick={() => navigate(`/documentos/${documento.id}`)}
+            onClick={() => openDocumentViewer(documento.id)}
             selectable={selectable}
             selected={isSelected(documento.id)}
             onToggle={() => onToggle(documento.id)}
@@ -329,7 +338,7 @@ function ArchiveDocumentList({
             {documentos.map((documento) => (
               <tr
                 key={documento.id}
-                onClick={() => navigate(`/documentos/${documento.id}`)}
+                onClick={() => openDocumentViewer(documento.id)}
                 className={`cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40 ${isSelected(documento.id) ? "bg-teal-50/60 dark:bg-teal-950/20" : ""}`}
               >
                 {selectable && (
