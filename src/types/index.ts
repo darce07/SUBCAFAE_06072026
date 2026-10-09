@@ -347,6 +347,24 @@ export interface ControlInternoUsuario {
   eliminados: number;
 }
 
+export interface ReporteActividadDiaria {
+  fecha: string;
+  usuario_id: string;
+  usuario_nombre: string | null;
+  usuario_email: string | null;
+  subidos: number;
+  editados: number;
+  eliminados: number;
+  anexos: number;
+  acciones: number;
+  primera_accion: string | null;
+  ultima_accion: string | null;
+  minutos_activos: number;
+  primera_conexion: string | null;
+  ultima_conexion: string | null;
+  minutos_conectado: number;
+}
+
 export interface ControlInternoFilters {
   anio?: number;
   mes?: number;

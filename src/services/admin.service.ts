@@ -7,6 +7,7 @@ import type {
   CatalogItem,
   ControlInternoFilters,
   ControlInternoUsuario,
+  ReporteActividadDiaria,
   PaginatedResult,
   RolePermissionRow,
 } from "../types";
@@ -78,6 +79,19 @@ export async function setRolePermission(roleId: string, permissionId: string, as
     p_asignado: assigned,
   });
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo actualizar el permiso."));
+}
+
+// Reporte diario de actividad por usuario (solo administradores). Las fechas son
+// YYYY-MM-DD en hora de Lima.
+export async function getReporteActividadDiaria(desde: string, hasta: string, usuarioId?: string): Promise<ReporteActividadDiaria[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc("obtener_reporte_actividad_diaria", {
+    p_desde: desde,
+    p_hasta: hasta,
+    p_usuario: usuarioId || null,
+  });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo cargar el reporte diario."));
+  return (data ?? []) as ReporteActividadDiaria[];
 }
 
 export async function getControlInternoUsuarios(filters: ControlInternoFilters = {}): Promise<ControlInternoUsuario[]> {

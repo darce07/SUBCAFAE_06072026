@@ -4,6 +4,7 @@ import { CalendarRange, Download, FilePlus2, FileX2, PenSquare, RotateCcw, Troph
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { Alert, Button, Card, EmptyState, PageHeader, Select, Skeleton } from "../components/ui";
 import { ChartFrame } from "../components/chart-frame";
+import { ControlInternoReporteDiario } from "../components/control-interno-reporte-diario";
 import { usePermissions } from "../hooks/use-permissions";
 import { useControlInterno } from "../hooks/use-control-interno";
 import { chartAxisTick, chartGridStroke, chartTooltipLabelStyle, chartTooltipStyle } from "../lib/chart-theme";
@@ -22,6 +23,7 @@ const podiumTone = [
 
 export function ControlInternoPage() {
   const { isAdmin } = usePermissions();
+  const [vista, setVista] = useState<"resumen" | "diario">("resumen");
   const [year, setYear] = useState("");
   const [month, setMonth] = useState("");
   const filters = useMemo(() => ({
@@ -96,6 +98,21 @@ export function ControlInternoPage() {
         description="Actividad documental por usuario: quién sube, edita y elimina, con filtro por periodo."
         action={<Button variant="secondary" disabled={data.length === 0} onClick={onExportPdf}><Download className="size-4" />Descargar PDF</Button>}
       />
+      <div className="flex gap-1 rounded-2xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900 sm:w-fit" role="tablist">
+        {([["resumen", "Resumen por periodo"], ["diario", "Reporte diario"]] as const).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={vista === id}
+            onClick={() => setVista(id)}
+            className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition sm:flex-none ${vista === id ? "bg-teal-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {vista === "diario" ? <ControlInternoReporteDiario /> : (<>
       {error && <Alert variant="warning">{error}</Alert>}
 
       <Card className="p-4 sm:p-5">
@@ -227,6 +244,7 @@ export function ControlInternoPage() {
           </Card>
         </>
       )}
+      </>)}
     </div>
   );
 }
