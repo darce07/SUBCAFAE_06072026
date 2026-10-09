@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarRange, Clock, Download, FilePlus2, FileX2, Info, PenSquare, UsersRound } from "lucide-react";
 import { Alert, Button, Card, EmptyState, Input, Select, Skeleton } from "./ui";
 import { useControlInterno } from "../hooks/use-control-interno";
+import { ControlInternoMapaCalor } from "./control-interno-mapa-calor";
 import { exportToPdf } from "../lib/export";
 import { getReporteActividadDiaria } from "../services/admin.service";
 import type { ReporteActividadDiaria } from "../types";
@@ -215,6 +216,8 @@ export function ControlInternoReporteDiario() {
           </div>
         )}
       </Card>
+
+      {rangoValido && <ControlInternoMapaCalor key={`${desde}|${hasta}|${usuarioId}`} desde={desde} hasta={hasta} usuarioId={usuarioId || undefined} />}
 
       <Alert variant="info" className="flex items-start gap-2">
         <Info className="mt-0.5 size-4 shrink-0" />
