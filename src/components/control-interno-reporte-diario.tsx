@@ -27,10 +27,11 @@ function fechaLarga(fecha: string) {
   return new Date(`${fecha}T12:00:00Z`).toLocaleDateString("es-PE", { weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
-// Aporte del día: lo que la persona produjo. Eliminar es limpieza y no suma; escanear sí,
+// Aporte del día: documentos y archivos que la persona produjo. Editar y eliminar son acciones sobre
+// algo ya contado (subir y luego corregir sería contarlo dos veces), así que no suman; escanear sí,
 // aunque la persona no haya entrado a subir nada.
 function totalTrabajado(row: ReporteActividadDiaria) {
-  return row.subidos + row.editados + row.anexos + row.escaneados;
+  return row.subidos + row.anexos + row.escaneados;
 }
 
 function duracion(minutos: number) {
@@ -221,7 +222,7 @@ export function ControlInternoReporteDiario() {
           <strong>Entró</strong>, <strong>Última conexión</strong> y <strong>Tiempo conectado</strong> salen del registro de conexión: el sistema anota cada pocos minutos
           que la persona lo tiene abierto y activo (pestaña visible y con uso en los últimos 5 minutos), aunque solo consulte. Solo existe desde que se activó
           este registro; los días anteriores muestran "—". Las columnas de acciones (<strong>Subidos, Editados, Eliminados, Anexos</strong>) salen de la auditoría
-          y "Subidos" cuenta solo los documentos que siguen activos. <strong>Escaneados</strong> son los documentos que la persona escaneó mientras otra los digitaba (se indica en cada documento con "Escaneado por"), contados el día en que se digitalizaron. <strong>Total</strong> suma lo que la persona produjo: subidos, editados, anexos y escaneados (eliminar no cuenta), así quien solo escanea también refleja su aporte. Se guarda únicamente fecha y hora, nunca el contenido, y cada persona recibe un aviso la primera vez.
+          y "Subidos" cuenta solo los documentos que siguen activos. <strong>Escaneados</strong> son los documentos que la persona escaneó mientras otra los digitaba (se indica en cada documento con "Escaneado por"), contados el día en que se digitalizaron. <strong>Total</strong> suma lo que la persona produjo: subidos, anexos y escaneados. Editar y eliminar no cuentan porque son acciones sobre un documento que ya se contó, y quien solo escanea también refleja su aporte. Se guarda únicamente fecha y hora, nunca el contenido, y cada persona recibe un aviso la primera vez.
         </span>
       </Alert>
     </div>
