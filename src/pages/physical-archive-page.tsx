@@ -1,14 +1,22 @@
 import { motion } from "framer-motion";
-import { Archive, FileQuestion, FolderArchive, LoaderCircle, Search } from "lucide-react";
+import { Archive, FileQuestion, FolderArchive, LoaderCircle, Search, Trash2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
 import { useColumnVisibility } from "../hooks/use-column-visibility";
+import { usePermissions } from "../hooks/use-permissions";
+import { collectAllIds, useRowSelection } from "../hooks/use-row-selection";
 import { useArchivoFisicoDocumentos, useArchivoFisicoResumen } from "../hooks/use-archivo-fisico-documentos";
 import { Alert, Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
 import { ColumnsMenu } from "../components/columns-menu";
+import { BulkActionBar } from "../components/bulk-action-bar";
+import { ConfirmDialog } from "../components/confirm-dialog";
+import { SelectCheckbox } from "../components/select-checkbox";
 import { formatDate, getStatusTone } from "../lib/utils";
+import { deleteDocumentos } from "../services/documentos.service";
+import { getArchivoFisicoDocumentos } from "../services/archivo-fisico.service";
 import type { Documento } from "../types";
 
 const ARCHIVE_COLUMNS = [
@@ -31,14 +39,54 @@ export function PhysicalArchivePage() {
   const catalogos = useCatalogos();
   const activeArchives = useMemo(() => catalogos.archivadores.filter((item) => item.activo), [catalogos.archivadores]);
   const selectedArchive = activeArchives.find((item) => item.id === selectedArchiveId) ?? null;
-  const { resumen, loading: loadingResumen, error: resumenError } = useArchivoFisicoResumen(debouncedSearch);
-  const { documentos, count, loading, error } = useArchivoFisicoDocumentos({
+  const { canDelete } = usePermissions();
+  const selection = useRowSelection();
+  const [resumenKey, setResumenKey] = useState(0);
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [selectingAll, setSelectingAll] = useState(false);
+  const { resumen, loading: loadingResumen, error: resumenError } = useArchivoFisicoResumen(debouncedSearch, resumenKey);
+  const { documentos, count, loading, error, refresh } = useArchivoFisicoDocumentos({
     search: debouncedSearch,
     archivadorId: selectedArchiveId || undefined,
     page,
     pageSize,
   });
   const totalPages = Math.max(Math.ceil(count / pageSize), 1);
+  const canBulkDelete = canDelete("documentos");
+  const pageIds = documentos.map((documento) => documento.id);
+  const pageSelection = selection.pageState(pageIds);
+
+  const selectAllMatching = async () => {
+    setSelectingAll(true);
+    try {
+      const ids = await collectAllIds((currentPage) =>
+        getArchivoFisicoDocumentos({ search: debouncedSearch, archivadorId: selectedArchiveId || undefined, page: currentPage, pageSize: 100 }));
+      selection.addMany(ids);
+    } catch (selectError) {
+      toast.error(selectError instanceof Error ? selectError.message : "No se pudieron seleccionar todos los documentos.");
+    } finally {
+      setSelectingAll(false);
+    }
+  };
+
+  const deleteSelected = async () => {
+    if (bulkRunning) return;
+    setBulkRunning(true);
+    try {
+      const result = await deleteDocumentos(selection.ids);
+      const failedIds = result.failed.map((item) => item.id);
+      selection.clear();
+      if (failedIds.length) selection.addMany(failedIds);
+      await refresh();
+      setResumenKey((value) => value + 1);
+      if (result.ok) toast.success(`${result.ok} ${result.ok === 1 ? "documento enviado" : "documentos enviados"} a la Papelera.`);
+      if (result.failed.length) toast.error(`${result.failed.length} no se pudieron eliminar: ${result.failed[0].message}`);
+    } finally {
+      setBulkRunning(false);
+      setConfirmBulk(false);
+    }
+  };
   const visibleArchives = activeArchives.filter((archive) => {
     const term = debouncedSearch.toLocaleLowerCase("es");
     return !term
@@ -47,6 +95,7 @@ export function PhysicalArchivePage() {
   });
 
   const selectArchive = (archiveId: string) => {
+    if (archiveId !== selectedArchiveId) selection.clear();
     setSelectedArchiveId(archiveId);
     setPage(1);
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -94,12 +143,13 @@ export function PhysicalArchivePage() {
               onChange={(event) => {
                 setSearch(event.target.value);
                 setPage(1);
+                selection.clear();
               }}
               className="pl-9"
               placeholder="Buscar documento, archivador o ruta..."
             />
           </div>
-          <Button variant="secondary" onClick={() => { setSearch(""); setSelectedArchiveId(""); setPage(1); }}>
+          <Button variant="secondary" onClick={() => { setSearch(""); setSelectedArchiveId(""); setPage(1); selection.clear(); }}>
             Restablecer filtros
           </Button>
         </div>
@@ -179,7 +229,23 @@ export function PhysicalArchivePage() {
           </div>
         ) : (
           <>
-            <ArchiveDocumentList documentos={documentos} isVisible={columnVisibility.isVisible} />
+            {canBulkDelete && (
+              <BulkActionBar count={selection.count} total={count} onSelectAll={() => void selectAllMatching()} selectingAll={selectingAll} onClear={selection.clear}>
+                <Button size="sm" variant="danger" onClick={() => setConfirmBulk(true)}>
+                  <Trash2 className="size-4" />Enviar a Papelera
+                </Button>
+              </BulkActionBar>
+            )}
+            <ArchiveDocumentList
+              documentos={documentos}
+              isVisible={columnVisibility.isVisible}
+              selectable={canBulkDelete}
+              isSelected={selection.isSelected}
+              onToggle={selection.toggle}
+              pageAll={pageSelection.all}
+              pageSome={pageSelection.some}
+              onTogglePage={() => selection.togglePage(pageIds)}
+            />
             {!documentos.length && (
               <div className="p-5 text-sm text-slate-500">No hay documentos para los filtros seleccionados.</div>
             )}
@@ -194,21 +260,62 @@ export function PhysicalArchivePage() {
         )}
       </Card>
       </div>
+      <ConfirmDialog
+        open={confirmBulk}
+        onOpenChange={(open) => !open && !bulkRunning && setConfirmBulk(false)}
+        title="Enviar documentos a la Papelera"
+        description={`¿Enviar ${selection.count} ${selection.count === 1 ? "documento" : "documentos"} a la Papelera? Dejarán de contar en la tabla principal y en los totales financieros, pero se pueden restaurar desde la Papelera.`}
+        confirmLabel={`Enviar ${selection.count} a la Papelera`}
+        loading={bulkRunning}
+        onConfirm={() => void deleteSelected()}
+      />
     </div>
   );
 }
 
-function ArchiveDocumentList({ documentos, isVisible }: { documentos: Documento[]; isVisible: (columnId: string) => boolean }) {
+function ArchiveDocumentList({
+  documentos,
+  isVisible,
+  selectable,
+  isSelected,
+  onToggle,
+  pageAll,
+  pageSome,
+  onTogglePage,
+}: {
+  documentos: Documento[];
+  isVisible: (columnId: string) => boolean;
+  selectable: boolean;
+  isSelected: (id: string) => boolean;
+  onToggle: (id: string) => void;
+  pageAll: boolean;
+  pageSome: boolean;
+  onTogglePage: () => void;
+}) {
   const navigate = useNavigate();
   return (
     <>
       <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">
-        {documentos.map((documento) => <ArchiveDocumentCard key={documento.id} documento={documento} onClick={() => navigate(`/documentos/${documento.id}`)} />)}
+        {documentos.map((documento) => (
+          <ArchiveDocumentCard
+            key={documento.id}
+            documento={documento}
+            onClick={() => navigate(`/documentos/${documento.id}`)}
+            selectable={selectable}
+            selected={isSelected(documento.id)}
+            onToggle={() => onToggle(documento.id)}
+          />
+        ))}
       </div>
       <div className="table-scroll responsive-table" tabIndex={0}>
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900">
             <tr>
+              {selectable && (
+                <th className="w-10 px-5 py-3">
+                  <SelectCheckbox label="Seleccionar todos los de esta página" checked={pageAll} indeterminate={pageSome} onChange={onTogglePage} />
+                </th>
+              )}
               <th className="px-5 py-3">Código</th>
               {isVisible("fecha") && <th className="px-5 py-3">Fecha</th>}
               {isVisible("categoria") && <th className="px-5 py-3">Categoría</th>}
@@ -223,8 +330,13 @@ function ArchiveDocumentList({ documentos, isVisible }: { documentos: Documento[
               <tr
                 key={documento.id}
                 onClick={() => navigate(`/documentos/${documento.id}`)}
-                className="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                className={`cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40 ${isSelected(documento.id) ? "bg-teal-50/60 dark:bg-teal-950/20" : ""}`}
               >
+                {selectable && (
+                  <td className="px-5 py-4">
+                    <SelectCheckbox label={`Seleccionar ${documento.codigo_documento}`} checked={isSelected(documento.id)} onChange={() => onToggle(documento.id)} />
+                  </td>
+                )}
                 <td className="px-5 py-4 font-semibold text-teal-700">{documento.codigo_documento}</td>
                 {isVisible("fecha") && <td className="px-5 py-4">{formatDate(documento.fecha_documento)}</td>}
                 {isVisible("categoria") && <td className="px-5 py-4">{documento.categoria?.nombre ?? "Sin categoría"}</td>}
@@ -241,11 +353,30 @@ function ArchiveDocumentList({ documentos, isVisible }: { documentos: Documento[
   );
 }
 
-function ArchiveDocumentCard({ documento, onClick }: { documento: Documento; onClick: () => void }) {
+function ArchiveDocumentCard({
+  documento,
+  onClick,
+  selectable,
+  selected,
+  onToggle,
+}: {
+  documento: Documento;
+  onClick: () => void;
+  selectable: boolean;
+  selected: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <button type="button" onClick={onClick} className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(event) => { if (event.key === "Enter") onClick(); }}
+      className={`w-full cursor-pointer rounded-2xl border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:bg-slate-950 ${selected ? "border-teal-500 ring-2 ring-teal-500/20" : "border-slate-200 dark:border-slate-800"}`}
+    >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        {selectable && <SelectCheckbox label={`Seleccionar ${documento.codigo_documento}`} checked={selected} onChange={onToggle} />}
+        <div className="min-w-0 flex-1">
           <p className="break-words font-bold text-teal-700">{documento.codigo_documento}</p>
           <p className="mt-1 break-words text-sm font-semibold text-slate-900 dark:text-white">{documento.titulo}</p>
         </div>
@@ -257,7 +388,7 @@ function ArchiveDocumentCard({ documento, onClick }: { documento: Documento; onC
         <ArchiveInfo label="Entidad" value={documento.entidad?.nombre ?? "—"} />
         <ArchiveInfo label="Ruta física" value={documento.ruta_historica || "Sin ruta registrada"} />
       </div>
-    </button>
+    </div>
   );
 }
 

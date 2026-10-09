@@ -49,7 +49,7 @@ export function useArchivoFisicoDocumentos(filters: ArchivoFisicoFilters = {}) {
   return { documentos, count, loading, error, refresh };
 }
 
-export function useArchivoFisicoResumen(search?: string) {
+export function useArchivoFisicoResumen(search?: string, reloadKey = 0) {
   const [resumen, setResumen] = useState<ArchivoFisicoResumen>(emptyResumen);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +72,7 @@ export function useArchivoFisicoResumen(search?: string) {
       .finally(() => {
         if (currentRequest === requestId.current) setLoading(false);
       });
-  }, [search]);
+  }, [search, reloadKey]);
 
   return { resumen, loading, error };
 }

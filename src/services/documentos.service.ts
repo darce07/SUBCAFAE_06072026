@@ -361,6 +361,33 @@ export async function restaurarDocumento(id: string): Promise<void> {
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo restaurar el documento."));
 }
 
+export interface BulkResult {
+  ok: number;
+  failed: Array<{ id: string; message: string }>;
+}
+
+// Aplica la misma función segura (permisos + auditoría) documento por
+// documento, con pocas peticiones en paralelo. Un fallo no detiene el resto.
+async function runBulk(ids: string[], action: (id: string) => Promise<void>): Promise<BulkResult> {
+  const result: BulkResult = { ok: 0, failed: [] };
+  const queue = [...ids];
+  const worker = async () => {
+    for (let id = queue.shift(); id !== undefined; id = queue.shift()) {
+      try {
+        await action(id);
+        result.ok += 1;
+      } catch (error) {
+        result.failed.push({ id, message: error instanceof Error ? error.message : "Error desconocido." });
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(5, ids.length) }, worker));
+  return result;
+}
+
+export const deleteDocumentos = (ids: string[]) => runBulk(ids, deleteDocumento);
+export const restaurarDocumentos = (ids: string[]) => runBulk(ids, restaurarDocumento);
+
 export async function getDashboardResumen(filters: DashboardFilters = {}): Promise<DashboardResumen> {
   if (!supabase) return buildMockDashboard(filters);
   const { data, error } = await supabase.rpc("obtener_dashboard_resumen_filtrado", {
