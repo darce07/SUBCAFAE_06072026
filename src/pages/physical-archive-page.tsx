@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Archive, FileQuestion, FolderArchive, LoaderCircle, Search, Trash2 } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, FileQuestion, FolderArchive, LoaderCircle, Search, Trash2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useCatalogos } from "../hooks/use-catalogos";
@@ -32,6 +32,7 @@ export function PhysicalArchivePage() {
   const [selectedArchiveId, setSelectedArchiveId] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [orden, setOrden] = useState<"asc" | "desc">("desc");
   const debouncedSearch = useDebounce(search);
   const resultsRef = useRef<HTMLDivElement>(null);
   const columnVisibility = useColumnVisibility("sigdaf:archivo-fisico-columnas");
@@ -48,6 +49,7 @@ export function PhysicalArchivePage() {
   const { documentos, count, loading, error, refresh } = useArchivoFisicoDocumentos({
     search: debouncedSearch,
     archivadorId: selectedArchiveId || undefined,
+    orderDirection: orden,
     page,
     pageSize,
   });
@@ -244,6 +246,8 @@ export function PhysicalArchivePage() {
               pageAll={pageSelection.all}
               pageSome={pageSelection.some}
               onTogglePage={() => selection.togglePage(pageIds)}
+              orden={orden}
+              onToggleOrden={() => { setOrden((value) => (value === "desc" ? "asc" : "desc")); setPage(1); }}
             />
             {!documentos.length && (
               <div className="p-5 text-sm text-slate-500">No hay documentos para los filtros seleccionados.</div>
@@ -291,6 +295,8 @@ function ArchiveDocumentList({
   pageAll,
   pageSome,
   onTogglePage,
+  orden,
+  onToggleOrden,
 }: {
   documentos: Documento[];
   isVisible: (columnId: string) => boolean;
@@ -300,6 +306,8 @@ function ArchiveDocumentList({
   pageAll: boolean;
   pageSome: boolean;
   onTogglePage: () => void;
+  orden: "asc" | "desc";
+  onToggleOrden: () => void;
 }) {
   return (
     <>
@@ -325,7 +333,18 @@ function ArchiveDocumentList({
                 </th>
               )}
               <th className="px-5 py-3">Código</th>
-              {isVisible("fecha") && <th className="px-5 py-3">Fecha</th>}
+              {isVisible("fecha") && (
+                <th className="px-5 py-3" aria-sort={orden === "asc" ? "ascending" : "descending"}>
+                  <button
+                    type="button"
+                    onClick={onToggleOrden}
+                    title={orden === "desc" ? "Más nuevos primero. Clic para ver los más antiguos primero." : "Más antiguos primero. Clic para ver los más nuevos primero."}
+                    className="inline-flex items-center gap-1 font-semibold uppercase hover:text-teal-700"
+                  >
+                    Fecha {orden === "desc" ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />}
+                  </button>
+                </th>
+              )}
               {isVisible("categoria") && <th className="px-5 py-3">Categoría</th>}
               {isVisible("entidad") && <th className="px-5 py-3">Entidad</th>}
               {isVisible("titulo") && <th className="px-5 py-3">Título</th>}
