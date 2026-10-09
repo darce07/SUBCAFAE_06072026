@@ -23,6 +23,7 @@ const archivoFisicoSelect = `
   categoria:catalogo_categorias(*),
   tipo_entidad:catalogo_tipo_entidad(*),
   entidad:entidades(*),
+  paginas:documento_paginas(paginas),
   tipo_categoria:catalogo_tipo_categoria(*),
   estado:catalogo_estado_documento(*),
   archivador:catalogo_archivadores(*),

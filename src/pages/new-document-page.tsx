@@ -24,6 +24,7 @@ import { createDocumentoAnexo } from "../services/anexos.service";
 import { uploadDocumentoAnexoFile } from "../services/storage.service";
 import { sincronizarDocumentoFirmantes } from "../services/firmantes.service";
 import { asignarEscaneadoPor } from "../services/escaneos.service";
+import { registrarPaginasDeArchivo } from "../services/paginas.service";
 import { categoriasParaAnexo } from "../lib/anexo-categorias";
 import { useUsuariosApoyo } from "../hooks/use-usuarios-apoyo";
 import type { CatalogItem, DocumentoHashMatch, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
@@ -454,6 +455,7 @@ export function NewDocumentPage() {
         periodoMes: esFinanciero && values.periodo_mes ? Number(values.periodo_mes) : null,
         periodoAnio: esFinanciero && values.periodo_anio ? Number(values.periodo_anio) : null,
       });
+      await registrarPaginasDeArchivo(documento.id, values.archivo);
       if (escaneadoPor) {
         try {
           await asignarEscaneadoPor([documento.id], escaneadoPor);

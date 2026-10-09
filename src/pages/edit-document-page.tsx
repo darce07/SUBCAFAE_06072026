@@ -24,6 +24,7 @@ import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview, re
 import { getDocumentoFirmantes, sincronizarDocumentoFirmantes } from "../services/firmantes.service";
 import { asignarEscaneadoPor, getEscaneadoPor } from "../services/escaneos.service";
 import { categoriasParaAnexo } from "../lib/anexo-categorias";
+import { registrarPaginasDeArchivo } from "../services/paginas.service";
 import { useUsuariosApoyo } from "../hooks/use-usuarios-apoyo";
 import type { CatalogItem, DocumentoAnexo, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
@@ -366,6 +367,7 @@ export function EditDocumentPage() {
         ...(receptorEntidadId ? [{ personalNaturalId: null, entidadId: receptorEntidadId, rol: "receptor" as const, representaEntidadId: null }] : []),
         ...firmanteIds.map((personalNaturalId) => ({ personalNaturalId, entidadId: null, rol: "firmante" as const, representaEntidadId: null })),
       ];
+      if (values.archivo) await registrarPaginasDeArchivo(id, values.archivo);
       if (escaneoOriginal !== null && escaneadoPor !== escaneoOriginal) {
         await asignarEscaneadoPor([id], escaneadoPor || null);
         setEscaneoOriginal(escaneadoPor);

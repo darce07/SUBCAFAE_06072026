@@ -127,6 +127,8 @@ export interface Documento {
     fecha: string;
   } | null;
   categoria?: CatalogItem | null;
+  // Cantidad de páginas del archivo principal (tabla documento_paginas); null si aún no se calculó.
+  paginas?: { paginas: number } | null;
   tipo_entidad?: CatalogItem | null;
   entidad?: Entidad | null;
   tipo_categoria?: CatalogItem | null;
