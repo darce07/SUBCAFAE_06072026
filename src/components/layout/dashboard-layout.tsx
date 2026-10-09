@@ -37,6 +37,7 @@ import { useAuth } from "../../features/auth/auth-context";
 import { useChat } from "../../features/chat/chat-context";
 import { ChatDrawer } from "../../features/chat/chat-drawer";
 import { usePermissions } from "../../hooks/use-permissions";
+import { usePresenceHeartbeat } from "../../hooks/use-presence-heartbeat";
 import { useTableScrollKeyboard } from "../../hooks/use-table-scroll-keyboard";
 import { useIdleLogout } from "../../hooks/use-idle-logout";
 import { Alert, Button, Input } from "../ui";
@@ -129,6 +130,7 @@ export function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, session, userContext, contextError, refreshUserContext } = useAuth();
+  usePresenceHeartbeat(Boolean(session?.user));
   const { conversaciones, openMyChat, closeAllChats } = useChat();
   const [openingChat, setOpeningChat] = useState(false);
   const [retryingContext, setRetryingContext] = useState(false);

@@ -357,9 +357,12 @@ export interface ReporteActividadDiaria {
   eliminados: number;
   anexos: number;
   acciones: number;
-  primera_accion: string;
-  ultima_accion: string;
+  primera_accion: string | null;
+  ultima_accion: string | null;
   minutos_activos: number;
+  primera_conexion: string | null;
+  ultima_conexion: string | null;
+  minutos_conectado: number;
 }
 
 export interface ControlInternoFilters {

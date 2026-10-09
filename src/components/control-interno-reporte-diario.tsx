@@ -18,7 +18,8 @@ function sumarDias(fecha: string, dias: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function hora(iso: string) {
+function hora(iso: string | null) {
+  if (!iso) return "—";
   return new Date(iso).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: ZONA });
 }
 
@@ -73,15 +74,15 @@ export function ControlInternoReporteDiario() {
   const exportarPdf = () => {
     exportToPdf(
       `Reporte diario de actividad · ${periodo}`,
-      ["Fecha", "Usuario", "Subidos", "Editados", "Eliminados", "Anexos", "Acciones", "Primera acción", "Última actividad", "Tiempo activo"],
-      rows.map((row) => [row.fecha, row.usuario_nombre ?? row.usuario_email ?? "Sin perfil", row.subidos, row.editados, row.eliminados, row.anexos, row.acciones, hora(row.primera_accion), hora(row.ultima_accion), duracion(row.minutos_activos)]),
+      ["Fecha", "Usuario", "Entró", "Última conexión", "Tiempo conectado", "Subidos", "Editados", "Eliminados", "Anexos", "Acciones", "Última acción"],
+      rows.map((row) => [row.fecha, row.usuario_nombre ?? row.usuario_email ?? "Sin perfil", hora(row.primera_conexion), hora(row.ultima_conexion), duracion(row.minutos_conectado), row.subidos, row.editados, row.eliminados, row.anexos, row.acciones, hora(row.ultima_accion)]),
       `actividad-diaria-${desde}-a-${hasta}`,
     );
   };
 
   const exportarCsv = () => {
-    const encabezado = ["Fecha", "Usuario", "Correo", "Subidos", "Editados", "Eliminados", "Anexos", "Acciones", "Primera acción", "Última actividad", "Minutos activos"];
-    const lineas = rows.map((row) => [row.fecha, row.usuario_nombre ?? "", row.usuario_email ?? "", row.subidos, row.editados, row.eliminados, row.anexos, row.acciones, hora(row.primera_accion), hora(row.ultima_accion), row.minutos_activos]);
+    const encabezado = ["Fecha", "Usuario", "Correo", "Entró", "Última conexión", "Minutos conectado", "Subidos", "Editados", "Eliminados", "Anexos", "Acciones", "Primera acción", "Última acción", "Minutos con acciones"];
+    const lineas = rows.map((row) => [row.fecha, row.usuario_nombre ?? "", row.usuario_email ?? "", hora(row.primera_conexion), hora(row.ultima_conexion), row.minutos_conectado, row.subidos, row.editados, row.eliminados, row.anexos, row.acciones, hora(row.primera_accion), hora(row.ultima_accion), row.minutos_activos]);
     const csv = [encabezado, ...lineas].map((linea) => linea.map((celda) => `"${String(celda).replaceAll('"', '""')}"`).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([String.fromCharCode(0xfeff) + csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
@@ -173,14 +174,15 @@ export function ControlInternoReporteDiario() {
                 <tr>
                   <th className="whitespace-nowrap px-4 py-3">Fecha</th>
                   <th className="whitespace-nowrap px-4 py-3">Usuario</th>
+                  <th className="whitespace-nowrap px-4 py-3">Entró</th>
+                  <th className="whitespace-nowrap px-4 py-3">Última conexión</th>
+                  <th className="whitespace-nowrap px-4 py-3">Tiempo conectado</th>
                   <th className="px-4 py-3 text-right">Subidos</th>
                   <th className="px-4 py-3 text-right">Editados</th>
                   <th className="px-4 py-3 text-right">Eliminados</th>
                   <th className="px-4 py-3 text-right">Anexos</th>
                   <th className="px-4 py-3 text-right">Acciones</th>
-                  <th className="whitespace-nowrap px-4 py-3">Primera acción</th>
-                  <th className="whitespace-nowrap px-4 py-3">Última actividad</th>
-                  <th className="whitespace-nowrap px-4 py-3">Tiempo activo</th>
+                  <th className="whitespace-nowrap px-4 py-3">Última acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -188,14 +190,15 @@ export function ControlInternoReporteDiario() {
                   <tr key={`${row.fecha}-${row.usuario_id}`}>
                     <td className="whitespace-nowrap px-4 py-3 capitalize">{fechaLarga(row.fecha)}</td>
                     <td className="px-4 py-3 font-semibold">{row.usuario_nombre ?? row.usuario_email ?? "Usuario sin perfil"}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{hora(row.primera_conexion)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{hora(row.ultima_conexion)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{row.primera_conexion ? duracion(row.minutos_conectado) : "—"}</td>
                     <td className="px-4 py-3 text-right">{row.subidos}</td>
                     <td className="px-4 py-3 text-right">{row.editados}</td>
                     <td className="px-4 py-3 text-right">{row.eliminados}</td>
                     <td className="px-4 py-3 text-right">{row.anexos}</td>
                     <td className="px-4 py-3 text-right font-semibold">{row.acciones}</td>
-                    <td className="whitespace-nowrap px-4 py-3">{hora(row.primera_accion)}</td>
                     <td className="whitespace-nowrap px-4 py-3">{hora(row.ultima_accion)}</td>
-                    <td className="whitespace-nowrap px-4 py-3">{duracion(row.minutos_activos)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -207,9 +210,10 @@ export function ControlInternoReporteDiario() {
       <Alert variant="info" className="flex items-start gap-2">
         <Info className="mt-0.5 size-4 shrink-0" />
         <span>
-          El reporte sale de las acciones registradas en el sistema (subir, editar, eliminar documentos y anexos). <strong>Última actividad</strong> es la hora
-          de la última acción del día, no la de desconexión: leer o consultar documentos no deja registro. <strong>Tiempo activo</strong> suma los tramos entre
-          acciones seguidas; una pausa de más de 30 minutos cuenta como inactividad. "Subidos" cuenta solo los documentos que siguen activos.
+          <strong>Entró</strong>, <strong>Última conexión</strong> y <strong>Tiempo conectado</strong> salen del registro de conexión: el sistema anota cada pocos minutos
+          que la persona lo tiene abierto y activo (pestaña visible y con uso en los últimos 5 minutos), aunque solo consulte. Solo existe desde que se activó
+          este registro; los días anteriores muestran "—". Las columnas de acciones (<strong>Subidos, Editados, Eliminados, Anexos</strong>) salen de la auditoría
+          y "Subidos" cuenta solo los documentos que siguen activos. Se guarda únicamente fecha y hora, nunca el contenido, y cada persona recibe un aviso la primera vez.
         </span>
       </Alert>
     </div>
