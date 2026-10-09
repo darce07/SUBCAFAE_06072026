@@ -93,6 +93,14 @@ export function EditDocumentPage() {
   const { upload, uploading } = useUploadDocumento();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Los desplegables solo pueden mostrar el valor guardado si ya existen sus
+  // opciones al montarse el formulario; si los catálogos llegan después, el
+  // navegador deja la primera opción de cada lista (ej. categoría "Acta",
+  // estado "Anulado") y al guardar se pisaría el dato real. Por eso el
+  // formulario espera a los catálogos, pero solo la primera vez: al refrescarlos
+  // después (crear una persona o entidad) no debe desmontarse y perder lo escrito.
+  const [catalogosListos, setCatalogosListos] = useState(false);
+  if (!catalogos.loading && !catalogosListos) setCatalogosListos(true);
   const [currentPath, setCurrentPath] = useState<string | null>(null);
   const [currentExtension, setCurrentExtension] = useState<string | null>(null);
   const [confirmValues, setConfirmValues] = useState<FormValues | null>(null);
@@ -484,7 +492,7 @@ export function EditDocumentPage() {
   if (!canEdit("documentos")) {
     return <Card className="p-8 text-center"><h1 className="font-serif text-xl font-bold">Acceso restringido</h1><p className="mt-2 text-sm text-slate-500">No tienes permiso para editar documentos.</p></Card>;
   }
-  if (loading) return <DocumentFormSkeleton />;
+  if (loading || !catalogosListos) return <DocumentFormSkeleton />;
   if (loadError) return <Card className="p-6 text-sm text-rose-700">{loadError}</Card>;
 
   return (
