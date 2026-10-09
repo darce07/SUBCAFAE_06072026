@@ -374,7 +374,7 @@ export interface SubidaDetalle {
   usuario_id: string;
   usuario_nombre: string | null;
   momento: string;
-  tipo: "documento" | "anexo";
+  tipo: "documento" | "anexo" | "escaneo";
   codigo: string | null;
   titulo: string | null;
 }

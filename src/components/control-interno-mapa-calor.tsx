@@ -1,6 +1,6 @@
 import { Clock, Download, Info } from "lucide-react";
 import { Alert, Button, Card, EmptyState, Skeleton } from "./ui";
-import { HORARIO_FIN, HORARIO_INICIO, descargarResumenPng, dentroDeHorario, duracion, etiquetaCorta, etiquetaHora, rangoHora, type ResumenSubidas } from "../lib/resumen-subidas";
+import { HORARIO_FIN, HORARIO_INICIO, descargarResumenPng, dentroDeHorario, duracion, etiquetaCorta, etiquetaHora, etiquetaTipo, rangoHora, type ResumenSubidas } from "../lib/resumen-subidas";
 
 // Subidas por hora del día. Cuenta SOLO lo que la persona subió (documentos que siguen activos y
 // anexos agregados); editar o eliminar no cuenta. Los datos los carga el reporte diario.
@@ -85,7 +85,7 @@ export function ControlInternoMapaCalor({ resumen, loading, desde, hasta }: { re
                 {personas.map((persona) => (
                   <tr key={persona.id}>
                     <td className="px-4 py-3 font-semibold">{persona.nombre}</td>
-                    <td className="px-4 py-3 text-right font-bold">{persona.total}</td>
+                    <td className="px-4 py-3 text-right font-bold">{persona.total}{persona.escaneos > 0 && <span className="block text-xs font-normal text-slate-500">{persona.escaneos} escaneando</span>}</td>
                     <td className="px-4 py-3 text-right text-teal-700 dark:text-teal-400">{persona.dentro}</td>
                     <td className="px-4 py-3 text-right font-semibold text-orange-600 dark:text-orange-400">{persona.fuera}</td>
                     <td className="px-4 py-3">{persona.masTemprano}</td>
@@ -122,7 +122,7 @@ export function ControlInternoMapaCalor({ resumen, loading, desde, hasta }: { re
                         <td className="whitespace-nowrap px-4 py-3">{subida.fecha}</td>
                         <td className="whitespace-nowrap px-4 py-3 font-semibold text-orange-600 dark:text-orange-400">{subida.textoHora}</td>
                         <td className="px-4 py-3">{subida.nombre}</td>
-                        <td className="px-4 py-3">{subida.tipo === "anexo" ? "Anexo" : "Documento"}</td>
+                        <td className="px-4 py-3">{etiquetaTipo(subida.tipo)}</td>
                         <td className="px-4 py-3"><span className="font-mono text-xs text-slate-500">{subida.codigo ?? ""}</span> {subida.titulo ?? ""}</td>
                       </tr>
                     ))}
@@ -138,7 +138,7 @@ export function ControlInternoMapaCalor({ resumen, loading, desde, hasta }: { re
         <Alert variant="info" className="flex items-start gap-2">
           <Info className="mt-0.5 size-4 shrink-0" />
           <span>
-            Cuenta solo documentos subidos (que siguen activos) y anexos agregados. Editar, eliminar o guardar sin cambios no cuenta, porque no demuestra trabajo nuevo.
+            Cuenta solo documentos subidos (que siguen activos) y anexos agregados y documentos escaneados mientras otra persona los digitaba (cuentan a la hora en que se digitalizaron; el total del equipo no los repite). Editar, eliminar o guardar sin cambios no cuenta, porque no demuestra trabajo nuevo.
             La hora es la del registro en el sistema. Una subida fuera de horario es un dato para revisar, no una prueba por sí sola: puede haber trabajo autorizado
             fuera de hora o tareas pendientes. Los fines de semana y feriados no se distinguen: solo cuenta la hora del día.
           </span>

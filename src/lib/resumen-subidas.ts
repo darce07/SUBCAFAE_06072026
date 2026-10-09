@@ -41,6 +41,8 @@ export interface Persona {
   nombre: string;
   porHora: number[];
   total: number;
+  // De las subidas, las que fueron escaneando documentos que otra persona digitó.
+  escaneos: number;
   dentro: number;
   fuera: number;
   horaPico: number | null;
@@ -60,6 +62,8 @@ export interface ResumenSubidas {
   fueraDeHorario: Subida[];
 }
 
+export const etiquetaTipo = (tipo: SubidaDetalle["tipo"]) => (tipo === "anexo" ? "Anexo" : tipo === "escaneo" ? "Escaneo" : "Documento");
+
 const aSubida = (row: SubidaDetalle): Subida => {
   const partes = Object.fromEntries(formatoFechaHora.formatToParts(new Date(row.momento)).map((parte) => [parte.type, parte.value]));
   const hora = Number(partes.hour);
@@ -77,8 +81,8 @@ const aSubida = (row: SubidaDetalle): Subida => {
   };
 };
 
-// Cuenta SOLO lo que la persona subió (documentos que siguen activos y anexos agregados); editar o
-// eliminar no cuenta. Une las subidas con los datos de conexión de cada persona.
+// Cuenta SOLO lo que la persona subió (documentos que siguen activos, anexos agregados y documentos
+// que escaneó mientras otra persona los digitaba); editar o eliminar no cuenta. Une las subidas con los datos de conexión de cada persona.
 export function calcularResumen(filas: SubidaDetalle[], conexiones: ReporteActividadDiaria[]): ResumenSubidas {
   const subidas = filas.map(aSubida);
   const porUsuario = new Map<string, Subida[]>();
@@ -110,6 +114,7 @@ export function calcularResumen(filas: SubidaDetalle[], conexiones: ReporteActiv
         nombre: lista[0]?.nombre ?? conexion?.nombre ?? "Usuario sin perfil",
         porHora,
         total: lista.length,
+        escaneos: lista.filter((subida) => subida.tipo === "escaneo").length,
         dentro,
         fuera: lista.length - dentro,
         horaPico: maximo > 0 ? porHora.indexOf(maximo) : null,
@@ -122,10 +127,12 @@ export function calcularResumen(filas: SubidaDetalle[], conexiones: ReporteActiv
     })
     .sort((a, b) => b.total - a.total || b.minutosConectado - a.minutosConectado);
 
-  const porHora = HORAS.map((hora) => subidas.filter((subida) => subida.hora === hora).length);
+  // Un documento escaneado por una persona y digitado por otra es uno solo: el equipo no lo cuenta dos veces.
+  const propias = subidas.filter((subida) => subida.tipo !== "escaneo");
+  const porHora = HORAS.map((hora) => propias.filter((subida) => subida.hora === hora).length);
   const dentro = porHora.reduce((suma, valor, hora) => suma + (dentroDeHorario(hora) ? valor : 0), 0);
   const maximo = Math.max(...porHora);
-  const equipo = { porHora, total: subidas.length, dentro, fuera: subidas.length - dentro, horaPico: maximo > 0 ? porHora.indexOf(maximo) : null, maximo };
+  const equipo = { porHora, total: propias.length, dentro, fuera: propias.length - dentro, horaPico: maximo > 0 ? porHora.indexOf(maximo) : null, maximo };
 
   const conSubidas = HORAS.filter((hora) => porHora[hora] > 0);
   const primera = Math.min(HORARIO_INICIO - 1, ...conSubidas);
@@ -237,7 +244,7 @@ export function dibujarResumenCanvas(resumen: ResumenSubidas, subtitulo: string)
   });
   ctx.fillStyle = "#94a3b8";
   ctx.font = "12px sans-serif";
-  ctx.fillText("Cuenta solo documentos subidos y anexos agregados; editar o eliminar no cuenta. SIGDAF · SUBCAFAE", 32, alto - 24);
+  ctx.fillText("Cuenta documentos subidos, anexos y escaneos; editar o eliminar no cuenta. SIGDAF · SUBCAFAE", 32, alto - 24);
   return canvas;
 }
 
@@ -281,7 +288,7 @@ export function exportarReporteDiarioPdf(opciones: { titulo: string; subtitulo: 
   if (resumen.fueraDeHorario.length) {
     autoTable(doc, {
       head: [["Fecha", "Hora", "Persona", "Qué subió", "Documento"]],
-      body: resumen.fueraDeHorario.map((subida) => [subida.fecha, subida.textoHora, subida.nombre, subida.tipo === "anexo" ? "Anexo" : "Documento", `${subida.codigo ?? ""} ${subida.titulo ?? ""}`.trim()]),
+      body: resumen.fueraDeHorario.map((subida) => [subida.fecha, subida.textoHora, subida.nombre, etiquetaTipo(subida.tipo), `${subida.codigo ?? ""} ${subida.titulo ?? ""}`.trim()]),
       startY: 20,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [234, 88, 12] }
