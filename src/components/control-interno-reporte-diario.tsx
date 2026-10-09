@@ -217,7 +217,7 @@ export function ControlInternoReporteDiario() {
         )}
       </Card>
 
-      {rangoValido && <ControlInternoMapaCalor key={`${desde}|${hasta}|${usuarioId}`} desde={desde} hasta={hasta} usuarioId={usuarioId || undefined} />}
+      {rangoValido && <ControlInternoMapaCalor key={`${desde}|${hasta}|${usuarioId}`} desde={desde} hasta={hasta} usuarioId={usuarioId || undefined} conexiones={rows} />}
 
       <Alert variant="info" className="flex items-start gap-2">
         <Info className="mt-0.5 size-4 shrink-0" />
