@@ -3,11 +3,14 @@ import { RotateCcw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Skeleton } from "../components/ui";
 import { ConfirmDialog } from "../components/confirm-dialog";
+import { BulkActionBar } from "../components/bulk-action-bar";
+import { SelectCheckbox } from "../components/select-checkbox";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
+import { collectAllIds, useRowSelection } from "../hooks/use-row-selection";
 import { formatDateTime, formatRelativeTime } from "../lib/utils";
-import { restaurarDocumento } from "../services/documentos.service";
+import { getDocumentos, restaurarDocumento, restaurarDocumentos } from "../services/documentos.service";
 import type { Documento } from "../types";
 
 export function TrashPage() {
@@ -16,6 +19,10 @@ export function TrashPage() {
   const [page, setPage] = useState(1);
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [pendingRestore, setPendingRestore] = useState<Documento | null>(null);
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [selectingAll, setSelectingAll] = useState(false);
+  const selection = useRowSelection();
   const debouncedSearch = useDebounce(search, 400);
   const pageSize = 20;
   const { documentos, count, loading, error, refresh } = useDocumentos({
@@ -43,6 +50,40 @@ export function TrashPage() {
     }
   };
 
+  const canRestore = canDelete("documentos");
+  const pageIds = documentos.map((documento) => documento.id);
+  const pageSelection = selection.pageState(pageIds);
+
+  const selectAllMatching = async () => {
+    setSelectingAll(true);
+    try {
+      const ids = await collectAllIds((currentPage) =>
+        getDocumentos({ search: debouncedSearch, soloEliminados: true, orderBy: "eliminado_at", orderDirection: "desc", page: currentPage, pageSize: 100 }));
+      selection.addMany(ids);
+    } catch (selectError) {
+      toast.error(selectError instanceof Error ? selectError.message : "No se pudieron seleccionar todos los documentos.");
+    } finally {
+      setSelectingAll(false);
+    }
+  };
+
+  const restoreSelected = async () => {
+    if (bulkRunning) return;
+    setBulkRunning(true);
+    try {
+      const result = await restaurarDocumentos(selection.ids);
+      const failedIds = new Set(result.failed.map((item) => item.id));
+      selection.clear();
+      if (failedIds.size) selection.addMany([...failedIds]);
+      await refresh();
+      if (result.ok) toast.success(`${result.ok} ${result.ok === 1 ? "documento restaurado" : "documentos restaurados"}.`);
+      if (result.failed.length) toast.error(`${result.failed.length} no se pudieron restaurar: ${result.failed[0].message}`);
+    } finally {
+      setBulkRunning(false);
+      setConfirmBulk(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -57,12 +98,19 @@ export function TrashPage() {
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input
               value={search}
-              onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+              onChange={(event) => { setSearch(event.target.value); setPage(1); selection.clear(); }}
               className="pl-9"
               placeholder="Buscar código, título o descripción..."
             />
           </div>
         </div>
+        {canRestore && (
+          <BulkActionBar count={selection.count} total={count} onSelectAll={() => void selectAllMatching()} selectingAll={selectingAll} onClear={selection.clear}>
+            <Button size="sm" variant="primary" onClick={() => setConfirmBulk(true)}>
+              <RotateCcw className="size-4" />Restaurar seleccionados
+            </Button>
+          </BulkActionBar>
+        )}
         {loading ? (
           <div className="space-y-3 p-4">
             {Array.from({ length: 6 }, (_, index) => (
@@ -82,6 +130,11 @@ export function TrashPage() {
             <table className="w-full min-w-[720px] text-sm">
               <thead className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-400 dark:border-slate-800">
                 <tr>
+                  {canRestore && (
+                    <th className="w-10 px-4 py-3">
+                      <SelectCheckbox label="Seleccionar todos los de esta página" checked={pageSelection.all} indeterminate={pageSelection.some} onChange={() => selection.togglePage(pageIds)} />
+                    </th>
+                  )}
                   <th className="px-4 py-3">Código</th>
                   <th className="px-4 py-3">Título</th>
                   <th className="px-4 py-3">Categoría</th>
@@ -93,7 +146,12 @@ export function TrashPage() {
                 {documentos.map((documento) => {
                   const eliminadoPor = documento.eliminado_por_usuario;
                   return (
-                    <tr key={documento.id}>
+                    <tr key={documento.id} className={selection.isSelected(documento.id) ? "bg-teal-50/60 dark:bg-teal-950/20" : undefined}>
+                      {canRestore && (
+                        <td className="px-4 py-3">
+                          <SelectCheckbox label={`Seleccionar ${documento.codigo_documento}`} checked={selection.isSelected(documento.id)} onChange={() => selection.toggle(documento.id)} />
+                        </td>
+                      )}
                       <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-200">{documento.codigo_documento}</td>
                       <td className="max-w-[280px] truncate px-4 py-3" title={documento.titulo}>{documento.titulo}</td>
                       <td className="px-4 py-3"><Badge tone="slate">{documento.categoria?.nombre ?? "Sin categoría"}</Badge></td>
@@ -144,6 +202,16 @@ export function TrashPage() {
         variant="primary"
         loading={Boolean(restoringId)}
         onConfirm={() => pendingRestore && void restore(pendingRestore)}
+      />
+      <ConfirmDialog
+        open={confirmBulk}
+        onOpenChange={(open) => !open && !bulkRunning && setConfirmBulk(false)}
+        title="Restaurar documentos"
+        description={`¿Restaurar ${selection.count} ${selection.count === 1 ? "documento" : "documentos"}? Volverán a aparecer en la tabla principal de documentos y en los totales financieros.`}
+        confirmLabel={`Restaurar ${selection.count}`}
+        variant="primary"
+        loading={bulkRunning}
+        onConfirm={() => void restoreSelected()}
       />
     </div>
   );
