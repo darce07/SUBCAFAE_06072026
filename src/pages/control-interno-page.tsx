@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { CalendarRange, Download, FilePlus2, FileX2, PenSquare, RotateCcw, Trophy, UserRoundCog } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
@@ -24,6 +24,8 @@ const podiumTone = [
 export function ControlInternoPage() {
   const { isAdmin } = usePermissions();
   const [vista, setVista] = useState<"resumen" | "diario">("resumen");
+  // El reporte diario registra aquí su exportador para que el botón de la cabecera descargue su PDF completo.
+  const exportarDiario = useRef<(() => void) | null>(null);
   const [year, setYear] = useState("");
   const [month, setMonth] = useState("");
   const filters = useMemo(() => ({
@@ -96,7 +98,7 @@ export function ControlInternoPage() {
         eyebrow="Supervisión"
         title="Control interno"
         description="Actividad documental por usuario: quién sube, edita y elimina, con filtro por periodo."
-        action={<Button variant="secondary" disabled={data.length === 0} onClick={onExportPdf}><Download className="size-4" />Descargar PDF</Button>}
+        action={<Button variant="secondary" disabled={vista === "resumen" && data.length === 0} onClick={() => (vista === "diario" ? exportarDiario.current?.() : onExportPdf())}><Download className="size-4" />Descargar PDF</Button>}
       />
       <div className="flex gap-1 rounded-2xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900 sm:w-fit" role="tablist">
         {([["resumen", "Resumen por periodo"], ["diario", "Reporte diario"]] as const).map(([id, label]) => (
@@ -112,7 +114,7 @@ export function ControlInternoPage() {
           </button>
         ))}
       </div>
-      {vista === "diario" ? <ControlInternoReporteDiario /> : (<>
+      {vista === "diario" ? <ControlInternoReporteDiario exportRef={exportarDiario} /> : (<>
       {error && <Alert variant="warning">{error}</Alert>}
 
       <Card className="p-4 sm:p-5">
