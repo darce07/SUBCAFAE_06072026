@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarDays, ExternalLink, Eye, FileText, Landmark, MapPin, Paperclip, Save, UploadCloud, X } from "lucide-react";
 import { toast } from "sonner";
-import { Alert, Button, Card, Input, PageHeader, Select } from "../components/ui";
+import { Alert, Badge, Button, Card, Input, PageHeader, Select } from "../components/ui";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useUploadDocumento } from "../hooks/use-upload-documento";
 import { buscarDocumentosPorHash, createDocumento } from "../services/documentos.service";
@@ -111,8 +111,11 @@ const blankValues: DraftValues = {
   archivador_id: "",
 };
 
+type TipoRegistro = "documentario" | "financiero";
+
 interface StoredDraft {
   values: DraftValues;
+  tipoRegistro?: TipoRegistro | null;
   entityDraft: EntityDraft;
   idempotencyKey: string;
   savedAt: string;
@@ -130,6 +133,10 @@ function readDraft(): StoredDraft | null {
 
 export function NewDocumentPage() {
   const initialDraft = useMemo(() => readDraft(), []);
+  // Documentario: solo la clasificación y el archivo. Financiero: además emisor/receptor,
+  // periodo, tipo de gestión, naturaleza, monto y operación. Hay que elegir antes de llenar.
+  const [tipoRegistro, setTipoRegistro] = useState<TipoRegistro | null>(initialDraft?.tipoRegistro ?? null);
+  const esFinanciero = tipoRegistro === "financiero";
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState(() => initialDraft?.idempotencyKey ?? crypto.randomUUID());
@@ -220,6 +227,7 @@ export function NewDocumentPage() {
         const { archivo: _archivo, ...draftValues } = values as FormValues;
         const draft: StoredDraft = {
           values: draftValues,
+          tipoRegistro,
           entityDraft,
           idempotencyKey,
           savedAt: new Date().toISOString(),
@@ -231,7 +239,7 @@ export function NewDocumentPage() {
       subscription.unsubscribe();
       window.clearTimeout(draftSaveTimeout.current);
     };
-  }, [entityDraft, idempotencyKey, watch]);
+  }, [entityDraft, idempotencyKey, tipoRegistro, watch]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -306,8 +314,36 @@ export function NewDocumentPage() {
     }
   };
 
+  const elegirTipoRegistro = (tipo: TipoRegistro) => {
+    if (tipo === "documentario") {
+      // Lo financiero queda vacío (y sin errores de validación ocultos).
+      const hayDatos = Boolean(
+        watch("monto") || watch("tipo_movimiento_id") || watch("tipo_operacion_id") || watch("tipo_categoria_id")
+        || watch("periodo_mes") || watch("periodo_anio") || emisorId.length || receptorId.length || firmanteIds.length
+        || emisorEntidadId || receptorEntidadId,
+      );
+      setValue("periodo_mes", "");
+      setValue("periodo_anio", "");
+      setValue("tipo_categoria_id", "");
+      setValue("tipo_movimiento_id", "");
+      setValue("tipo_movimiento_nombre", "");
+      setValue("tipo_operacion_id", "");
+      setValue("monto", 0);
+      setEmisorId([]);
+      setEmisorRepresenta(null);
+      setEmisorEntidadId(null);
+      setReceptorId([]);
+      setReceptorRepresenta(null);
+      setReceptorEntidadId(null);
+      setFirmanteIds([]);
+      if (hayDatos) toast.info("Se vaciaron los campos financieros porque este registro es documentario.");
+    }
+    setTipoRegistro(tipo);
+  };
+
   const clearForm = () => {
     reset(blankValues);
+    setTipoRegistro(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setPreviewOpen(false);
@@ -396,7 +432,7 @@ export function NewDocumentPage() {
         fechaDocumento: values.fecha_documento,
         tipoEntidadId: values.tipo_entidad_id || null,
         entidadId,
-        tipoCategoriaId: values.tipo_categoria_id || null,
+        tipoCategoriaId: esFinanciero ? values.tipo_categoria_id || null : null,
         estadoId: values.estado_id,
         titulo: values.titulo,
         descripcion: values.descripcion || null,
@@ -405,12 +441,12 @@ export function NewDocumentPage() {
         archivadorId: values.archivador_id || null,
         archivoPath: uploaded.path,
         extension,
-        monto: values.monto ?? 0,
-        tipoMovimientoId: values.tipo_movimiento_id || null,
-        tipoOperacionId: isNoAplica ? null : values.tipo_operacion_id || null,
+        monto: esFinanciero ? values.monto ?? 0 : 0,
+        tipoMovimientoId: esFinanciero ? values.tipo_movimiento_id || null : null,
+        tipoOperacionId: !esFinanciero || isNoAplica ? null : values.tipo_operacion_id || null,
         archivoHash: archivoHash,
-        periodoMes: values.periodo_mes ? Number(values.periodo_mes) : null,
-        periodoAnio: values.periodo_anio ? Number(values.periodo_anio) : null,
+        periodoMes: esFinanciero && values.periodo_mes ? Number(values.periodo_mes) : null,
+        periodoAnio: esFinanciero && values.periodo_anio ? Number(values.periodo_anio) : null,
       });
       if (pendingAnexos.length) {
         if (pendingAnexos.some((anexo) => !anexo.tipoAnexoId || anexo.titulo.trim().length < 2)) {
@@ -442,7 +478,7 @@ export function NewDocumentPage() {
           });
         }
       }
-      const firmantesPayload: SincronizarFirmanteInput[] = [
+      const firmantesPayload: SincronizarFirmanteInput[] = !esFinanciero ? [] : [
         ...emisorId.map((personalNaturalId) => ({ personalNaturalId, entidadId: null, rol: "emisor" as const, representaEntidadId: emisorRepresenta })),
         ...(emisorEntidadId ? [{ personalNaturalId: null, entidadId: emisorEntidadId, rol: "emisor" as const, representaEntidadId: null }] : []),
         ...receptorId.map((personalNaturalId) => ({ personalNaturalId, entidadId: null, rol: "receptor" as const, representaEntidadId: receptorRepresenta })),
@@ -493,8 +529,18 @@ export function NewDocumentPage() {
         </Alert>
       )}
       {catalogos.error && <Alert>{catalogos.error}</Alert>}
+      {tipoRegistro === null ? (
+        <TipoRegistroSelector onSelect={elegirTipoRegistro} />
+      ) : (
       <form onSubmit={handleSubmit(onSubmit)} className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
         <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500">Tipo de registro:</span>
+              <Badge tone={esFinanciero ? "blue" : "green"}>{esFinanciero ? "Financiero" : "Documentario"}</Badge>
+            </div>
+            <Button type="button" size="sm" variant="secondary" onClick={() => setTipoRegistro(null)}>Cambiar</Button>
+          </div>
           <Card className="p-5 sm:p-6">
             <SectionTitle icon={<FileText />} title="Información documental" description="Clasificación y datos principales" />
             <div className="grid gap-5 md:grid-cols-2">
@@ -511,6 +557,7 @@ export function NewDocumentPage() {
               >
                 <div className="relative"><CalendarDays className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input type="date" min={`${minDocumentYear}-01-01`} max={`${maxDocumentYear}-12-31`} className="pl-9" {...register("fecha_documento")} /></div>
               </Field>
+              {esFinanciero && (<>
               <Field
                 label="Periodo (opcional)"
                 error={errors.periodo_mes?.message ?? errors.periodo_anio?.message}
@@ -518,11 +565,13 @@ export function NewDocumentPage() {
               >
                 <MonthYearPicker value={periodoValue} onChange={onPeriodoChange} minYear={minDocumentYear} maxYear={maxDocumentYear} />
               </Field>
+              </>)}
               <Field label="Estado *" error={errors.estado_id?.message}>
                 <Select className="w-full" {...register("estado_id")}><option value="">Seleccionar estado</option>{selectableOptions(catalogos.estadosDocumento, watch("estado_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select>
               </Field>
               <Field label="Título del archivo *" error={errors.titulo?.message} className="md:col-span-2"><Input placeholder="Ej. Factura por servicio de mantenimiento" {...register("titulo")} /></Field>
               <Field label="Descripción" className="md:col-span-2"><textarea className="min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 dark:border-slate-700 dark:bg-slate-950" {...register("descripcion")} /></Field>
+              {esFinanciero && (<>
               <Field label="Emisor / remitente (opcional)" hint="Quién emite o remite el documento: una persona, o directamente una entidad.">
                 <FirmantesCombobox
                   single
@@ -573,6 +622,7 @@ export function NewDocumentPage() {
                   }}
                 />
               </Field>
+              </>)}
             </div>
           </Card>
 
@@ -597,6 +647,7 @@ export function NewDocumentPage() {
                   onRefresh={() => void refreshEntitySection()}
                 />
               </Field>
+              {esFinanciero && (<>
               <Field label="Tipo de gestión" info="No es el tipo de documento — es la naturaleza de la gestión que realizó la entidad o persona emisora/receptora (ej. Contable, Tesorería, Legal)."><Select className="w-full" {...register("tipo_categoria_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposCategoria, watch("tipo_categoria_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
               <Field label="Naturaleza del documento" hint="¿Mueve dinero? Si es un oficio, memo o resolución, elige “No aplica”.">
                 <Select className="w-full" {...register("tipo_movimiento_id")}><option value="">No especificado</option>{selectableOptions(catalogos.tiposMovimiento, watch("tipo_movimiento_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select>
@@ -613,6 +664,7 @@ export function NewDocumentPage() {
                   <Field label="Tipo de operación" error={errors.tipo_operacion_id?.message}><Select className="w-full" {...register("tipo_operacion_id")}><option value="">Seleccionar operación</option>{selectableOptions(catalogos.tiposOperacion, watch("tipo_operacion_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
                 </>
               )}
+              </>)}
             </div>
           </Card>
 
@@ -674,6 +726,7 @@ export function NewDocumentPage() {
           {previewUrl && <button type="button" onClick={() => setPreviewOpen(true)} className="mt-4 block w-full overflow-hidden rounded-xl border border-slate-200 text-left transition hover:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 dark:border-slate-700">{selectedFile?.type.startsWith("image/") ? <img src={previewUrl} alt="Vista previa" className="h-56 w-full object-contain" /> : <iframe src={previewUrl} title="Vista previa PDF" className="pointer-events-none h-72 w-full" />}</button>}
         </Card>
       </form>
+      )}
       {previewOpen && previewUrl && selectedFile && (
         <LocalFileViewer
           title={selectedFile.name}
@@ -708,5 +761,45 @@ function LocalFileViewer({ title, url, mimeType, onClose }: { title: string; url
         </div>
       </div>
     </div>
+  );
+}
+
+function TipoRegistroSelector({ onSelect }: { onSelect: (tipo: TipoRegistro) => void }) {
+  const options: Array<{ tipo: TipoRegistro; title: string; text: string; examples: string; icon: ReactNode }> = [
+    {
+      tipo: "documentario",
+      title: "Documentario",
+      text: "Solo se registra la clasificación del documento y su archivo.",
+      examples: "Oficios, actas, cartas, resoluciones, certificados.",
+      icon: <FileText className="size-6" />,
+    },
+    {
+      tipo: "financiero",
+      title: "Financiero",
+      text: "Además se registran emisor y receptor, naturaleza, monto y tipo de operación.",
+      examples: "Facturas, boletas, vouchers, recibos, pagos.",
+      icon: <Landmark className="size-6" />,
+    },
+  ];
+  return (
+    <Card className="p-5 sm:p-8">
+      <h2 className="font-serif text-xl font-bold">¿Qué vas a registrar?</h2>
+      <p className="mt-1 text-sm text-slate-500">Según el tipo, el formulario muestra solo los datos que hacen falta.</p>
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        {options.map((option) => (
+          <button
+            key={option.tipo}
+            type="button"
+            onClick={() => onSelect(option.tipo)}
+            className="rounded-2xl border-2 border-slate-200 bg-white p-5 text-left transition hover:-translate-y-0.5 hover:border-teal-500 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-teal-500/10 dark:border-slate-700 dark:bg-slate-900"
+          >
+            <div className="mb-3 grid size-12 place-items-center rounded-2xl bg-teal-50 text-teal-700 dark:bg-teal-950/50">{option.icon}</div>
+            <h3 className="text-lg font-bold">{option.title}</h3>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{option.text}</p>
+            <p className="mt-2 text-xs text-slate-400">{option.examples}</p>
+          </button>
+        ))}
+      </div>
+    </Card>
   );
 }
