@@ -3,9 +3,9 @@ import { CalendarRange, Clock, Download, FilePlus2, FileX2, Info, PenSquare, Use
 import { Alert, Button, Card, EmptyState, Input, Select, Skeleton } from "./ui";
 import { useControlInterno } from "../hooks/use-control-interno";
 import { ControlInternoMapaCalor } from "./control-interno-mapa-calor";
-import { exportToPdf } from "../lib/export";
-import { getReporteActividadDiaria } from "../services/admin.service";
-import type { ReporteActividadDiaria } from "../types";
+import { calcularResumen, exportarReporteDiarioPdf } from "../lib/resumen-subidas";
+import { getReporteActividadDiaria, getSubidasDetalle } from "../services/admin.service";
+import type { ReporteActividadDiaria, SubidaDetalle } from "../types";
 
 const ZONA = "America/Lima";
 
@@ -47,6 +47,7 @@ export function ControlInternoReporteDiario() {
   const [hasta, setHasta] = useState(() => hoyLima());
   const [usuarioId, setUsuarioId] = useState("");
   const [rows, setRows] = useState<ReporteActividadDiaria[]>([]);
+  const [subidasRows, setSubidasRows] = useState<SubidaDetalle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Lista de personas para el filtro: las que tienen alguna actividad registrada.
@@ -57,9 +58,9 @@ export function ControlInternoReporteDiario() {
   useEffect(() => {
     if (!rangoValido) return;
     let active = true;
-    void getReporteActividadDiaria(desde, hasta, usuarioId || undefined)
-      .then((result) => { if (active) { setRows(result); setError(null); } })
-      .catch((loadError) => { if (active) { setRows([]); setError(loadError instanceof Error ? loadError.message : "No se pudo cargar el reporte."); } })
+    void Promise.all([getReporteActividadDiaria(desde, hasta, usuarioId || undefined), getSubidasDetalle(desde, hasta, usuarioId || undefined)])
+      .then(([result, subidas]) => { if (active) { setRows(result); setSubidasRows(subidas); setError(null); } })
+      .catch((loadError) => { if (active) { setRows([]); setSubidasRows([]); setError(loadError instanceof Error ? loadError.message : "No se pudo cargar el reporte."); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [desde, hasta, usuarioId, rangoValido]);
@@ -77,15 +78,19 @@ export function ControlInternoReporteDiario() {
     eliminados: rows.reduce((total, row) => total + row.eliminados, 0),
   }), [rows]);
 
+  const resumen = useMemo(() => calcularResumen(subidasRows, rows), [subidasRows, rows]);
+
   const periodo = desde === hasta ? fechaLarga(desde) : `${fechaLarga(desde)} al ${fechaLarga(hasta)}`;
 
   const exportarPdf = () => {
-    exportToPdf(
-      `Reporte diario de actividad · ${periodo}`,
-      ["Fecha", "Usuario", "Entró", "Última conexión", "Tiempo conectado", "Subidos", "Editados", "Eliminados", "Anexos", "Escaneados", "Total", "Última acción"],
-      rows.map((row) => [row.fecha, row.usuario_nombre ?? row.usuario_email ?? "Sin perfil", hora(row.primera_conexion), hora(row.ultima_conexion), duracion(row.minutos_conectado), row.subidos, row.editados, row.eliminados, row.anexos, row.escaneados, totalTrabajado(row), hora(row.ultima_accion)]),
-      `actividad-diaria-${desde}-a-${hasta}`,
-    );
+    exportarReporteDiarioPdf({
+      titulo: `Reporte diario de actividad · ${periodo}`,
+      subtitulo: desde === hasta ? `Fecha: ${desde}` : `Del ${desde} al ${hasta}`,
+      resumen,
+      encabezadoDetalle: ["Fecha", "Usuario", "Entró", "Última conexión", "Tiempo conectado", "Subidos", "Editados", "Eliminados", "Anexos", "Escaneados", "Total", "Última acción"],
+      filasDetalle: rows.map((row) => [row.fecha, row.usuario_nombre ?? row.usuario_email ?? "Sin perfil", hora(row.primera_conexion), hora(row.ultima_conexion), duracion(row.minutos_conectado), row.subidos, row.editados, row.eliminados, row.anexos, row.escaneados, totalTrabajado(row), hora(row.ultima_accion)]),
+      archivo: `actividad-diaria-${desde}-a-${hasta}`,
+    });
   };
 
   const exportarCsv = () => {
@@ -217,7 +222,7 @@ export function ControlInternoReporteDiario() {
         )}
       </Card>
 
-      {rangoValido && <ControlInternoMapaCalor key={`${desde}|${hasta}|${usuarioId}`} desde={desde} hasta={hasta} usuarioId={usuarioId || undefined} conexiones={rows} />}
+      {rangoValido && <ControlInternoMapaCalor resumen={resumen} loading={loading} desde={desde} hasta={hasta} />}
 
       <Alert variant="info" className="flex items-start gap-2">
         <Info className="mt-0.5 size-4 shrink-0" />
