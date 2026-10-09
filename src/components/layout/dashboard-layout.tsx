@@ -9,7 +9,6 @@ import {
   CircleDollarSign,
   ClipboardCheck,
   DatabaseBackup,
-  FileClock,
   FilePlus2,
   Files,
   Gauge,
@@ -61,7 +60,6 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
     label: "Gestión documental",
     items: [
       { label: "Documentos", href: "/documentos", icon: Files, permission: ["documentos", "ver"] },
-      { label: "Explorador histórico", href: "/documentos/historico", icon: FileClock, permission: ["documentos", "ver"] },
       { label: "Nuevo documento", href: "/documentos/nuevo", icon: FilePlus2, permission: ["documentos", "crear"] },
       { label: "Verificación", href: "/verificacion", icon: ClipboardCheck, permission: ["documentos", "ver"] },
       { label: "Archivo físico", href: "/archivo-fisico", icon: Archive, permission: ["documentos", "ver"] },

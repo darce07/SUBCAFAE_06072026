@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Clipboard, Download, ExternalLink, FileText, History, LoaderCircle, MapPin, Pencil, Trash2, X } from "lucide-react";
+import { Download, ExternalLink, FileText, History, LoaderCircle, MapPin, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { DocumentAuditRecord, Documento, DocumentoAnexo, PendingDocumentoAnexo } from "../types";
 import { Badge, Button, Card, EmptyState, PageHeader } from "../components/ui";
@@ -194,11 +194,6 @@ export function DocumentDetailPage() {
             <Card className="p-5">
               <div className="mb-4 flex items-center gap-2"><MapPin className="size-5 text-orange-600" /><h3 className="font-bold">Ubicación física</h3></div>
               <p className="rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-950">{documento.archivador?.nombre ?? "Sin archivador asignado"}</p>
-            </Card>
-            <Card className="p-5">
-              <h3 className="font-bold">Ruta histórica</h3>
-              <p className="mt-4 break-all rounded-xl bg-slate-50 p-4 font-mono text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-400">{documento.ruta_historica ?? "Sin ruta histórica"}</p>
-              <Button variant="secondary" className="mt-4 w-full" disabled={!documento.ruta_historica} onClick={() => { void navigator.clipboard.writeText(documento.ruta_historica ?? ""); toast.success("Ruta copiada."); }}><Clipboard className="size-4" />Copiar ruta</Button>
             </Card>
           </div>
         </div>
