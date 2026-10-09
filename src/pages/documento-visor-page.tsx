@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Download, ExternalLink, FileText, LoaderCircle, X } from "lucide-react";
+import { Download, ExternalLink, FileText, LoaderCircle, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge, Button } from "../components/ui";
 import { TextFilePreview } from "../components/text-file-preview";
 import { useAuth } from "../features/auth/auth-context";
+import { usePermissions } from "../hooks/use-permissions";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
 import { getDocumentoById } from "../services/documentos.service";
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview } from "../services/storage.service";
@@ -31,6 +32,7 @@ function mimeFromExtension(extension?: string | null) {
 export function DocumentoVisorPage() {
   const { id } = useParams();
   const { userContext } = useAuth();
+  const { canEdit } = usePermissions();
   const [documento, setDocumento] = useState<Documento | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +64,20 @@ export function DocumentoVisorPage() {
       cancelled = true;
       if (objectUrl) releaseDocumentoPreview(objectUrl);
     };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const recargarDatos = () => {
+      if (document.visibilityState !== "visible") return;
+      void getDocumentoById(id).then((row) => {
+        if (!row) return;
+        setDocumento(row);
+        document.title = `${row.codigo_documento} · ${row.titulo}`;
+      }, () => undefined);
+    };
+    document.addEventListener("visibilitychange", recargarDatos);
+    return () => document.removeEventListener("visibilitychange", recargarDatos);
   }, [id]);
 
   const download = async () => {
@@ -102,6 +118,11 @@ export function DocumentoVisorPage() {
             <Button size="sm" variant="secondary" onClick={() => window.open(preview.signedUrl, "_blank", "noopener,noreferrer")}><ExternalLink className="size-4" />Abrir archivo</Button>
           )}
           <Button size="sm" variant="secondary" disabled={!documento.archivo_path} onClick={() => void download()}><Download className="size-4" />Descargar</Button>
+          {canEdit("documentos") && (
+            <Link to={`/documentos/${documento.id}/editar`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-8 items-center justify-center gap-2 rounded-xl bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-700">
+              <Pencil className="size-4" />Editar datos
+            </Link>
+          )}
           <Link to={`/documentos/${documento.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-8 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
             <FileText className="size-4" />Detalle completo
           </Link>
