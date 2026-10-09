@@ -15,6 +15,7 @@ import { ConfirmDialog } from "../components/confirm-dialog";
 import { SelectCheckbox } from "../components/select-checkbox";
 import { formatDate, getStatusTone } from "../lib/utils";
 import { deleteDocumentos } from "../services/documentos.service";
+import { calcularPaginasDeDocumento } from "../services/paginas.service";
 import { getArchivoFisicoDocumentos } from "../services/archivo-fisico.service";
 import type { Documento } from "../types";
 
@@ -24,7 +25,7 @@ const ARCHIVE_COLUMNS = [
   { id: "entidad", label: "Entidad" },
   { id: "titulo", label: "Título" },
   { id: "estado", label: "Estado" },
-  { id: "ruta", label: "Ruta física" },
+  { id: "paginas", label: "Páginas" },
 ];
 
 export function PhysicalArchivePage() {
@@ -39,7 +40,8 @@ export function PhysicalArchivePage() {
   const catalogos = useCatalogos();
   const activeArchives = useMemo(() => catalogos.archivadores.filter((item) => item.activo), [catalogos.archivadores]);
   const selectedArchive = activeArchives.find((item) => item.id === selectedArchiveId) ?? null;
-  const { canDelete } = usePermissions();
+  const { canDelete, isAdmin } = usePermissions();
+  const [calculandoPaginas, setCalculandoPaginas] = useState(false);
   const selection = useRowSelection();
   const [resumenKey, setResumenKey] = useState(0);
   const [confirmBulk, setConfirmBulk] = useState(false);
@@ -68,6 +70,43 @@ export function PhysicalArchivePage() {
       toast.error(selectError instanceof Error ? selectError.message : "No se pudieron seleccionar todos los documentos.");
     } finally {
       setSelectingAll(false);
+    }
+  };
+
+  // Para los documentos ya subidos: baja cada archivo del archivador elegido, cuenta sus
+  // páginas y las guarda. Solo administradores; solo los que aún no tienen el dato.
+  const calcularPaginasPendientes = async () => {
+    if (!selectedArchiveId || calculandoPaginas) return;
+    setCalculandoPaginas(true);
+    try {
+      const pendientes: Documento[] = [];
+      for (let numero = 1; numero <= 20; numero += 1) {
+        const resultado = await getArchivoFisicoDocumentos({ archivadorId: selectedArchiveId, page: numero, pageSize: 100 });
+        pendientes.push(...resultado.data.filter((documento) => documento.archivo_path && !documento.paginas));
+        if (numero * 100 >= resultado.count) break;
+      }
+      if (!pendientes.length) {
+        toast.info("Todos los documentos de este archivador ya tienen su cantidad de páginas (o su formato no permite contarlas).");
+        return;
+      }
+      let calculados = 0;
+      let sinDato = 0;
+      let fallidos = 0;
+      for (const [indice, documento] of pendientes.entries()) {
+        toast.loading(`Calculando páginas: ${indice + 1} de ${pendientes.length}…`, { id: "calcular-paginas" });
+        try {
+          const paginas = await calcularPaginasDeDocumento(documento.id, documento.archivo_path as string, documento.extension);
+          if (paginas) calculados += 1; else sinDato += 1;
+        } catch {
+          fallidos += 1;
+        }
+      }
+      toast.success(`Páginas calculadas: ${calculados}. Sin dato por formato (Word, Excel…): ${sinDato}. Con error: ${fallidos}.`, { id: "calcular-paginas" });
+      await refresh();
+    } catch (calculoError) {
+      toast.error(calculoError instanceof Error ? calculoError.message : "No se pudieron calcular las páginas.", { id: "calcular-paginas" });
+    } finally {
+      setCalculandoPaginas(false);
     }
   };
 
@@ -217,6 +256,9 @@ export function PhysicalArchivePage() {
               >
                 {[10, 20, 50].map((size) => <option key={size} value={size}>{size}</option>)}
               </Select>
+              {isAdmin && (
+                <Button variant="secondary" loading={calculandoPaginas} onClick={() => void calcularPaginasPendientes()}>Calcular páginas</Button>
+              )}
               <ColumnsMenu columns={ARCHIVE_COLUMNS} isVisible={columnVisibility.isVisible} toggle={columnVisibility.toggle} />
             </div>
           </div>
@@ -349,7 +391,7 @@ function ArchiveDocumentList({
               {isVisible("entidad") && <th className="px-5 py-3">Entidad</th>}
               {isVisible("titulo") && <th className="px-5 py-3">Título</th>}
               {isVisible("estado") && <th className="px-5 py-3">Estado</th>}
-              {isVisible("ruta") && <th className="px-5 py-3">Ruta física</th>}
+              {isVisible("paginas") && <th className="px-5 py-3">Páginas</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -370,7 +412,7 @@ function ArchiveDocumentList({
                 {isVisible("entidad") && <td className="px-5 py-4">{documento.entidad?.nombre ?? "—"}</td>}
                 {isVisible("titulo") && <td className="max-w-md px-5 py-4">{documento.titulo}</td>}
                 {isVisible("estado") && <td className="px-5 py-4"><Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Pendiente"}</Badge></td>}
-                {isVisible("ruta") && <td className="px-5 py-4 text-slate-500">{documento.ruta_historica || "Sin ruta registrada"}</td>}
+                {isVisible("paginas") && <td className="px-5 py-4 text-slate-600">{documento.paginas?.paginas ?? "—"}</td>}
               </tr>
             ))}
           </tbody>
@@ -413,7 +455,7 @@ function ArchiveDocumentCard({
         <ArchiveInfo label="Fecha" value={formatDate(documento.fecha_documento)} />
         <ArchiveInfo label="Categoría" value={documento.categoria?.nombre ?? "Sin categoría"} />
         <ArchiveInfo label="Entidad" value={documento.entidad?.nombre ?? "—"} />
-        <ArchiveInfo label="Ruta física" value={documento.ruta_historica || "Sin ruta registrada"} />
+        <ArchiveInfo label="Páginas" value={documento.paginas?.paginas ? String(documento.paginas.paginas) : "—"} />
       </div>
     </div>
   );
