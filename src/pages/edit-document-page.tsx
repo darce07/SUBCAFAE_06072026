@@ -23,6 +23,7 @@ import { createDocumentoAnexo, deleteDocumentoAnexo, getDocumentoAnexos, updateD
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview, removeDocumentoFile, uploadDocumentoAnexoFile } from "../services/storage.service";
 import { getDocumentoFirmantes, sincronizarDocumentoFirmantes } from "../services/firmantes.service";
 import { asignarEscaneadoPor, getEscaneadoPor } from "../services/escaneos.service";
+import { categoriasParaAnexo } from "../lib/anexo-categorias";
 import { useUsuariosApoyo } from "../hooks/use-usuarios-apoyo";
 import type { CatalogItem, DocumentoAnexo, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
@@ -651,7 +652,7 @@ export function EditDocumentPage() {
             </div>
           </Card>
         <DocumentAttachmentsSection
-          tiposAnexo={catalogos.tiposAnexo}
+          tiposAnexo={categoriasParaAnexo(catalogos.tiposAnexo, catalogos.categorias)}
           existing={anexos}
           loadingExisting={loadingAnexos}
           pending={pendingAnexos}
@@ -706,9 +707,9 @@ export function EditDocumentPage() {
                 <Input value={editingAnexo.titulo} onChange={(event) => setEditingAnexo({ ...editingAnexo, titulo: event.target.value })} />
               </label>
               <label>
-                <span className="mb-2 block text-sm font-semibold">Tipo de documento *</span>
+                <span className="mb-2 block text-sm font-semibold">Categoría *</span>
                 <Select className="w-full" value={editingAnexo.tipo_anexo_id} onChange={(event) => setEditingAnexo({ ...editingAnexo, tipo_anexo_id: event.target.value })}>
-                  {catalogos.tiposAnexo.filter((item) => item.activo).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                  {categoriasParaAnexo(catalogos.tiposAnexo, catalogos.categorias, editingAnexo.tipo_anexo_id).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
                 </Select>
               </label>
               <label>
