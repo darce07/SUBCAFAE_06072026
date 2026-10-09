@@ -134,9 +134,9 @@ export function DocumentAttachmentsSection({
                 <Input value={item.titulo} onChange={(event) => updatePending(item.id, { titulo: event.target.value })} placeholder="Título del anexo" />
               </label>
               <label>
-                <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Tipo *</span>
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Categoría *</span>
                 <Select className="w-full" value={item.tipoAnexoId} onChange={(event) => updatePending(item.id, { tipoAnexoId: event.target.value })}>
-                  <option value="">Seleccionar tipo</option>
+                  <option value="">Seleccionar categoría</option>
                   {tiposAnexo.filter((type) => type.activo).map((type) => <option key={type.id} value={type.id}>{type.nombre}</option>)}
                 </Select>
               </label>

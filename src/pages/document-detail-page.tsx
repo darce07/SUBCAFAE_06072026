@@ -13,6 +13,7 @@ import { deleteDocumentoAnexo, getDocumentoAnexos } from "../services/anexos.ser
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview } from "../services/storage.service";
 import { usePermissions } from "../hooks/use-permissions";
+import { categoriasParaAnexo } from "../lib/anexo-categorias";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useAuth } from "../features/auth/auth-context";
 
@@ -200,7 +201,7 @@ export function DocumentDetailPage() {
       </Card>
 
       <DocumentAttachmentsSection
-        tiposAnexo={catalogos.tiposAnexo}
+        tiposAnexo={categoriasParaAnexo(catalogos.tiposAnexo, catalogos.categorias)}
         existing={anexos}
         pending={[] as PendingDocumentoAnexo[]}
         onPendingChange={() => undefined}

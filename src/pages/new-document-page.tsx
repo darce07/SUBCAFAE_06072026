@@ -24,6 +24,7 @@ import { createDocumentoAnexo } from "../services/anexos.service";
 import { uploadDocumentoAnexoFile } from "../services/storage.service";
 import { sincronizarDocumentoFirmantes } from "../services/firmantes.service";
 import { asignarEscaneadoPor } from "../services/escaneos.service";
+import { categoriasParaAnexo } from "../lib/anexo-categorias";
 import { useUsuariosApoyo } from "../hooks/use-usuarios-apoyo";
 import type { CatalogItem, DocumentoHashMatch, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
@@ -694,7 +695,7 @@ export function NewDocumentPage() {
           </Card>
 
           <DocumentAttachmentsSection
-            tiposAnexo={catalogos.tiposAnexo}
+            tiposAnexo={categoriasParaAnexo(catalogos.tiposAnexo, catalogos.categorias)}
             pending={pendingAnexos}
             onPendingChange={setPendingAnexos}
           />
