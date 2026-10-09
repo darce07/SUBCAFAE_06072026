@@ -64,7 +64,7 @@ export function SindicatoDetailPage() {
       <PageHeader
         eyebrow="Sindicatos"
         title={data?.sindicato.nombre ?? "Sindicato"}
-        description="Detalle de ingresos, gastos y documentos asociados a este sindicato."
+        description="Lo que SUBCAFAE le ha dado a este sindicato (gasto), lo que recibió de él y los documentos asociados."
         action={<Button variant="secondary" onClick={() => navigate("/sindicatos")}><ArrowLeft className="size-4" />Volver</Button>}
       />
       {error && <Alert>{error}</Alert>}

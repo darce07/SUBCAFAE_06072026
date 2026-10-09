@@ -64,7 +64,7 @@ export function SindicatosPage() {
       <PageHeader
         eyebrow="Finanzas"
         title="Sindicatos"
-        description="Balance de ingresos y gastos por sindicato, calculado desde los documentos registrados."
+        description="Lo que SUBCAFAE entrega a cada sindicato (gasto) y lo que recibe de él, calculado desde los documentos registrados."
       />
       {error && <Alert>{error}</Alert>}
 
@@ -72,7 +72,8 @@ export function SindicatosPage() {
         <Info className="mt-0.5 size-4 shrink-0" />
         <span>
           Los sindicatos se reconocen solos: es todo documento cuya <strong>Entidad</strong> sea de tipo <strong>Sindicato</strong>.
-          Para sumar uno nuevo, regístralo como entidad con ese tipo; no hace falta crear nada aquí.
+          El <strong>gasto</strong> es lo que SUBCAFAE le da al sindicato (documentos con naturaleza <strong>Egreso</strong>).
+          Para sumar un sindicato nuevo, regístralo como entidad con ese tipo; no hace falta crear nada aquí.
         </span>
       </Alert>
 
