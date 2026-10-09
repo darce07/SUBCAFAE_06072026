@@ -368,13 +368,13 @@ export interface ReporteActividadDiaria {
   escaneados: number;
 }
 
-export interface ActividadPorHora {
+export interface SubidaDetalle {
   usuario_id: string;
   usuario_nombre: string | null;
-  hora: number;
-  subidos: number;
-  editados: number;
-  anexos: number;
+  momento: string;
+  tipo: "documento" | "anexo";
+  codigo: string | null;
+  titulo: string | null;
 }
 
 export interface ControlInternoFilters {
