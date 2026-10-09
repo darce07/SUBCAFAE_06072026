@@ -27,8 +27,7 @@ function mimeFromExtension(extension?: string | null) {
 }
 
 // Visor para comparar: el archivo a un lado y los datos del documento al otro.
-// Se abre en una ventana propia (sin menú lateral) para poder ponerla junto a
-// otra ventana, otro documento o el papel que se está revisando.
+// Se abre en una pestaña propia, sin menú lateral, para aprovechar el ancho.
 export function DocumentoVisorPage() {
   const { id } = useParams();
   const { userContext } = useAuth();
@@ -106,7 +105,7 @@ export function DocumentoVisorPage() {
           <Link to={`/documentos/${documento.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-8 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
             <FileText className="size-4" />Detalle completo
           </Link>
-          <Button size="sm" variant="ghost" aria-label="Cerrar ventana" onClick={() => window.close()}><X className="size-4" /></Button>
+          <Button size="sm" variant="ghost" aria-label="Cerrar pestaña" onClick={() => window.close()}><X className="size-4" /></Button>
         </div>
       </header>
 
