@@ -363,6 +363,7 @@ export interface ReporteActividadDiaria {
   primera_conexion: string | null;
   ultima_conexion: string | null;
   minutos_conectado: number;
+  escaneados: number;
 }
 
 export interface ControlInternoFilters {

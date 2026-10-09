@@ -23,6 +23,8 @@ import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo } from "../services/anexos.service";
 import { uploadDocumentoAnexoFile } from "../services/storage.service";
 import { sincronizarDocumentoFirmantes } from "../services/firmantes.service";
+import { asignarEscaneadoPor } from "../services/escaneos.service";
+import { useUsuariosApoyo } from "../hooks/use-usuarios-apoyo";
 import type { CatalogItem, DocumentoHashMatch, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
 import { findMatchingEntity, validateEntityDocument } from "../lib/entity-document";
@@ -137,6 +139,8 @@ export function NewDocumentPage() {
   // periodo, tipo de gestión, naturaleza, monto y operación. Hay que elegir antes de llenar.
   const [tipoRegistro, setTipoRegistro] = useState<TipoRegistro | null>(initialDraft?.tipoRegistro ?? null);
   const esFinanciero = tipoRegistro === "financiero";
+  const usuariosApoyo = useUsuariosApoyo();
+  const [escaneadoPor, setEscaneadoPor] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState(() => initialDraft?.idempotencyKey ?? crypto.randomUUID());
@@ -343,6 +347,7 @@ export function NewDocumentPage() {
 
   const clearForm = () => {
     reset(blankValues);
+    setEscaneadoPor("");
     setTipoRegistro(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
@@ -448,6 +453,13 @@ export function NewDocumentPage() {
         periodoMes: esFinanciero && values.periodo_mes ? Number(values.periodo_mes) : null,
         periodoAnio: esFinanciero && values.periodo_anio ? Number(values.periodo_anio) : null,
       });
+      if (escaneadoPor) {
+        try {
+          await asignarEscaneadoPor([documento.id], escaneadoPor);
+        } catch (escaneoError) {
+          toast.warning(escaneoError instanceof Error ? escaneoError.message : "No se pudo guardar quién escaneó el documento.");
+        }
+      }
       if (pendingAnexos.length) {
         if (pendingAnexos.some((anexo) => !anexo.tipoAnexoId || anexo.titulo.trim().length < 2)) {
           toast.error("Completa el título y tipo de todos los anexos antes de guardar.");
@@ -672,6 +684,12 @@ export function NewDocumentPage() {
             <SectionTitle icon={<MapPin />} title="Archivo y trazabilidad" description="Ubicación física del documento" />
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Archivador"><Select className="w-full" {...register("archivador_id")}><option value="">Sin archivador</option>{selectableOptions(catalogos.archivadores, watch("archivador_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
+              <Field label="Escaneado por (opcional)" hint="Si otra persona escaneó el documento físico, indícalo para que el reporte de Control interno le dé crédito.">
+                <Select className="w-full" value={escaneadoPor} onChange={(event) => setEscaneadoPor(event.target.value)}>
+                  <option value="">Nadie / no aplica</option>
+                  {usuariosApoyo.map((usuario) => <option key={usuario.id} value={usuario.id}>{usuario.nombre}</option>)}
+                </Select>
+              </Field>
             </div>
           </Card>
 
