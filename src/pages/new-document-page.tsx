@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarDays, ClipboardPaste, ExternalLink, Eye, FileText, Landmark, MapPin, Paperclip, Save, UploadCloud, X } from "lucide-react";
+import { CalendarDays, ExternalLink, Eye, FileText, Landmark, MapPin, Paperclip, Save, UploadCloud, X } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, Button, Card, Input, PageHeader, Select } from "../components/ui";
 import { useCatalogos } from "../hooks/use-catalogos";
@@ -126,13 +126,6 @@ function readDraft(): StoredDraft | null {
   } catch {
     return null;
   }
-}
-
-function localRouteFromFile(file: File) {
-  const fileWithPath = file as File & { path?: string };
-  if (fileWithPath.path) return fileWithPath.path;
-  const relativePath = "webkitRelativePath" in file ? String(file.webkitRelativePath || "") : "";
-  return relativePath ? relativePath.replaceAll("/", "\\") : "";
 }
 
 export function NewDocumentPage() {
@@ -328,34 +321,6 @@ export function NewDocumentPage() {
     setArchivoHash(null);
     setHashMatches([]);
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
-  };
-
-  const pasteHistoricalRoute = async () => {
-    if (!navigator.clipboard?.readText) {
-      toast.error("El navegador no permite leer el portapapeles en este contexto.");
-      return;
-    }
-    try {
-      const text = (await navigator.clipboard.readText()).trim();
-      if (!text) {
-        toast.info("No hay texto en el portapapeles.");
-        return;
-      }
-      setValue("ruta_historica", text, { shouldDirty: true });
-      toast.success("Ruta histórica pegada. Revísala antes de guardar.");
-    } catch {
-      toast.error("No se pudo leer el portapapeles. Pega la ruta manualmente.");
-    }
-  };
-
-  const handleFolderFile = async (file: File | undefined) => {
-    if (!file) return;
-    await handleFile(file);
-    const route = localRouteFromFile(file);
-    if (route) {
-      setValue("ruta_historica", route, { shouldDirty: true });
-      toast.success("Se capturó la ruta relativa de la carpeta seleccionada.");
-    }
   };
 
   const onSubmit = async (values: FormValues) => {
@@ -652,19 +617,9 @@ export function NewDocumentPage() {
           </Card>
 
           <Card className="p-5 sm:p-6">
-            <SectionTitle icon={<MapPin />} title="Archivo y trazabilidad" description="Ubicación física y ruta histórica importada" />
+            <SectionTitle icon={<MapPin />} title="Archivo y trazabilidad" description="Ubicación física del documento" />
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Archivador"><Select className="w-full" {...register("archivador_id")}><option value="">Sin archivador</option>{selectableOptions(catalogos.archivadores, watch("archivador_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
-              <Field label="Ruta histórica" className="md:col-span-2">
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                  <span>El navegador no entrega la ruta completa del archivo; pega aquí la ruta local real si la necesitas.</span>
-                  <div className="flex flex-wrap gap-2">
-                    <label htmlFor="documento-folder-input" className="inline-flex min-h-8 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"><MapPin className="size-4" />Elegir carpeta</label>
-                    <Button type="button" size="sm" variant="secondary" onClick={() => void pasteHistoricalRoute()}><ClipboardPaste className="size-4" />Pegar ruta</Button>
-                  </div>
-                </div>
-                <textarea className="min-h-24 w-full rounded-xl border border-slate-200 bg-white p-3 font-mono text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950" placeholder="Ej. C:\\SUBCAFAE\\SUBCAFAE\\REQUISITOS PARA REAPERTURAR - BBVA\\RD 00381-2025.pdf" {...register("ruta_historica")} />
-              </Field>
             </div>
           </Card>
 
@@ -683,7 +638,6 @@ export function NewDocumentPage() {
         <Card className="h-fit p-5 xl:sticky xl:top-28">
           <div className="mb-4 flex items-center gap-2"><Paperclip className="size-4 text-teal-700" /><h2 className="font-bold">Archivo digital *</h2></div>
           <input id="documento-file-input" type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" onChange={(event) => void handleFile(event.target.files?.[0])} />
-          <input id="documento-folder-input" type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" webkitdirectory="" onChange={(event) => void handleFolderFile(event.target.files?.[0])} />
           {selectedFile ? (
             <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 text-center dark:border-slate-700 dark:bg-slate-950">
               <button
@@ -700,7 +654,6 @@ export function NewDocumentPage() {
               <div className="mt-3 flex flex-wrap justify-center gap-2">
                 <Button type="button" size="sm" variant="secondary" disabled={!previewUrl} onClick={() => setPreviewOpen(true)}><Eye className="size-4" />Previsualizar</Button>
                 <label htmlFor="documento-file-input" className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"><UploadCloud className="size-4" />Cambiar</label>
-                <label htmlFor="documento-folder-input" className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"><MapPin className="size-4" />Con ruta</label>
               </div>
             </div>
           ) : (
@@ -708,7 +661,6 @@ export function NewDocumentPage() {
               <UploadCloud className="mb-3 size-8 text-teal-600" />
               <span className="text-sm font-semibold">Selecciona o arrastra un archivo</span>
               <span className="mt-1 text-xs text-slate-500">PDF, Word, Excel o imagen · Máx. 20 MB</span>
-              <span className="mt-2 text-[11px] text-slate-400">Para ruta relativa, usa “Elegir carpeta” en Ruta histórica.</span>
             </label>
           )}
           {errors.archivo && <span className="mt-2 block text-xs text-rose-600">{errors.archivo.message}</span>}

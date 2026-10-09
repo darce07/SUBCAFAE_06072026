@@ -593,7 +593,9 @@ export function EditDocumentPage() {
                 }}
               />
             </Field>
-            <Field label="Ruta histórica" className="md:col-span-2"><textarea className="min-h-24 w-full rounded-xl border border-slate-200 bg-white p-3 font-mono text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950" {...register("ruta_historica")} /></Field>
+            {/* La Ruta histórica está oculta por ahora, pero se conserva: sin este campo
+                registrado, al guardar se perdería la ruta que ya tiene el documento. */}
+            <input type="hidden" {...register("ruta_historica")} />
           </div>
         </Card>
         <Card className="p-5 sm:p-6">

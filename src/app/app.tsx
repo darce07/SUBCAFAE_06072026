@@ -10,7 +10,6 @@ const DocumentsPage = lazy(() => import("../pages/documents-page").then((module)
 const NewDocumentPage = lazy(() => import("../pages/new-document-page").then((module) => ({ default: module.NewDocumentPage })));
 const DocumentDetailPage = lazy(() => import("../pages/document-detail-page").then((module) => ({ default: module.DocumentDetailPage })));
 const EditDocumentPage = lazy(() => import("../pages/edit-document-page").then((module) => ({ default: module.EditDocumentPage })));
-const HistoricalPage = lazy(() => import("../pages/historical-page").then((module) => ({ default: module.HistoricalPage })));
 const TrashPage = lazy(() => import("../pages/trash-page").then((module) => ({ default: module.TrashPage })));
 const VerificationPage = lazy(() => import("../pages/verification-page").then((module) => ({ default: module.VerificationPage })));
 const PhysicalArchivePage = lazy(() => import("../pages/physical-archive-page").then((module) => ({ default: module.PhysicalArchivePage })));
@@ -45,7 +44,8 @@ export function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/documentos" element={<DocumentsPage />} />
-            <Route path="/documentos/historico" element={<HistoricalPage />} />
+            {/* Explorador histórico oculto por ahora; la página sigue en src/pages/historical-page.tsx. */}
+            <Route path="/documentos/historico" element={<Navigate to="/documentos" replace />} />
             <Route path="/documentos/papelera" element={<TrashPage />} />
             <Route path="/documentos/nuevo" element={<NewDocumentPage />} />
             <Route path="/documentos/:id" element={<DocumentDetailPage />} />
