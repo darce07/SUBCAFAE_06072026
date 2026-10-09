@@ -8,7 +8,7 @@ import type {
   ControlInternoFilters,
   ControlInternoUsuario,
   ReporteActividadDiaria,
-  ActividadPorHora,
+  SubidaDetalle,
   PaginatedResult,
   RolePermissionRow,
 } from "../types";
@@ -96,11 +96,11 @@ export async function getReporteActividadDiaria(desde: string, hasta: string, us
 }
 
 // Actividad por hora del día (hora de Lima) para el mapa de calor. Solo administradores.
-export async function getActividadPorHora(desde: string, hasta: string, usuarioId?: string): Promise<ActividadPorHora[]> {
+export async function getSubidasDetalle(desde: string, hasta: string, usuarioId?: string): Promise<SubidaDetalle[]> {
   if (!supabase) return [];
-  const { data, error } = await supabase.rpc("obtener_actividad_por_hora", { p_desde: desde, p_hasta: hasta, p_usuario: usuarioId || null });
-  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo cargar la actividad por hora."));
-  return (data ?? []) as ActividadPorHora[];
+  const { data, error } = await supabase.rpc("obtener_subidas_detalle", { p_desde: desde, p_hasta: hasta, p_usuario: usuarioId || null });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron cargar las subidas."));
+  return (data ?? []) as SubidaDetalle[];
 }
 
 export async function getControlInternoUsuarios(filters: ControlInternoFilters = {}): Promise<ControlInternoUsuario[]> {
