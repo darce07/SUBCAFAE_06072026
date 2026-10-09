@@ -22,6 +22,8 @@ import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo, deleteDocumentoAnexo, getDocumentoAnexos, updateDocumentoAnexo } from "../services/anexos.service";
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview, removeDocumentoFile, uploadDocumentoAnexoFile } from "../services/storage.service";
 import { getDocumentoFirmantes, sincronizarDocumentoFirmantes } from "../services/firmantes.service";
+import { asignarEscaneadoPor, getEscaneadoPor } from "../services/escaneos.service";
+import { useUsuariosApoyo } from "../hooks/use-usuarios-apoyo";
 import type { CatalogItem, DocumentoAnexo, PendingDocumentoAnexo, SincronizarFirmanteInput } from "../types";
 import { useEntitySearch } from "../hooks/use-entity-search";
 import { findMatchingEntity, validateEntityDocument } from "../lib/entity-document";
@@ -118,6 +120,10 @@ export function EditDocumentPage() {
   // así borraría los que ya tiene el documento. Por eso solo se sincronizan
   // cuando la carga terminó bien.
   const [firmantesCargados, setFirmantesCargados] = useState(false);
+  const usuariosApoyo = useUsuariosApoyo();
+  const [escaneadoPor, setEscaneadoPor] = useState("");
+  // Solo se guarda un cambio de "escaneado por" si el valor guardado se pudo leer.
+  const [escaneoOriginal, setEscaneoOriginal] = useState<string | null>(null);
   const [editingAnexo, setEditingAnexo] = useState<DocumentoAnexo | null>(null);
   const [editAnexoFile, setEditAnexoFile] = useState<File | null>(null);
   const [viewer, setViewer] = useState<{ title: string; objectUrl: string; signedUrl: string; mimeType: string | null } | null>(null);
@@ -213,6 +219,13 @@ export function EditDocumentPage() {
         setFirmantesCargados(true);
       })
       .catch((error) => toast.error(error instanceof Error ? error.message : "No se pudieron cargar los firmantes."));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    void getEscaneadoPor(id)
+      .then((valor) => { setEscaneadoPor(valor ?? ""); setEscaneoOriginal(valor ?? ""); })
+      .catch(() => undefined);
   }, [id]);
 
   const periodoMes = watch("periodo_mes");
@@ -352,6 +365,10 @@ export function EditDocumentPage() {
         ...(receptorEntidadId ? [{ personalNaturalId: null, entidadId: receptorEntidadId, rol: "receptor" as const, representaEntidadId: null }] : []),
         ...firmanteIds.map((personalNaturalId) => ({ personalNaturalId, entidadId: null, rol: "firmante" as const, representaEntidadId: null })),
       ];
+      if (escaneoOriginal !== null && escaneadoPor !== escaneoOriginal) {
+        await asignarEscaneadoPor([id], escaneadoPor || null);
+        setEscaneoOriginal(escaneadoPor);
+      }
       if (firmantesCargados) await sincronizarDocumentoFirmantes(id, firmantesPayload);
       else toast.warning("No se modificaron el emisor, receptor ni los firmantes porque no se pudieron cargar. Recarga la página para editarlos.");
       if (pendingAnexos.length) {
@@ -622,6 +639,12 @@ export function EditDocumentPage() {
             <SectionTitle icon={<MapPin />} title="Archivo y trazabilidad" description="Ubicación física del documento" />
             <div className="grid gap-5 md:grid-cols-2">
             <Field label="Archivador"><Select className="w-full" {...register("archivador_id")}><option value="">Sin archivador</option>{selectableOptions(catalogos.archivadores, watch("archivador_id")).map((item) => <option key={item.id} value={item.id}>{item.nombre}{!item.activo ? " (inactivo)" : ""}</option>)}</Select></Field>
+              <Field label="Escaneado por (opcional)" hint="Si otra persona escaneó el documento físico, indícalo para que el reporte de Control interno le dé crédito.">
+                <Select className="w-full" value={escaneadoPor} onChange={(event) => setEscaneadoPor(event.target.value)}>
+                  <option value="">Nadie / no aplica</option>
+                  {usuariosApoyo.map((usuario) => <option key={usuario.id} value={usuario.id}>{usuario.nombre}</option>)}
+                </Select>
+              </Field>
             {/* La Ruta histórica está oculta por ahora, pero se conserva: sin este campo
                 registrado, al guardar se perdería la ruta que ya tiene el documento. */}
             <input type="hidden" {...register("ruta_historica")} />

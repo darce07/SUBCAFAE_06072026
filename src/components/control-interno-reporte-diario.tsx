@@ -74,15 +74,15 @@ export function ControlInternoReporteDiario() {
   const exportarPdf = () => {
     exportToPdf(
       `Reporte diario de actividad · ${periodo}`,
-      ["Fecha", "Usuario", "Entró", "Última conexión", "Tiempo conectado", "Subidos", "Editados", "Eliminados", "Anexos", "Acciones", "Última acción"],
-      rows.map((row) => [row.fecha, row.usuario_nombre ?? row.usuario_email ?? "Sin perfil", hora(row.primera_conexion), hora(row.ultima_conexion), duracion(row.minutos_conectado), row.subidos, row.editados, row.eliminados, row.anexos, row.acciones, hora(row.ultima_accion)]),
+      ["Fecha", "Usuario", "Entró", "Última conexión", "Tiempo conectado", "Subidos", "Editados", "Eliminados", "Anexos", "Escaneados", "Acciones", "Última acción"],
+      rows.map((row) => [row.fecha, row.usuario_nombre ?? row.usuario_email ?? "Sin perfil", hora(row.primera_conexion), hora(row.ultima_conexion), duracion(row.minutos_conectado), row.subidos, row.editados, row.eliminados, row.anexos, row.escaneados, row.acciones, hora(row.ultima_accion)]),
       `actividad-diaria-${desde}-a-${hasta}`,
     );
   };
 
   const exportarCsv = () => {
-    const encabezado = ["Fecha", "Usuario", "Correo", "Entró", "Última conexión", "Minutos conectado", "Subidos", "Editados", "Eliminados", "Anexos", "Acciones", "Primera acción", "Última acción", "Minutos con acciones"];
-    const lineas = rows.map((row) => [row.fecha, row.usuario_nombre ?? "", row.usuario_email ?? "", hora(row.primera_conexion), hora(row.ultima_conexion), row.minutos_conectado, row.subidos, row.editados, row.eliminados, row.anexos, row.acciones, hora(row.primera_accion), hora(row.ultima_accion), row.minutos_activos]);
+    const encabezado = ["Fecha", "Usuario", "Correo", "Entró", "Última conexión", "Minutos conectado", "Subidos", "Editados", "Eliminados", "Anexos", "Escaneados", "Acciones", "Primera acción", "Última acción", "Minutos con acciones"];
+    const lineas = rows.map((row) => [row.fecha, row.usuario_nombre ?? "", row.usuario_email ?? "", hora(row.primera_conexion), hora(row.ultima_conexion), row.minutos_conectado, row.subidos, row.editados, row.eliminados, row.anexos, row.escaneados, row.acciones, hora(row.primera_accion), hora(row.ultima_accion), row.minutos_activos]);
     const csv = [encabezado, ...lineas].map((linea) => linea.map((celda) => `"${String(celda).replaceAll('"', '""')}"`).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([String.fromCharCode(0xfeff) + csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
@@ -181,6 +181,7 @@ export function ControlInternoReporteDiario() {
                   <th className="px-4 py-3 text-right">Editados</th>
                   <th className="px-4 py-3 text-right">Eliminados</th>
                   <th className="px-4 py-3 text-right">Anexos</th>
+                  <th className="px-4 py-3 text-right">Escaneados</th>
                   <th className="px-4 py-3 text-right">Acciones</th>
                   <th className="whitespace-nowrap px-4 py-3">Última acción</th>
                 </tr>
@@ -197,6 +198,7 @@ export function ControlInternoReporteDiario() {
                     <td className="px-4 py-3 text-right">{row.editados}</td>
                     <td className="px-4 py-3 text-right">{row.eliminados}</td>
                     <td className="px-4 py-3 text-right">{row.anexos}</td>
+                    <td className="px-4 py-3 text-right">{row.escaneados}</td>
                     <td className="px-4 py-3 text-right font-semibold">{row.acciones}</td>
                     <td className="whitespace-nowrap px-4 py-3">{hora(row.ultima_accion)}</td>
                   </tr>
@@ -213,7 +215,7 @@ export function ControlInternoReporteDiario() {
           <strong>Entró</strong>, <strong>Última conexión</strong> y <strong>Tiempo conectado</strong> salen del registro de conexión: el sistema anota cada pocos minutos
           que la persona lo tiene abierto y activo (pestaña visible y con uso en los últimos 5 minutos), aunque solo consulte. Solo existe desde que se activó
           este registro; los días anteriores muestran "—". Las columnas de acciones (<strong>Subidos, Editados, Eliminados, Anexos</strong>) salen de la auditoría
-          y "Subidos" cuenta solo los documentos que siguen activos. Se guarda únicamente fecha y hora, nunca el contenido, y cada persona recibe un aviso la primera vez.
+          y "Subidos" cuenta solo los documentos que siguen activos. <strong>Escaneados</strong> son los documentos que la persona escaneó mientras otra los digitaba (se indica en cada documento con "Escaneado por"), contados el día en que se digitalizaron. Se guarda únicamente fecha y hora, nunca el contenido, y cada persona recibe un aviso la primera vez.
         </span>
       </Alert>
     </div>
