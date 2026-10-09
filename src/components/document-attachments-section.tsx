@@ -124,29 +124,33 @@ export function DocumentAttachmentsSection({
 
         {pending.map((item) => (
           <div key={item.id} className="rounded-2xl border border-dashed border-teal-300 bg-teal-50/40 p-4 dark:border-teal-900 dark:bg-teal-950/20">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_220px_minmax(0,1fr)_auto] lg:items-end">
-              <div className="min-w-0">
-                <p className="flex items-center gap-2 break-words font-bold text-slate-900 dark:text-white"><UploadCloud className="size-4 text-teal-700" />{item.file.name}</p>
-                <p className="mt-1 text-xs text-slate-500">{formatSize(item.file.size)} · {item.file.type || "Archivo"}</p>
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="flex min-w-0 items-start gap-2 font-bold text-slate-900 dark:text-white"><UploadCloud className="mt-0.5 size-4 shrink-0 text-teal-700" /><span className="min-w-0 break-words">{item.file.name}</span></p>
+                  <p className="mt-1 text-xs text-slate-500">{formatSize(item.file.size)} · {item.file.type || "Archivo"}</p>
+                </div>
+                <Button type="button" size="sm" variant="danger" className="shrink-0" onClick={() => onPendingChange(pending.filter((pendingItem) => pendingItem.id !== item.id))}>
+                  <Trash2 className="size-4" />Quitar
+                </Button>
               </div>
-              <label>
-                <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Título *</span>
-                <Input value={item.titulo} onChange={(event) => updatePending(item.id, { titulo: event.target.value })} placeholder="Título del anexo" />
-              </label>
-              <label>
-                <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Categoría *</span>
-                <Select className="w-full" value={item.tipoAnexoId} onChange={(event) => updatePending(item.id, { tipoAnexoId: event.target.value })}>
-                  <option value="">Seleccionar categoría</option>
-                  {tiposAnexo.filter((type) => type.activo).map((type) => <option key={type.id} value={type.id}>{type.nombre}</option>)}
-                </Select>
-              </label>
-              <label>
-                <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Descripción opcional</span>
-                <Input value={item.descripcion} onChange={(event) => updatePending(item.id, { descripcion: event.target.value })} placeholder="Detalle breve del anexo" />
-              </label>
-              <Button type="button" variant="danger" onClick={() => onPendingChange(pending.filter((pendingItem) => pendingItem.id !== item.id))}>
-                <Trash2 className="size-4" />Quitar
-              </Button>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <label className="min-w-0">
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Título *</span>
+                  <Input value={item.titulo} onChange={(event) => updatePending(item.id, { titulo: event.target.value })} placeholder="Título del anexo" />
+                </label>
+                <label className="min-w-0">
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Categoría *</span>
+                  <Select className="w-full min-w-0" value={item.tipoAnexoId} onChange={(event) => updatePending(item.id, { tipoAnexoId: event.target.value })}>
+                    <option value="">Seleccionar categoría</option>
+                    {tiposAnexo.filter((type) => type.activo).map((type) => <option key={type.id} value={type.id}>{type.nombre}</option>)}
+                  </Select>
+                </label>
+                <label className="min-w-0 md:col-span-2 xl:col-span-1">
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Descripción opcional</span>
+                  <Input value={item.descripcion} onChange={(event) => updatePending(item.id, { descripcion: event.target.value })} placeholder="Detalle breve del anexo" />
+                </label>
+              </div>
             </div>
           </div>
         ))}
