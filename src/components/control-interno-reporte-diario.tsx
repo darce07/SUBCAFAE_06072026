@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type RefObject } from "react";
 import { CalendarRange, Clock, Download, FilePlus2, FileX2, Info, PenSquare, UsersRound } from "lucide-react";
 import { Alert, Button, Card, EmptyState, Input, Select, Skeleton } from "./ui";
 import { useControlInterno } from "../hooks/use-control-interno";
@@ -42,7 +42,8 @@ function duracion(minutos: number) {
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 
-export function ControlInternoReporteDiario() {
+// exportRef deja que el botón "Descargar PDF" de la cabecera de la página descargue este reporte completo.
+export function ControlInternoReporteDiario({ exportRef }: { exportRef?: RefObject<(() => void) | null> }) {
   const [desde, setDesde] = useState(() => sumarDias(hoyLima(), -6));
   const [hasta, setHasta] = useState(() => hoyLima());
   const [usuarioId, setUsuarioId] = useState("");
@@ -92,6 +93,12 @@ export function ControlInternoReporteDiario() {
       archivo: `actividad-diaria-${desde}-a-${hasta}`,
     });
   };
+
+  useEffect(() => {
+    if (!exportRef) return;
+    exportRef.current = exportarPdf;
+    return () => { exportRef.current = null; };
+  });
 
   const exportarCsv = () => {
     const encabezado = ["Fecha", "Usuario", "Correo", "Entró", "Última conexión", "Minutos conectado", "Subidos", "Editados", "Eliminados", "Anexos", "Escaneados", "Total", "Primera acción", "Última acción", "Minutos con acciones"];
