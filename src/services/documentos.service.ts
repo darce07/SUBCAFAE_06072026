@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabase";
 import { getSupabaseErrorMessage } from "../lib/supabase-error";
 import { mockDocumentos } from "../mocks/supabase-data";
+import { removeDocumentoFiles } from "./storage.service";
 import type {
   CreateDocumentoCommand,
   DashboardFilters,
@@ -387,6 +388,51 @@ async function runBulk(ids: string[], action: (id: string) => Promise<void>): Pr
 
 export const deleteDocumentos = (ids: string[]) => runBulk(ids, deleteDocumento);
 export const restaurarDocumentos = (ids: string[]) => runBulk(ids, restaurarDocumento);
+
+export interface EliminacionDefinitivaResult extends BulkResult {
+  archivosBorrados: number;
+}
+
+// Elimina para siempre documentos que YA están en la Papelera (solo admin):
+//  1) la base valida y dice qué archivos del Storage son de esos documentos;
+//  2) se borran esos archivos con la API de Storage (así sí se libera espacio);
+//  3) recién entonces se borra el registro. Si falla el borrado de los
+//     archivos de un documento, su registro NO se borra y sigue en la Papelera
+//     para poder reintentar, sin dejar archivos huérfanos.
+export async function eliminarDocumentosDefinitivamente(ids: string[]): Promise<EliminacionDefinitivaResult> {
+  const result: EliminacionDefinitivaResult = { ok: 0, failed: [], archivosBorrados: 0 };
+  if (!supabase || !ids.length) return result;
+
+  const { data, error } = await supabase.rpc("preparar_eliminacion_definitiva", { p_ids: ids });
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo preparar la eliminación definitiva."));
+  const items = (data ?? []) as Array<{ id: string; codigo: string; paths: string[] }>;
+
+  const listos: string[] = [];
+  const queue = [...items];
+  const worker = async () => {
+    for (let item = queue.shift(); item !== undefined; item = queue.shift()) {
+      try {
+        await removeDocumentoFiles(item.paths);
+        result.archivosBorrados += item.paths.length;
+        listos.push(item.id);
+      } catch (storageError) {
+        result.failed.push({ id: item.id, message: storageError instanceof Error ? storageError.message : "No se pudieron borrar los archivos." });
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(5, items.length) }, worker));
+
+  for (let start = 0; start < listos.length; start += 100) {
+    const lote = listos.slice(start, start + 100);
+    const { data: borrados, error: deleteError } = await supabase.rpc("eliminar_documentos_definitivamente", { p_ids: lote });
+    if (deleteError) {
+      lote.forEach((id) => result.failed.push({ id, message: getSupabaseErrorMessage(deleteError, "No se pudo eliminar el registro.") }));
+    } else {
+      result.ok += Number(borrados ?? 0);
+    }
+  }
+  return result;
+}
 
 export async function getDashboardResumen(filters: DashboardFilters = {}): Promise<DashboardResumen> {
   if (!supabase) return buildMockDashboard(filters);
