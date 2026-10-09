@@ -35,6 +35,11 @@ function totalTrabajado(row: ReporteActividadDiaria) {
   return row.subidos + row.anexos + row.escaneados;
 }
 
+// Quien colabora escaneando toma las horas de quien digitó los mismos documentos; se aclara con "*".
+function marcaConexion(row: ReporteActividadDiaria, texto: string) {
+  return row.conexion_heredada ? `${texto} *` : texto;
+}
+
 function duracion(minutos: number) {
   if (minutos < 60) return `${minutos} min`;
   const h = Math.floor(minutos / 60);
@@ -89,7 +94,7 @@ export function ControlInternoReporteDiario({ exportRef }: { exportRef?: RefObje
       subtitulo: desde === hasta ? `Fecha: ${desde}` : `Del ${desde} al ${hasta}`,
       resumen,
       encabezadoDetalle: ["Fecha", "Usuario", "Entró", "Última conexión", "Tiempo conectado", "Subidos", "Editados", "Eliminados", "Anexos", "Escaneados", "Total", "Última acción"],
-      filasDetalle: rows.map((row) => [row.fecha, row.usuario_nombre ?? row.usuario_email ?? "Sin perfil", hora(row.primera_conexion), hora(row.ultima_conexion), duracion(row.minutos_conectado), row.subidos, row.editados, row.eliminados, row.anexos, row.escaneados, totalTrabajado(row), hora(row.ultima_accion)]),
+      filasDetalle: rows.map((row) => [row.fecha, row.usuario_nombre ?? row.usuario_email ?? "Sin perfil", marcaConexion(row, hora(row.primera_conexion)), hora(row.ultima_conexion), duracion(row.minutos_conectado), row.subidos, row.editados, row.eliminados, row.anexos, row.escaneados, totalTrabajado(row), hora(row.ultima_accion)]),
       archivo: `actividad-diaria-${desde}-a-${hasta}`,
     });
   };
@@ -211,7 +216,7 @@ export function ControlInternoReporteDiario({ exportRef }: { exportRef?: RefObje
                   <tr key={`${row.fecha}-${row.usuario_id}`}>
                     <td className="whitespace-nowrap px-4 py-3 capitalize">{fechaLarga(row.fecha)}</td>
                     <td className="px-4 py-3 font-semibold">{row.usuario_nombre ?? row.usuario_email ?? "Usuario sin perfil"}</td>
-                    <td className="whitespace-nowrap px-4 py-3">{hora(row.primera_conexion)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{hora(row.primera_conexion)}{row.conexion_heredada && <span className="ml-1 text-xs font-normal text-slate-500" title={`Colaboró escaneando: se consideran las mismas horas que ${row.conexion_heredada_de ?? "quien digitó"}`}>*</span>}</td>
                     <td className="whitespace-nowrap px-4 py-3">{hora(row.ultima_conexion)}</td>
                     <td className="whitespace-nowrap px-4 py-3">{row.primera_conexion ? duracion(row.minutos_conectado) : "—"}</td>
                     <td className="px-4 py-3 text-right">{row.subidos}</td>
@@ -237,7 +242,7 @@ export function ControlInternoReporteDiario({ exportRef }: { exportRef?: RefObje
           <strong>Entró</strong>, <strong>Última conexión</strong> y <strong>Tiempo conectado</strong> salen del registro de conexión: el sistema anota cada pocos minutos
           que la persona lo tiene abierto y activo (pestaña visible y con uso en los últimos 5 minutos), aunque solo consulte. Solo existe desde que se activó
           este registro; los días anteriores muestran "—". Las columnas de acciones (<strong>Subidos, Editados, Eliminados, Anexos</strong>) salen de la auditoría
-          y "Subidos" cuenta solo los documentos que siguen activos. <strong>Escaneados</strong> son los documentos que la persona escaneó mientras otra los digitaba (se indica en cada documento con "Escaneado por"), contados el día en que se digitalizaron. <strong>Total</strong> suma lo que la persona produjo: subidos, anexos y escaneados. Editar y eliminar no cuentan porque son acciones sobre un documento que ya se contó, y quien solo escanea también refleja su aporte. Se guarda únicamente fecha y hora, nunca el contenido, y cada persona recibe un aviso la primera vez.
+          y "Subidos" cuenta solo los documentos que siguen activos. <strong>Escaneados</strong> son los documentos que la persona escaneó mientras otra los digitaba (se indica en cada documento con "Escaneado por"), contados el día en que se digitalizaron. <strong>Total</strong> suma lo que la persona produjo: subidos, anexos y escaneados. Editar y eliminar no cuentan porque son acciones sobre un documento que ya se contó, y quien solo escanea también refleja su aporte. Quien colabora escaneando toma las mismas horas de entrada y fin de quien digitó esos documentos (marcado con <strong>*</strong>), aunque no haya entrado al sistema. Se guarda únicamente fecha y hora, nunca el contenido, y cada persona recibe un aviso la primera vez.
         </span>
       </Alert>
     </div>

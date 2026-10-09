@@ -366,6 +366,8 @@ export interface ReporteActividadDiaria {
   ultima_conexion: string | null;
   minutos_conectado: number;
   escaneados: number;
+  conexion_heredada: boolean;
+  conexion_heredada_de: string | null;
 }
 
 export interface SubidaDetalle {
