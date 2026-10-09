@@ -183,6 +183,14 @@ export async function removeDocumentoFile(path: string) {
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudo retirar el archivo."));
 }
 
+// Borra varios archivos del Storage de una vez. Un archivo que ya no existe no
+// es error: la API simplemente no lo devuelve.
+export async function removeDocumentoFiles(paths: string[]) {
+  if (!supabase || !paths.length) return;
+  const { error } = await supabase.storage.from(BUCKET).remove(paths);
+  if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron borrar los archivos del almacenamiento."));
+}
+
 async function optimizeImage(file: File): Promise<File> {
   const bitmap = await createImageBitmap(file);
   const maxSide = 1800;

@@ -4,17 +4,19 @@ import { toast } from "sonner";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Skeleton } from "../components/ui";
 import { ConfirmDialog } from "../components/confirm-dialog";
 import { BulkActionBar } from "../components/bulk-action-bar";
+import { PermanentDeleteDialog } from "../components/permanent-delete-dialog";
 import { SelectCheckbox } from "../components/select-checkbox";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
 import { collectAllIds, useRowSelection } from "../hooks/use-row-selection";
 import { formatDateTime, formatRelativeTime } from "../lib/utils";
-import { getDocumentos, restaurarDocumento, restaurarDocumentos } from "../services/documentos.service";
+import { eliminarDocumentosDefinitivamente, getDocumentos, restaurarDocumento, restaurarDocumentos } from "../services/documentos.service";
 import type { Documento } from "../types";
 
 export function TrashPage() {
-  const { canDelete } = usePermissions();
+  const { canDelete, isAdmin } = usePermissions();
+  const [confirmPermanent, setConfirmPermanent] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [restoringId, setRestoringId] = useState<string | null>(null);
@@ -84,6 +86,25 @@ export function TrashPage() {
     }
   };
 
+  const deletePermanently = async () => {
+    if (bulkRunning) return;
+    setBulkRunning(true);
+    try {
+      const result = await eliminarDocumentosDefinitivamente(selection.ids);
+      const failedIds = result.failed.map((item) => item.id);
+      selection.clear();
+      if (failedIds.length) selection.addMany(failedIds);
+      await refresh();
+      if (result.ok) toast.success(`${result.ok} ${result.ok === 1 ? "documento eliminado" : "documentos eliminados"} definitivamente, con ${result.archivosBorrados} ${result.archivosBorrados === 1 ? "archivo borrado" : "archivos borrados"} del almacenamiento.`);
+      if (result.failed.length) toast.error(`${result.failed.length} no se eliminaron y siguen en la Papelera: ${result.failed[0].message}`);
+    } catch (permanentError) {
+      toast.error(permanentError instanceof Error ? permanentError.message : "No se pudo eliminar definitivamente.");
+    } finally {
+      setBulkRunning(false);
+      setConfirmPermanent(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -109,6 +130,11 @@ export function TrashPage() {
             <Button size="sm" variant="primary" onClick={() => setConfirmBulk(true)}>
               <RotateCcw className="size-4" />Restaurar seleccionados
             </Button>
+            {isAdmin && (
+              <Button size="sm" variant="danger" onClick={() => setConfirmPermanent(true)}>
+                <Trash2 className="size-4" />Eliminar definitivamente
+              </Button>
+            )}
           </BulkActionBar>
         )}
         {loading ? (
@@ -212,6 +238,13 @@ export function TrashPage() {
         variant="primary"
         loading={bulkRunning}
         onConfirm={() => void restoreSelected()}
+      />
+      <PermanentDeleteDialog
+        open={confirmPermanent}
+        onOpenChange={(open) => !open && !bulkRunning && setConfirmPermanent(false)}
+        count={selection.count}
+        loading={bulkRunning}
+        onConfirm={() => void deletePermanently()}
       />
     </div>
   );
