@@ -272,13 +272,12 @@ export function PhysicalArchivePage() {
   );
 }
 
-// Abre el documento en una ventana propia (archivo + datos) para poder
-// compararlo; cada documento usa su propia ventana, así se pueden poner dos
-// juntos. Si el navegador bloquea la ventana emergente, se abre en la misma.
+// Abre el documento (archivo + datos) en una pestaña nueva para poder
+// compararlo. Cada documento usa su propia pestaña: si ya estaba abierto se
+// vuelve a esa en vez de duplicarla. Si el navegador la bloquea, se abre en la
+// misma pestaña.
 function openDocumentViewer(id: string) {
-  const width = Math.min(1280, window.screen.availWidth - 80);
-  const height = Math.min(860, window.screen.availHeight - 80);
-  const opened = window.open(`/documentos/${id}/visor`, `visor-${id}`, `popup=yes,width=${width},height=${height},left=40,top=40`);
+  const opened = window.open(`/documentos/${id}/visor`, `visor-${id}`);
   if (!opened) window.location.assign(`/documentos/${id}/visor`);
   else opened.focus();
 }
