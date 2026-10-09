@@ -116,6 +116,7 @@ export function DocumentsPage() {
   const [categoryId, setCategoryId] = useState("");
   const [statusId, setStatusId] = useState("");
   const [creadorId, setCreadorId] = useState("");
+  const [entidadId, setEntidadId] = useState("");
   const [creators, setCreators] = useState<DocumentCreator[]>([]);
   const [year, setYear] = useState("");
   const [orderMode, setOrderMode] = useState<"registro_desc" | "registro_asc">("registro_desc");
@@ -144,6 +145,7 @@ export function DocumentsPage() {
     categoriaId: categoryId || undefined,
     estadoId: statusId || undefined,
     creadorId: creadorId || undefined,
+    entidadId: entidadId || undefined,
     anio: year ? Number(year) : undefined,
     orderBy: "created_at",
     orderDirection: orderMode === "registro_asc" ? "asc" : "desc",
@@ -381,6 +383,7 @@ export function DocumentsPage() {
             <Select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(1); }}><option value="">Todas las categorías</option>{catalogos.categorias.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={statusId} onChange={(event) => { setStatusId(event.target.value); setPage(1); }}><option value="">Todos los estados</option>{catalogos.estadosDocumento.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={creadorId} onChange={(event) => { setCreadorId(event.target.value); setPage(1); }}><option value="">Todos los usuarios</option>{creators.map((item) => <option key={item.id} value={item.id}>{item.nombre_completo || item.email || "Sin nombre"}</option>)}</Select>
+            <Select className="w-full sm:w-56" value={entidadId} onChange={(event) => { setEntidadId(event.target.value); setPage(1); }} aria-label="Filtrar por entidad"><option value="">Todas las entidades</option>{catalogos.entidades.filter((entidad) => entidad.activo).sort((a, b) => a.nombre.localeCompare(b.nombre, "es")).map((entidad) => <option key={entidad.id} value={entidad.id}>{entidad.nombre}</option>)}</Select>
             <Select value={year} onChange={(event) => { setYear(event.target.value); setPage(1); }}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
             <Select value={orderMode} onChange={(event) => { setOrderMode(event.target.value as "registro_desc" | "registro_asc"); setPage(1); }}><option value="registro_desc">Registro: recientes primero</option><option value="registro_asc">Registro: antiguos primero</option></Select>
             <Select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value={5}>5 filas</option><option value={10}>10 filas</option><option value={20}>20 filas</option><option value={50}>50 filas</option></Select>
