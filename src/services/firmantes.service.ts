@@ -6,7 +6,9 @@ export async function getDocumentoFirmantes(documentoId: string): Promise<Docume
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("documento_firmantes")
-    .select("*, personal_natural(*), entidad:entidades(*)")
+    // documento_firmantes tiene dos relaciones con entidades (entidad_id y
+    // representa_entidad_id): hay que indicar cuál usar o PostgREST rechaza la consulta.
+    .select("*, personal_natural(*), entidad:entidades!documento_firmantes_entidad_id_fkey(*)")
     .eq("documento_id", documentoId)
     .order("created_at", { ascending: true });
   if (error) throw new Error(getSupabaseErrorMessage(error, "No se pudieron cargar los firmantes."));
