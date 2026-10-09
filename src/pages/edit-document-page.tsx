@@ -106,6 +106,10 @@ export function EditDocumentPage() {
   const [receptorRepresenta, setReceptorRepresenta] = useState<string | null>(null);
   const [receptorEntidadId, setReceptorEntidadId] = useState<string | null>(null);
   const [firmanteIds, setFirmanteIds] = useState<string[]>([]);
+  // Si los firmantes no se pudieron cargar, los campos quedan vacíos; guardar
+  // así borraría los que ya tiene el documento. Por eso solo se sincronizan
+  // cuando la carga terminó bien.
+  const [firmantesCargados, setFirmantesCargados] = useState(false);
   const [editingAnexo, setEditingAnexo] = useState<DocumentoAnexo | null>(null);
   const [editAnexoFile, setEditAnexoFile] = useState<File | null>(null);
   const [viewer, setViewer] = useState<{ title: string; objectUrl: string; signedUrl: string; mimeType: string | null } | null>(null);
@@ -198,6 +202,7 @@ export function EditDocumentPage() {
             .map((firmante) => firmante.personal_natural_id)
             .filter((personalNaturalId): personalNaturalId is string => personalNaturalId !== null),
         );
+        setFirmantesCargados(true);
       })
       .catch((error) => toast.error(error instanceof Error ? error.message : "No se pudieron cargar los firmantes."));
   }, [id]);
@@ -339,7 +344,8 @@ export function EditDocumentPage() {
         ...(receptorEntidadId ? [{ personalNaturalId: null, entidadId: receptorEntidadId, rol: "receptor" as const, representaEntidadId: null }] : []),
         ...firmanteIds.map((personalNaturalId) => ({ personalNaturalId, entidadId: null, rol: "firmante" as const, representaEntidadId: null })),
       ];
-      await sincronizarDocumentoFirmantes(id, firmantesPayload);
+      if (firmantesCargados) await sincronizarDocumentoFirmantes(id, firmantesPayload);
+      else toast.warning("No se modificaron el emisor, receptor ni los firmantes porque no se pudieron cargar. Recarga la página para editarlos.");
       if (pendingAnexos.length) {
         if (pendingAnexos.some((anexo) => !anexo.tipoAnexoId || anexo.titulo.trim().length < 2)) {
           toast.error("Completa el título y tipo de todos los anexos antes de guardar.");
