@@ -4,6 +4,7 @@ import { ArrowDownRight, ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Fil
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { Alert, Badge, Button, Card, EmptyState, PageHeader, Select, Skeleton } from "../components/ui";
 import { ChartFrame } from "../components/chart-frame";
+import { DocumentoPreviewDialog } from "../components/documento-preview-dialog";
 import { useDocumentos } from "../hooks/use-documentos";
 import { getBalanceSindicato } from "../services/sindicatos.service";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
@@ -17,6 +18,7 @@ export function SindicatoDetailPage() {
   const navigate = useNavigate();
   const [year, setYear] = useState("");
   const [page, setPage] = useState(1);
+  const [vistaPreviaId, setVistaPreviaId] = useState<string | null>(null);
   const [data, setData] = useState<BalanceSindicato | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -142,7 +144,14 @@ export function SindicatoDetailPage() {
                   {documentos.map((row) => {
                     const movimiento = row.tipo_movimiento?.nombre;
                     return (
-                      <tr key={row.id} className="cursor-pointer transition hover:bg-slate-50 dark:hover:bg-slate-900/60" onClick={() => navigate(`/documentos/${row.id}`)}>
+                      <tr
+                        key={row.id}
+                        className="cursor-pointer transition hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none dark:hover:bg-slate-900/60"
+                        tabIndex={0}
+                        title="Ver el documento"
+                        onClick={() => setVistaPreviaId(row.id)}
+                        onKeyDown={(event) => { if (event.key === "Enter") setVistaPreviaId(row.id); }}
+                      >
                         <td className="whitespace-nowrap px-4 py-3 font-bold text-teal-700">{row.codigo_documento}</td>
                         <td className="whitespace-nowrap px-4 py-3">{formatDate(row.fecha_documento)}</td>
                         <td className="max-w-64 truncate px-4 py-3">{row.titulo}</td>
@@ -168,6 +177,8 @@ export function SindicatoDetailPage() {
           </>
         )}
       </Card>
+
+      <DocumentoPreviewDialog documentoId={vistaPreviaId} onClose={() => setVistaPreviaId(null)} />
     </div>
   );
 }
