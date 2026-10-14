@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
 import { ChartColumn } from "lucide-react";
-import { Alert, Card, EmptyState, Skeleton } from "./ui";
+import { Alert, Card, EmptyState, Select, Skeleton } from "./ui";
 import { ChartFrame } from "./chart-frame";
 import { getBalanceSindicatosMensual } from "../services/sindicatos.service";
 import { formatCurrency } from "../lib/utils";
@@ -21,7 +21,8 @@ type Fila = { mes: string; mesNumero: number; ingresos: number; egresosGenerales
 
 // Gasto mensual por sindicato (pila naranja, un tramo por sindicato) junto al ingreso del mes. El saldo
 // del mes (ingresos menos todos los egresos) se ve en el indicador al pasar el mouse.
-export function SindicatosGraficoMensual({ anio }: { anio: number }) {
+export function SindicatosGraficoMensual({ anioInicial, anios }: { anioInicial: number; anios: number[] }) {
+  const [anio, setAnio] = useState(anioInicial);
   const [data, setData] = useState<BalanceSindicatosMensual | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,6 +54,8 @@ export function SindicatosGraficoMensual({ anio }: { anio: number }) {
   }), [vigente, sindicatos]);
 
   const hayDatos = filas.some((fila) => fila.gastoSindicatos > 0 || fila.ingresos > 0);
+  const hayGastoSindicatos = filas.some((fila) => fila.gastoSindicatos > 0);
+  const opcionesAnio = anios.includes(anio) ? anios : [anio, ...anios];
 
   const indicador = ({ active, payload }: TooltipContentProps) => {
     if (!active || !payload?.length) return null;
@@ -82,8 +85,18 @@ export function SindicatosGraficoMensual({ anio }: { anio: number }) {
 
   return (
     <Card className="min-w-0 overflow-hidden p-5">
-      <h2 className="font-bold">Gasto mensual por sindicato e ingreso del mes</h2>
-      <p className="text-sm text-slate-500">Año {anio}. En naranja, lo dado a cada sindicato apilado; en azul, el ingreso del mes. Pasa el mouse sobre un mes para ver el detalle y el saldo.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="font-bold">Gasto mensual por sindicato e ingreso del mes</h2>
+          <p className="text-sm text-slate-500">En naranja, lo dado a cada sindicato apilado; en azul, el ingreso del mes. Pasa el mouse sobre un mes para ver el detalle y el saldo.</p>
+        </div>
+        <label className="shrink-0">
+          <span className="mb-1 block text-xs font-semibold text-slate-500">Año del gráfico</span>
+          <Select className="w-full sm:w-36" value={String(anio)} onChange={(event) => setAnio(Number(event.target.value))}>
+            {opcionesAnio.map((valor) => <option key={valor} value={valor}>{valor}</option>)}
+          </Select>
+        </label>
+      </div>
 
       {error && <div className="mt-4"><Alert variant="warning">{error}</Alert></div>}
 
@@ -93,6 +106,14 @@ export function SindicatosGraficoMensual({ anio }: { anio: number }) {
         <div className="mt-4"><EmptyState icon={<ChartColumn />} title="Sin movimientos en este año" description="No hay documentos de ingreso ni gasto en sindicatos durante el año seleccionado." /></div>
       ) : (
         <>
+          {!hayGastoSindicatos && (
+            <div className="mt-4">
+              <Alert variant="info">
+                En {anio} no hay gasto registrado en ningún sindicato: solo se ven los ingresos. El gasto sale de documentos cuya entidad es un sindicato, con naturaleza <strong>Egreso</strong>
+                y un monto mayor a cero, según la fecha del documento. Prueba con otro año o revisa que esos documentos tengan monto y fecha correctos.
+              </Alert>
+            </div>
+          )}
           <ChartFrame height={320} className="mt-5">
             {({ width, height }) => (
               <BarChart width={width} height={height} data={filas} barGap={4}>
