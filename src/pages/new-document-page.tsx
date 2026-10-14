@@ -23,7 +23,7 @@ import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo } from "../services/anexos.service";
 import { uploadDocumentoAnexoFile } from "../services/storage.service";
 import { sincronizarDocumentoFirmantes } from "../services/firmantes.service";
-import { asignarEscaneadoPor } from "../services/escaneos.service";
+import { asignarEscaneadoPor, asignarEscaneadoPorAnexos } from "../services/escaneos.service";
 import { registrarPaginasDeArchivo } from "../services/paginas.service";
 import { categoriasParaAnexo } from "../lib/anexo-categorias";
 import { useUsuariosApoyo } from "../hooks/use-usuarios-apoyo";
@@ -480,7 +480,7 @@ export function NewDocumentPage() {
           const anexoExtension = uploadedAnexo.file.name.includes(".")
             ? uploadedAnexo.file.name.split(".").pop()?.toLowerCase() ?? null
             : null;
-          await createDocumentoAnexo({
+          const anexoCreado = await createDocumentoAnexo({
             documentoId: documento.id,
             tipoAnexoId: anexo.tipoAnexoId,
             titulo: anexo.titulo,
@@ -491,6 +491,13 @@ export function NewDocumentPage() {
             mimeType: uploadedAnexo.file.type || null,
             sizeBytes: uploadedAnexo.file.size,
           });
+          if (anexo.escaneadoPor) {
+            try {
+              await asignarEscaneadoPorAnexos([anexoCreado.id], anexo.escaneadoPor);
+            } catch (escaneoError) {
+              toast.warning(escaneoError instanceof Error ? escaneoError.message : "No se pudo guardar quién escaneó el anexo.");
+            }
+          }
         }
       }
       const firmantesPayload: SincronizarFirmanteInput[] = !esFinanciero ? [] : [
@@ -700,6 +707,7 @@ export function NewDocumentPage() {
             tiposAnexo={categoriasParaAnexo(catalogos.tiposAnexo, catalogos.categorias)}
             pending={pendingAnexos}
             onPendingChange={setPendingAnexos}
+            usuariosApoyo={usuariosApoyo}
           />
 
           <div className="flex justify-end gap-3">

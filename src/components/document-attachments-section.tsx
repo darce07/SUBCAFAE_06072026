@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Badge, Button, Card, Input, Select } from "./ui";
 import { formatDate } from "../lib/utils";
 import { validateDocumentoFile } from "../services/storage.service";
+import type { UsuarioApoyo } from "../services/escaneos.service";
 import type { CatalogItem, DocumentoAnexo, PendingDocumentoAnexo } from "../types";
 
 interface Props {
@@ -11,6 +12,9 @@ interface Props {
   onPendingChange: (items: PendingDocumentoAnexo[]) => void;
   existing?: DocumentoAnexo[];
   loadingExisting?: boolean;
+  // Personas que se pueden indicar como "escaneó el anexo" y quién escaneó cada anexo ya guardado.
+  usuariosApoyo?: UsuarioApoyo[];
+  escaneadoPorAnexo?: Record<string, string>;
   allowAdd?: boolean;
   canEditExisting?: boolean;
   canDeleteExisting?: boolean;
@@ -26,6 +30,8 @@ export function DocumentAttachmentsSection({
   onPendingChange,
   existing = [],
   loadingExisting = false,
+  usuariosApoyo = [],
+  escaneadoPorAnexo = {},
   allowAdd = true,
   canEditExisting = false,
   canDeleteExisting = false,
@@ -52,6 +58,7 @@ export function DocumentAttachmentsSection({
         titulo: file.name.replace(/\.[^.]+$/, ""),
         tipoAnexoId: defaultType,
         descripcion: "",
+        escaneadoPor: "",
       });
     }
     if (nextItems.length) onPendingChange([...pending, ...nextItems]);
@@ -97,6 +104,9 @@ export function DocumentAttachmentsSection({
                 <p className="mt-1 break-words text-xs text-slate-400">
                   {anexo.nombre_archivo} · {formatSize(anexo.size_bytes)} · {anexo.extension?.toUpperCase() ?? "ARCHIVO"}
                 </p>
+                {escaneadoPorAnexo[anexo.id] && (
+                  <p className="mt-1 text-xs text-slate-500">Escaneado por <span className="font-semibold">{usuariosApoyo.find((usuario) => usuario.id === escaneadoPorAnexo[anexo.id])?.nombre ?? "otra persona"}</span></p>
+                )}
               </div>
               <Meta label="Fecha" value={formatDate(anexo.created_at)} />
               <Meta label="Usuario" value={anexo.creador?.nombre_completo ?? anexo.creador?.email ?? "Usuario registrado"} />
@@ -149,6 +159,13 @@ export function DocumentAttachmentsSection({
                 <label className="min-w-0 md:col-span-2 xl:col-span-1">
                   <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Descripción opcional</span>
                   <Input value={item.descripcion} onChange={(event) => updatePending(item.id, { descripcion: event.target.value })} placeholder="Detalle breve del anexo" />
+                </label>
+                <label className="min-w-0">
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Escaneado por (opcional)</span>
+                  <Select className="w-full min-w-0" value={item.escaneadoPor} onChange={(event) => updatePending(item.id, { escaneadoPor: event.target.value })}>
+                    <option value="">Nadie / lo escaneé yo</option>
+                    {usuariosApoyo.map((usuario) => <option key={usuario.id} value={usuario.id}>{usuario.nombre}</option>)}
+                  </Select>
                 </label>
               </div>
             </div>
