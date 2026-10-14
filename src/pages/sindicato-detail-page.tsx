@@ -178,7 +178,7 @@ export function SindicatoDetailPage() {
         )}
       </Card>
 
-      <DocumentoPreviewDialog documentoId={vistaPreviaId} onClose={() => setVistaPreviaId(null)} />
+      <DocumentoPreviewDialog documentoId={vistaPreviaId} documentoInicial={documentos.find((item) => item.id === vistaPreviaId) ?? null} onClose={() => setVistaPreviaId(null)} />
     </div>
   );
 }
