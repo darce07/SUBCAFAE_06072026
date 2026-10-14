@@ -22,7 +22,7 @@ import { MontoInput } from "../components/monto-input";
 import { createDocumentoAnexo, deleteDocumentoAnexo, getDocumentoAnexos, updateDocumentoAnexo } from "../services/anexos.service";
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview, removeDocumentoFile, uploadDocumentoAnexoFile } from "../services/storage.service";
 import { getDocumentoFirmantes, sincronizarDocumentoFirmantes } from "../services/firmantes.service";
-import { asignarEscaneadoPor, getEscaneadoPor } from "../services/escaneos.service";
+import { asignarEscaneadoPor, asignarEscaneadoPorAnexos, getEscaneadoPor, getEscaneadosAnexos } from "../services/escaneos.service";
 import { categoriasParaAnexo } from "../lib/anexo-categorias";
 import { registrarPaginasDeArchivo } from "../services/paginas.service";
 import { useUsuariosApoyo } from "../hooks/use-usuarios-apoyo";
@@ -128,6 +128,9 @@ export function EditDocumentPage() {
   const [escaneoOriginal, setEscaneoOriginal] = useState<string | null>(null);
   const [editingAnexo, setEditingAnexo] = useState<DocumentoAnexo | null>(null);
   const [editAnexoFile, setEditAnexoFile] = useState<File | null>(null);
+  // Quién escaneó cada anexo guardado (id del anexo -> id de la persona) y el valor del anexo que se edita.
+  const [escaneosAnexos, setEscaneosAnexos] = useState<Record<string, string>>({});
+  const [editEscaneoAnexo, setEditEscaneoAnexo] = useState("");
   const [viewer, setViewer] = useState<{ title: string; objectUrl: string; signedUrl: string; mimeType: string | null } | null>(null);
   const [loadingAnexos, setLoadingAnexos] = useState(false);
   const [savingAnexos, setSavingAnexos] = useState(false);
@@ -195,7 +198,7 @@ export function EditDocumentPage() {
     if (!id) return;
     setLoadingAnexos(true);
     void getDocumentoAnexos(id)
-      .then(setAnexos)
+      .then(async (rows) => { setAnexos(rows); setEscaneosAnexos(await getEscaneadosAnexos(rows.map((row) => row.id))); })
       .catch((error) => toast.error(error instanceof Error ? error.message : "No se pudieron cargar los anexos."))
       .finally(() => setLoadingAnexos(false));
   }, [id]);
@@ -395,7 +398,7 @@ export function EditDocumentPage() {
           const anexoExtension = uploadedAnexo.file.name.includes(".")
             ? uploadedAnexo.file.name.split(".").pop()?.toLowerCase() ?? null
             : null;
-          await createDocumentoAnexo({
+          const anexoCreado = await createDocumentoAnexo({
             documentoId: id,
             tipoAnexoId: anexo.tipoAnexoId,
             titulo: anexo.titulo,
@@ -406,8 +409,17 @@ export function EditDocumentPage() {
             mimeType: uploadedAnexo.file.type || null,
             sizeBytes: uploadedAnexo.file.size,
           });
+          if (anexo.escaneadoPor) {
+            try {
+              await asignarEscaneadoPorAnexos([anexoCreado.id], anexo.escaneadoPor);
+            } catch (escaneoError) {
+              toast.warning(escaneoError instanceof Error ? escaneoError.message : "No se pudo guardar quién escaneó el anexo.");
+            }
+          }
         }
-        setAnexos(await getDocumentoAnexos(id));
+        const anexosActualizados = await getDocumentoAnexos(id);
+        setAnexos(anexosActualizados);
+        setEscaneosAnexos(await getEscaneadosAnexos(anexosActualizados.map((row) => row.id)));
         setPendingAnexos([]);
       }
       toast.success("Documento actualizado y auditado.");
@@ -488,7 +500,16 @@ export function EditDocumentPage() {
       if (filePayload.archivoPath && previousPath !== filePayload.archivoPath) {
         await removeDocumentoFile(previousPath);
       }
-      setAnexos(await getDocumentoAnexos(id));
+      if ((escaneosAnexos[editingAnexo.id] ?? "") !== editEscaneoAnexo) {
+        try {
+          await asignarEscaneadoPorAnexos([editingAnexo.id], editEscaneoAnexo || null);
+        } catch (escaneoError) {
+          toast.warning(escaneoError instanceof Error ? escaneoError.message : "No se pudo guardar quién escaneó el anexo.");
+        }
+      }
+      const anexosActualizados = await getDocumentoAnexos(id);
+      setAnexos(anexosActualizados);
+      setEscaneosAnexos(await getEscaneadosAnexos(anexosActualizados.map((row) => row.id)));
       setEditingAnexo(null);
       setEditAnexoFile(null);
       toast.success("Anexo actualizado correctamente.");
@@ -659,6 +680,8 @@ export function EditDocumentPage() {
           loadingExisting={loadingAnexos}
           pending={pendingAnexos}
           onPendingChange={setPendingAnexos}
+          usuariosApoyo={usuariosApoyo}
+          escaneadoPorAnexo={escaneosAnexos}
           canEditExisting={canEditAnexos}
           canDeleteExisting={canDeleteAnexos}
           onViewExisting={viewAnexo}
@@ -666,6 +689,7 @@ export function EditDocumentPage() {
           onEditExisting={(anexo) => {
             setEditingAnexo({ ...anexo });
             setEditAnexoFile(null);
+            setEditEscaneoAnexo(escaneosAnexos[anexo.id] ?? "");
           }}
           onDeleteExisting={removeAnexo}
         />
@@ -717,6 +741,13 @@ export function EditDocumentPage() {
               <label>
                 <span className="mb-2 block text-sm font-semibold">Descripción</span>
                 <textarea value={editingAnexo.descripcion ?? ""} onChange={(event) => setEditingAnexo({ ...editingAnexo, descripcion: event.target.value })} className="min-h-24 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950" />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold">Escaneado por (opcional)</span>
+                <Select className="w-full" value={editEscaneoAnexo} onChange={(event) => setEditEscaneoAnexo(event.target.value)}>
+                  <option value="">Nadie / lo escaneé yo</option>
+                  {usuariosApoyo.map((usuario) => <option key={usuario.id} value={usuario.id}>{usuario.nombre}</option>)}
+                </Select>
               </label>
               <label className="flex cursor-pointer items-center gap-4 rounded-2xl border-2 border-dashed border-slate-300 p-5 transition hover:border-teal-500 dark:border-slate-700">
                 <UploadCloud className="size-7 text-teal-600" />

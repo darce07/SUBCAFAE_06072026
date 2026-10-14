@@ -10,6 +10,8 @@ import { ConfirmDialog } from "../components/confirm-dialog";
 import { TextFilePreview } from "../components/text-file-preview";
 import { deleteDocumento, getDocumentoById, getDocumentoHistory } from "../services/documentos.service";
 import { deleteDocumentoAnexo, getDocumentoAnexos } from "../services/anexos.service";
+import { getEscaneadosAnexos } from "../services/escaneos.service";
+import { useUsuariosApoyo } from "../hooks/use-usuarios-apoyo";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
 import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview } from "../services/storage.service";
 import { usePermissions } from "../hooks/use-permissions";
@@ -26,6 +28,8 @@ export function DocumentDetailPage() {
   const watermarkUsuario = userContext?.nombreCompleto ?? userContext?.email ?? "usuario del sistema";
   const [documento, setDocumento] = useState<Documento | null>(null);
   const [anexos, setAnexos] = useState<DocumentoAnexo[]>([]);
+  const [escaneosAnexos, setEscaneosAnexos] = useState<Record<string, string>>({});
+  const usuariosApoyo = useUsuariosApoyo();
   const [history, setHistory] = useState<DocumentAuditRecord[]>([]);
   const [viewer, setViewer] = useState<{ title: string; objectUrl: string; signedUrl: string; mimeType: string | null } | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -48,6 +52,7 @@ export function DocumentDetailPage() {
         setDocumento(documentRow);
         setHistory(historyRows);
         setAnexos(anexosRows);
+        void getEscaneadosAnexos(anexosRows.map((row) => row.id)).then((mapa) => { if (!cancelled) setEscaneosAnexos(mapa); });
       })
       .catch((error) => {
         if (!cancelled) toast.error(error instanceof Error ? error.message : "No se pudo cargar el documento.");
@@ -205,6 +210,8 @@ export function DocumentDetailPage() {
         existing={anexos}
         pending={[] as PendingDocumentoAnexo[]}
         onPendingChange={() => undefined}
+        usuariosApoyo={usuariosApoyo}
+        escaneadoPorAnexo={escaneosAnexos}
         allowAdd={false}
         canEditExisting={canManageAnexos}
         canDeleteExisting={canDelete("anexos")}

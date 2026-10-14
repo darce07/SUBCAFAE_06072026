@@ -171,6 +171,8 @@ export interface PendingDocumentoAnexo {
   titulo: string;
   tipoAnexoId: string;
   descripcion: string;
+  // Persona que escaneó el anexo físico ("" si no se indicó).
+  escaneadoPor: string;
 }
 
 export interface CreateDocumentoAnexoCommand {
