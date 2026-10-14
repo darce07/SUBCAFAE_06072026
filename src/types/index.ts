@@ -330,6 +330,16 @@ export interface BalanceSindicatos {
   aniosDisponibles: number[];
 }
 
+export interface BalanceSindicatosMensual {
+  anio: number;
+  meses: Array<{
+    mes: number;
+    ingresos: number;
+    egresos: number;
+    sindicatos: Array<{ id: string; nombre: string; egresos: number }>;
+  }>;
+}
+
 export interface BalanceSindicato {
   sindicato: { id: string; nombre: string; activo: boolean };
   totalDocumentos: number;

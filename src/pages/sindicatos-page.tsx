@@ -5,6 +5,7 @@ import { ArrowDownRight, ArrowUpRight, CalendarRange, ChevronRight, Info, Scale,
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { Alert, Badge, Button, Card, EmptyState, PageHeader, Select, Skeleton } from "../components/ui";
 import { ChartFrame } from "../components/chart-frame";
+import { SindicatosGraficoMensual } from "../components/sindicatos-grafico-mensual";
 import { getBalanceSindicatos } from "../services/sindicatos.service";
 import { formatCurrency, formatDate } from "../lib/utils";
 import { chartAxisTick, chartGridStroke, chartTooltipLabelStyle, chartTooltipStyle } from "../lib/chart-theme";
@@ -114,6 +115,8 @@ export function SindicatosPage() {
           </motion.div>
         ))}
       </div>
+
+      <SindicatosGraficoMensual anio={year ? Number(year) : availableYears[0]} />
 
       {hasMovements && (
         <Card className="min-w-0 overflow-hidden p-5">
