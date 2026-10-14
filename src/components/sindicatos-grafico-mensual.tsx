@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
 import { ChartColumn } from "lucide-react";
 import { Alert, Card, EmptyState, Select, Skeleton } from "./ui";
@@ -21,8 +21,31 @@ type Fila = { mes: string; mesNumero: number; ingresos: number; egresosGenerales
 
 // Gasto mensual por sindicato (pila naranja, un tramo por sindicato) junto al ingreso del mes. El saldo
 // del mes (ingresos menos todos los egresos) se ve en el indicador al pasar el mouse.
-export function SindicatosGraficoMensual({ anioInicial, anios }: { anioInicial: number; anios: number[] }) {
+// Si el año no lo fijó el filtro de la página, el gráfico abre en el año más reciente que tenga gasto en
+// sindicatos (un año sin gasto solo mostraría las barras de ingreso). `anioFijo` indica que lo eligió el usuario.
+export function SindicatosGraficoMensual({ anioInicial, anios, anioFijo }: { anioInicial: number; anios: number[]; anioFijo: boolean }) {
   const [anio, setAnio] = useState(anioInicial);
+  const eligioAnio = useRef(anioFijo);
+  const clave = anios.join(",");
+
+  useEffect(() => {
+    if (eligioAnio.current) return;
+    let active = true;
+    void (async () => {
+      for (const candidato of anios) {
+        try {
+          const resultado = await getBalanceSindicatosMensual(candidato);
+          const hayGasto = resultado.meses.some((mes) => mes.sindicatos.some((item) => item.egresos > 0));
+          if (!active || eligioAnio.current) return;
+          if (hayGasto) { setAnio(candidato); return; }
+        } catch {
+          return;
+        }
+      }
+    })();
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clave]);
   const [data, setData] = useState<BalanceSindicatosMensual | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,7 +115,7 @@ export function SindicatosGraficoMensual({ anioInicial, anios }: { anioInicial: 
         </div>
         <label className="shrink-0">
           <span className="mb-1 block text-xs font-semibold text-slate-500">Año del gráfico</span>
-          <Select className="w-full sm:w-36" value={String(anio)} onChange={(event) => setAnio(Number(event.target.value))}>
+          <Select className="w-full sm:w-36" value={String(anio)} onChange={(event) => { eligioAnio.current = true; setAnio(Number(event.target.value)); }}>
             {opcionesAnio.map((valor) => <option key={valor} value={valor}>{valor}</option>)}
           </Select>
         </label>

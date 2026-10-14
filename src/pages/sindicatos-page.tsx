@@ -116,7 +116,7 @@ export function SindicatosPage() {
         ))}
       </div>
 
-      <SindicatosGraficoMensual key={year} anioInicial={year ? Number(year) : availableYears[0]} anios={availableYears} />
+      <SindicatosGraficoMensual key={year} anioInicial={year ? Number(year) : availableYears[0]} anios={availableYears} anioFijo={Boolean(year)} />
 
       {hasMovements && (
         <Card className="min-w-0 overflow-hidden p-5">
