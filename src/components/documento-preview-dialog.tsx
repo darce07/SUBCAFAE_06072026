@@ -10,12 +10,15 @@ import { useAuth } from "../features/auth/auth-context";
 import { usePermissions } from "../hooks/use-permissions";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
 import { getDocumentoById } from "../services/documentos.service";
-import { downloadDocumentoFile, getDocumentoPreview, releaseDocumentoPreview } from "../services/storage.service";
+import { downloadDocumentoFile, getSignedUrl } from "../services/storage.service";
 import type { Documento } from "../types";
 
 // Vista previa en una ventana emergente, sin salir de la página: el archivo a un lado y los datos del
 // documento al otro. Para leer rápido; el visor en pestaña y el detalle siguen disponibles.
-export function DocumentoPreviewDialog({ documentoId, onClose }: { documentoId: string | null; onClose: () => void }) {
+// `documentoInicial` es la fila que ya tiene la lista: con ella los datos se ven al instante y solo
+// falta pedir el enlace del archivo. El archivo se muestra directo desde su enlace firmado (el visor
+// del navegador lo va leyendo por partes), sin descargarlo completo antes de mostrarlo.
+export function DocumentoPreviewDialog({ documentoId, documentoInicial, onClose }: { documentoId: string | null; documentoInicial?: Documento | null; onClose: () => void }) {
   return (
     <Dialog.Root open={Boolean(documentoId)} onOpenChange={(open) => { if (!open) onClose(); }}>
       <Dialog.Portal>
@@ -25,45 +28,44 @@ export function DocumentoPreviewDialog({ documentoId, onClose }: { documentoId: 
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
           {/* Se monta al abrir y se desmonta al cerrar: cada documento empieza limpio y libera su archivo. */}
-          {documentoId && <Contenido key={documentoId} id={documentoId} onClose={onClose} />}
+          {documentoId && <Contenido key={documentoId} id={documentoId} inicial={documentoInicial?.id === documentoId ? documentoInicial : null} onClose={onClose} />}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
   );
 }
 
-function Contenido({ id, onClose }: { id: string; onClose: () => void }) {
+function Contenido({ id, inicial, onClose }: { id: string; inicial: Documento | null; onClose: () => void }) {
   const { userContext } = useAuth();
   const { canEdit } = usePermissions();
-  const [documento, setDocumento] = useState<Documento | null>(null);
+  const [documento, setDocumento] = useState<Documento | null>(inicial);
   const [preview, setPreview] = useState<Preview | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!inicial);
+  const [cargandoArchivo, setCargandoArchivo] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    let objectUrl = "";
     void (async () => {
       try {
-        const row = await getDocumentoById(id);
+        const row = inicial ?? await getDocumentoById(id);
         if (cancelled) return;
         setDocumento(row);
+        setLoading(false);
         if (row?.archivo_path) {
-          const result = await getDocumentoPreview(row.archivo_path);
-          objectUrl = result.objectUrl;
-          if (cancelled) { if (objectUrl) releaseDocumentoPreview(objectUrl); return; }
-          setPreview({ ...result, mimeType: result.mimeType ?? mimeFromExtension(row.extension) });
+          const signedUrl = await getSignedUrl(row.archivo_path, 300);
+          if (cancelled) return;
+          if (signedUrl) setPreview({ objectUrl: signedUrl, signedUrl, mimeType: mimeFromExtension(row.extension) });
         }
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : "No se pudo cargar el documento.");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) { setLoading(false); setCargandoArchivo(false); }
       }
     })();
-    return () => {
-      cancelled = true;
-      if (objectUrl) releaseDocumentoPreview(objectUrl);
-    };
+    return () => { cancelled = true; };
+    // `inicial` es la fila de este mismo id (el diálogo se monta de nuevo por documento).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const download = async () => {
@@ -122,7 +124,7 @@ function Contenido({ id, onClose }: { id: string; onClose: () => void }) {
       ) : (
         <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)] lg:overflow-hidden">
           <section className="min-h-[60dvh] min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:min-h-0">
-            <FilePane preview={preview} title={documento.titulo} hasFile={Boolean(documento.archivo_path)} />
+            <FilePane preview={preview} title={documento.titulo} hasFile={Boolean(documento.archivo_path)} loading={cargandoArchivo} />
           </section>
           <aside className="min-h-0 min-w-0 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 lg:overflow-y-auto">
             <div className="flex items-start justify-between gap-3">

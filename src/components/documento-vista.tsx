@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { FileText, LoaderCircle } from "lucide-react";
 import { TextFilePreview } from "./text-file-preview";
 import { WORD_MIME } from "../lib/documento-mime";
 
@@ -14,7 +14,8 @@ export function Field({ label, value, wide }: { label: string; value?: string | 
   );
 }
 
-export function FilePane({ preview, title, hasFile }: { preview: Preview | null; title: string; hasFile: boolean }) {
+export function FilePane({ preview, title, hasFile, loading = false }: { preview: Preview | null; title: string; hasFile: boolean; loading?: boolean }) {
+  if (loading && !preview) return <div className="grid h-full min-h-48 place-items-center text-sm text-slate-500"><div className="text-center"><LoaderCircle className="mx-auto mb-2 size-7 animate-spin text-teal-600" />Cargando archivo…</div></div>;
   if (!hasFile) return <Message title="Sin archivo digital" text="Este documento no tiene un archivo asociado." />;
   if (!preview) return <Message title="No se pudo cargar el archivo" text="Prueba con Abrir archivo o Descargar, en la parte de arriba." />;
   const mime = preview.mimeType;
