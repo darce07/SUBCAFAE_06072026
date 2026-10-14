@@ -21,6 +21,7 @@ import { downloadDocumentoFile, getSignedUrl } from "../services/storage.service
 import { usePermissions } from "../hooks/use-permissions";
 import { useAuth } from "../features/auth/auth-context";
 import { ConfirmDialog } from "../components/confirm-dialog";
+import { DocumentoPreviewDialog } from "../components/documento-preview-dialog";
 
 const columnAutoSizeLimits: Record<string, { min: number; max: number }> = {
   codigo_documento: { min: 150, max: 230 },
@@ -128,6 +129,8 @@ export function DocumentsPage() {
   const [autoFitColumns, setAutoFitColumns] = useState<Record<string, boolean>>({});
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
+  // Documento abierto en la ventana emergente de vista previa (el ojo de la lista).
+  const [vistaPreviaId, setVistaPreviaId] = useState<string | null>(null);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
     try {
       const stored = localStorage.getItem("sigdaf:documentos-columnas");
@@ -326,7 +329,7 @@ export function DocumentsPage() {
         enableHiding: false,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button variant="ghost" size="icon" title="Ver detalle" onClick={() => navigate(`/documentos/${row.original.id}`)}><Eye className="size-4" /></Button>
+            <Button variant="ghost" size="icon" title="Ver documento" aria-label="Ver documento" onClick={() => setVistaPreviaId(row.original.id)}><Eye className="size-4" /></Button>
             {canEdit("documentos") && <Button variant="ghost" size="icon" title="Editar" onClick={() => navigate(`/documentos/${row.original.id}/editar`)}><Pencil className="size-4" /></Button>}
             <Button variant="ghost" size="icon" title="Copiar ruta histórica" disabled={!row.original.ruta_historica} onClick={() => { void navigator.clipboard.writeText(row.original.ruta_historica ?? ""); toast.success("Ruta copiada."); }}><Clipboard className="size-4" /></Button>
             <Button variant="ghost" size="icon" title="Ver archivo" disabled={!row.original.archivo_path} onClick={() => void openFile(row.original.archivo_path)}><ExternalLink className="size-4" /></Button>
@@ -430,7 +433,7 @@ export function DocumentsPage() {
                   canEdit={canEdit("documentos")}
                   canDelete={canDelete("documentos")}
                   deleting={deletingId === documento.id}
-                  onView={() => navigate(`/documentos/${documento.id}`)}
+                  onView={() => setVistaPreviaId(documento.id)}
                   onEdit={() => navigate(`/documentos/${documento.id}/editar`)}
                   onOpenFile={() => void openFile(documento.archivo_path)}
                   onMarkObserved={() => void markObserved(documento)}
@@ -508,6 +511,7 @@ export function DocumentsPage() {
           </div>
         </div>
       </Card>
+      <DocumentoPreviewDialog documentoId={vistaPreviaId} onClose={() => setVistaPreviaId(null)} />
       <ConfirmDialog
         open={pendingDelete !== null}
         onOpenChange={(nextOpen) => { if (!nextOpen) setPendingDelete(null); }}
