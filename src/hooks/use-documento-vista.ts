@@ -40,5 +40,5 @@ export function useDocumentoVista(id: string, inicial: Documento | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  return { documento, preview, loading, cargandoArchivo, error };
+  return { documento, setDocumento, preview, loading, cargandoArchivo, error };
 }
