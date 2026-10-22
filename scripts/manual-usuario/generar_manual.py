@@ -181,7 +181,7 @@ CONTENIDO = [
     ("p", "Al hacer clic en el <b>título</b> de un documento se abre, a la derecha, un <b>panel</b> con el monto registrado en grande y el archivo, para comprobar si el monto es correcto. El panel no bloquea la lista: se puede hacer clic en otro título y el panel cambia, así se revisan varios documentos seguidos. Los botones del panel son:"),
     ("b", [
         "<b>Abrir, Descargar, Pantalla completa y Detalle:</b> como en Documentos.",
-        "<b>Pasar a documentario (ícono del documento con check):</b> para un registro que no debería contar como dinero. El monto pasa a S/ 0.00 y el documento deja de sumar como ingreso o egreso (desaparece de la lista y de los totales). Pide confirmación y el monto anterior queda en Auditoría. Volver a financiero se hace desde Editar documento, indicando de nuevo naturaleza, monto y operación.",
+        "<b>Pasar a documentario (ícono del billete tachado):</b> para un registro que no debería contar como dinero. El monto pasa a S/ 0.00 y el documento deja de sumar como ingreso o egreso (desaparece de la lista y de los totales). Pide confirmación y el monto anterior queda en Auditoría. Volver a financiero se hace desde Editar documento, indicando de nuevo naturaleza, monto y operación.",
         "<b>Eliminar (tacho de basura):</b> envía el documento a la Papelera, de donde se puede restaurar; mientras esté allí su monto no suma. Pide confirmación.",
         "<b>Corregir monto o datos:</b> abre la edición del documento en una pestaña nueva, sin perder el lugar en la lista.",
     ]),

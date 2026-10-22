@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Download, ExternalLink, FileCheck2, FileText, LoaderCircle, Maximize2, Pencil, Trash2, X } from "lucide-react";
+import { ChevronDown, Download, ExternalLink, BanknoteX, FileText, LoaderCircle, Maximize2, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge, Button } from "./ui";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -115,7 +115,7 @@ export function DocumentoPanel({ id, inicial, onClose, onCambio }: { id: string;
             <Link to={`/documentos/${documento.id}/visor`} target="_blank" rel="noopener noreferrer" title="Pantalla completa (pestaña nueva)" aria-label="Pantalla completa" className={botonIcono}><Maximize2 className="size-4" /></Link>
             <Link to={`/documentos/${documento.id}`} title="Detalle completo del documento" aria-label="Detalle completo" className={botonIcono}><FileText className="size-4" /></Link>
             {canEdit("documentos") && esFinanciero && (
-              <Button size="icon" variant="secondary" title="Pasar a documentario: el monto deja de contar como ingreso o egreso" aria-label="Pasar a documentario" onClick={() => setConfirmando("documentario")}><FileCheck2 className="size-4" /></Button>
+              <Button size="icon" variant="secondary" title="Pasar a documentario: el monto deja de contar como ingreso o egreso" aria-label="Pasar a documentario" onClick={() => setConfirmando("documentario")}><BanknoteX className="size-4" /></Button>
             )}
             {canDelete("documentos") && (
               <Button size="icon" variant="danger" title="Eliminar el documento (va a la Papelera)" aria-label="Eliminar documento" onClick={() => setConfirmando("eliminar")}><Trash2 className="size-4" /></Button>
