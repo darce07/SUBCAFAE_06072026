@@ -1,16 +1,14 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Download, ExternalLink, FileText, LoaderCircle, Maximize2, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge, Button } from "./ui";
-import { Field, FilePane, type Preview } from "./documento-vista";
-import { mimeFromExtension } from "../lib/documento-mime";
+import { Field, FilePane } from "./documento-vista";
+import { useDocumentoVista } from "../hooks/use-documento-vista";
 import { useAuth } from "../features/auth/auth-context";
 import { usePermissions } from "../hooks/use-permissions";
 import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
-import { getDocumentoById } from "../services/documentos.service";
-import { downloadDocumentoFile, getSignedUrl } from "../services/storage.service";
+import { downloadDocumentoFile } from "../services/storage.service";
 import type { Documento } from "../types";
 
 // Vista previa en una ventana emergente, sin salir de la página: el archivo a un lado y los datos del
@@ -38,35 +36,7 @@ export function DocumentoPreviewDialog({ documentoId, documentoInicial, onClose 
 function Contenido({ id, inicial, onClose }: { id: string; inicial: Documento | null; onClose: () => void }) {
   const { userContext } = useAuth();
   const { canEdit } = usePermissions();
-  const [documento, setDocumento] = useState<Documento | null>(inicial);
-  const [preview, setPreview] = useState<Preview | null>(null);
-  const [loading, setLoading] = useState(!inicial);
-  const [cargandoArchivo, setCargandoArchivo] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const row = inicial ?? await getDocumentoById(id);
-        if (cancelled) return;
-        setDocumento(row);
-        setLoading(false);
-        if (row?.archivo_path) {
-          const signedUrl = await getSignedUrl(row.archivo_path, 300);
-          if (cancelled) return;
-          if (signedUrl) setPreview({ objectUrl: signedUrl, signedUrl, mimeType: mimeFromExtension(row.extension) });
-        }
-      } catch (loadError) {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "No se pudo cargar el documento.");
-      } finally {
-        if (!cancelled) { setLoading(false); setCargandoArchivo(false); }
-      }
-    })();
-    return () => { cancelled = true; };
-    // `inicial` es la fila de este mismo id (el diálogo se monta de nuevo por documento).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  const { documento, preview, loading, cargandoArchivo, error } = useDocumentoVista(id, inicial);
 
   const download = async () => {
     if (!documento?.archivo_path) return;
