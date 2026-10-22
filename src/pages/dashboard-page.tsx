@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArchiveX,
   CalendarRange,
+  ChevronRight,
   FileQuestion,
   Files,
   FolderX,
@@ -12,6 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -61,10 +63,19 @@ export function DashboardPage() {
     year || null,
   ].filter(Boolean).join(" de ");
 
-  const metrics = [
+  // Las tarjetas de ingresos y egresos llevan a la lista de documentos que las componen, con el mismo periodo.
+  const detalleFinanzas = (tipo: "ingresos" | "egresos") => {
+    const params = new URLSearchParams();
+    if (year) params.set("anio", year);
+    if (month) params.set("mes", month);
+    const consulta = params.toString();
+    return `/finanzas/${tipo}${consulta ? `?${consulta}` : ""}`;
+  };
+
+  const metrics: Array<{ label: string; href?: string; value: string; icon: typeof Files; color: string; bg: string; ring: string }> = [
     { label: "Total documentos", value: summary.totalDocumentos.toLocaleString("es-PE"), icon: Files, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/50", ring: "ring-blue-600/10" },
-    { label: "Total ingresos", value: formatCurrency(summary.totalIngresos), icon: Landmark, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/50", ring: "ring-emerald-600/10" },
-    { label: "Total egresos", value: formatCurrency(summary.totalEgresos), icon: Wallet, color: "text-rose-600", bg: "bg-rose-50 dark:bg-rose-950/50", ring: "ring-rose-600/10" },
+    { label: "Total ingresos", href: detalleFinanzas("ingresos"), value: formatCurrency(summary.totalIngresos), icon: Landmark, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/50", ring: "ring-emerald-600/10" },
+    { label: "Total egresos", href: detalleFinanzas("egresos"), value: formatCurrency(summary.totalEgresos), icon: Wallet, color: "text-rose-600", bg: "bg-rose-50 dark:bg-rose-950/50", ring: "ring-rose-600/10" },
     { label: "Balance general", value: formatCurrency(summary.balanceGeneral), icon: Scale, color: "text-violet-600", bg: "bg-violet-50 dark:bg-violet-950/50", ring: "ring-violet-600/10" },
     { label: "Sin archivo digital", value: String(summary.sinArchivo), icon: FileQuestion, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/50", ring: "ring-red-600/10" },
     { label: "Sin archivador", value: String(summary.sinArchivador), icon: ArchiveX, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/50", ring: "ring-amber-600/10" },
@@ -124,15 +135,21 @@ export function DashboardPage() {
         />
       )}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        {metrics.map(({ label, value, icon: Icon, color, bg, ring }, index) => (
-          <motion.div key={label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
-            <Card className="group p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5">
+        {metrics.map(({ label, href, value, icon: Icon, color, bg, ring }, index) => {
+          const tarjeta = (
+            <Card className={`group p-3 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5 ${href ? "h-full cursor-pointer hover:border-teal-300" : ""}`}>
               <div className={`grid size-9 place-items-center rounded-2xl ring-1 ring-inset sm:size-11 ${bg} ${color} ${ring}`}><Icon className="size-4 sm:size-5" /></div>
               <p className="mt-3 break-words text-lg font-black tracking-tight text-slate-950 dark:text-white sm:mt-5 sm:text-2xl">{value}</p>
               <p className="mt-1 text-xs text-slate-500 sm:text-sm">{label}</p>
+              {href && <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-400">Ver documentos<ChevronRight className="size-3.5 transition group-hover:translate-x-0.5" /></p>}
             </Card>
-          </motion.div>
-        ))}
+          );
+          return (
+            <motion.div key={label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
+              {href ? <Link to={href} className="block h-full rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-teal-500" aria-label={`${label}: ver los documentos que lo componen`}>{tarjeta}</Link> : tarjeta}
+            </motion.div>
+          );
+        })}
       </div>
 
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)]">
