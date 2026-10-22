@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Download, ExternalLink, FileText, LoaderCircle, Maximize2, Pencil, X } from "lucide-react";
+import { ChevronDown, Download, ExternalLink, FileCheck2, FileText, LoaderCircle, Maximize2, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge, Button } from "./ui";
+import { ConfirmDialog } from "./confirm-dialog";
 import { Field, FilePane } from "./documento-vista";
 import { useAuth } from "../features/auth/auth-context";
 import { useDocumentoVista } from "../hooks/use-documento-vista";
 import { usePermissions } from "../hooks/use-permissions";
 import { formatCurrency, formatDate, formatDateTime, getStatusTone } from "../lib/utils";
+import { deleteDocumento, editDocumento } from "../services/documentos.service";
 import { downloadDocumentoFile } from "../services/storage.service";
 import type { Documento } from "../types";
 
@@ -15,9 +17,11 @@ import type { Documento } from "../types";
 // se puede hacer clic en otro documento y el panel cambia. Muestra el monto bien visible junto al
 // archivo, para comprobar de un vistazo si el monto registrado es el correcto.
 // El padre lo monta con `key` = id del documento, así cada documento empieza limpio.
-export function DocumentoPanel({ id, inicial, onClose }: { id: string; inicial: Documento | null; onClose: () => void }) {
+export function DocumentoPanel({ id, inicial, onClose, onCambio }: { id: string; inicial: Documento | null; onClose: () => void; onCambio?: () => void }) {
   const { userContext } = useAuth();
-  const { canEdit } = usePermissions();
+  const { canEdit, canDelete } = usePermissions();
+  const [confirmando, setConfirmando] = useState<"eliminar" | "documentario" | null>(null);
+  const [procesando, setProcesando] = useState(false);
   const { documento, preview, loading, cargandoArchivo, error } = useDocumentoVista(id, inicial);
   // Los datos secundarios van plegados para que el archivo ocupe casi todo el panel.
   const [masDatos, setMasDatos] = useState(false);
@@ -32,6 +36,61 @@ export function DocumentoPanel({ id, inicial, onClose }: { id: string; inicial: 
       );
     } catch (downloadError) {
       toast.error(downloadError instanceof Error ? downloadError.message : "No se pudo descargar el archivo.");
+    }
+  };
+
+  const esFinanciero = documento?.tipo_movimiento?.nombre === "Ingreso" || documento?.tipo_movimiento?.nombre === "Egreso";
+
+  // Eliminar manda el documento a la Papelera (se puede restaurar); el monto deja de contar mientras esté ahí.
+  const eliminar = async () => {
+    if (!documento) return;
+    setProcesando(true);
+    try {
+      await deleteDocumento(documento.id);
+      toast.success(`${documento.codigo_documento} enviado a la Papelera.`);
+      setConfirmando(null);
+      onCambio?.();
+      onClose();
+    } catch (deleteError) {
+      toast.error(deleteError instanceof Error ? deleteError.message : "No se pudo eliminar el documento.");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  // Pasar a documentario: monto 0 y sin naturaleza, operación, tipo de gestión ni periodo. Así deja de
+  // contarse como ingreso o egreso. El monto anterior queda en el historial de auditoría.
+  const pasarADocumentario = async () => {
+    if (!documento) return;
+    setProcesando(true);
+    try {
+      await editDocumento(documento.id, {
+        fechaDocumento: documento.fecha_documento,
+        categoriaId: documento.categoria_id,
+        tipoEntidadId: documento.tipo_entidad_id ?? null,
+        entidadId: documento.entidad_id ?? null,
+        tipoCategoriaId: null,
+        estadoId: documento.estado_id,
+        titulo: documento.titulo,
+        descripcion: documento.descripcion ?? null,
+        rutaHistorica: documento.ruta_historica ?? null,
+        archivadorId: documento.archivador_id ?? null,
+        archivoPath: documento.archivo_path ?? null,
+        extension: documento.extension ?? null,
+        monto: 0,
+        tipoMovimientoId: null,
+        tipoOperacionId: null,
+        periodoMes: null,
+        periodoAnio: null,
+      });
+      toast.success(`${documento.codigo_documento} ahora es documentario: ya no cuenta como ${documento.tipo_movimiento?.nombre?.toLowerCase() ?? "movimiento"}.`);
+      setConfirmando(null);
+      onCambio?.();
+      onClose();
+    } catch (editError) {
+      toast.error(editError instanceof Error ? editError.message : "No se pudo cambiar el tipo de registro.");
+    } finally {
+      setProcesando(false);
     }
   };
 
@@ -55,6 +114,12 @@ export function DocumentoPanel({ id, inicial, onClose }: { id: string; inicial: 
             <Button size="icon" variant="secondary" title="Descargar" aria-label="Descargar" disabled={!documento.archivo_path} onClick={() => void descargar()}><Download className="size-4" /></Button>
             <Link to={`/documentos/${documento.id}/visor`} target="_blank" rel="noopener noreferrer" title="Pantalla completa (pestaña nueva)" aria-label="Pantalla completa" className={botonIcono}><Maximize2 className="size-4" /></Link>
             <Link to={`/documentos/${documento.id}`} title="Detalle completo del documento" aria-label="Detalle completo" className={botonIcono}><FileText className="size-4" /></Link>
+            {canEdit("documentos") && esFinanciero && (
+              <Button size="icon" variant="secondary" title="Pasar a documentario: el monto deja de contar como ingreso o egreso" aria-label="Pasar a documentario" onClick={() => setConfirmando("documentario")}><FileCheck2 className="size-4" /></Button>
+            )}
+            {canDelete("documentos") && (
+              <Button size="icon" variant="danger" title="Eliminar el documento (va a la Papelera)" aria-label="Eliminar documento" onClick={() => setConfirmando("eliminar")}><Trash2 className="size-4" /></Button>
+            )}
             {canEdit("documentos") && (
               <Link to={`/documentos/${documento.id}/editar`} target="_blank" rel="noopener noreferrer" title="Abre la edición en una pestaña nueva" className="ml-auto inline-flex min-h-8 items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-700">
                 <Pencil className="size-4" />Corregir monto o datos
@@ -84,7 +149,10 @@ export function DocumentoPanel({ id, inicial, onClose }: { id: string; inicial: 
                   {esIngreso ? "+ " : esEgreso ? "- " : ""}{formatCurrency(Number(documento.monto || 0))}
                 </p>
               </div>
-              <Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Sin estado"}</Badge>
+              <div className="flex flex-col items-end gap-1">
+                <Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Sin estado"}</Badge>
+                <span className="text-[11px] font-semibold text-slate-500">{esFinanciero ? "Registro financiero" : "Registro documentario"}</span>
+              </div>
             </div>
             <p className="mt-1 truncate text-xs text-slate-500" title={`${formatDate(documento.fecha_documento)} · ${documento.categoria?.nombre ?? "Sin categoría"} · ${documento.archivador?.nombre ?? "Sin archivador"}`}>
               {formatDate(documento.fecha_documento)} · {documento.categoria?.nombre ?? "Sin categoría"} · {documento.archivador?.nombre ?? "Sin archivador"}
@@ -107,6 +175,25 @@ export function DocumentoPanel({ id, inicial, onClose }: { id: string; inicial: 
           </div>
         </>
       )}
+      <ConfirmDialog
+        open={confirmando === "eliminar"}
+        onOpenChange={(abierto) => { if (!abierto) setConfirmando(null); }}
+        title="Eliminar documento"
+        description={documento ? `¿Eliminar ${documento.codigo_documento}? Se enviará a la Papelera (se puede restaurar) y su monto de ${formatCurrency(Number(documento.monto || 0))} dejará de sumar mientras esté allí.` : ""}
+        confirmLabel="Eliminar"
+        loading={procesando}
+        onConfirm={() => void eliminar()}
+      />
+      <ConfirmDialog
+        open={confirmando === "documentario"}
+        onOpenChange={(abierto) => { if (!abierto) setConfirmando(null); }}
+        title="Pasar a documentario"
+        description={documento ? `${documento.codigo_documento} dejará de ser financiero: su monto de ${formatCurrency(Number(documento.monto || 0))} pasará a S/ 0.00 y ya no contará como ${documento.tipo_movimiento?.nombre?.toLowerCase() ?? "movimiento"} (desaparecerá de esta lista y de los totales). El monto anterior queda en el historial de auditoría. Para volver a financiero hay que editar el documento e indicar de nuevo naturaleza, monto y operación.` : ""}
+        confirmLabel="Pasar a documentario"
+        variant="primary"
+        loading={procesando}
+        onConfirm={() => void pasarADocumentario()}
+      />
     </section>
   );
 }

@@ -5,6 +5,7 @@ import type { DocumentoFilters } from "../types";
 export function useMontoTotal(filters: DocumentoFilters) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [recarga, setRecarga] = useState(0);
   const requestId = useRef(0);
   const filterKey = JSON.stringify(filters);
 
@@ -22,7 +23,10 @@ export function useMontoTotal(filters: DocumentoFilters) {
         if (currentRequest === requestId.current) setLoading(false);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterKey]);
+  }, [filterKey, recarga]);
 
-  return { total, loading };
+  // Vuelve a calcular el total (por ejemplo, después de eliminar un documento o cambiar su tipo).
+  const refresh = () => setRecarga((valor) => valor + 1);
+
+  return { total, loading, refresh };
 }

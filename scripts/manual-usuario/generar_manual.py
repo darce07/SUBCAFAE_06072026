@@ -21,7 +21,7 @@ from reportlab.platypus import (
 )
 from reportlab.platypus.tableofcontents import TableOfContents
 
-VERSION = "Versión 2.0 · Octubre 2026"
+VERSION = "Versión 2.1 · Octubre 2026"
 SALIDA = Path(__file__).resolve().parents[2] / "public" / "manual-usuario-sigdaf.pdf"
 TEAL = colors.HexColor("#0f766e")
 TEAL_CLARO = colors.HexColor("#ccfbf1")
@@ -176,6 +176,15 @@ CONTENIDO = [
     ("h1", "10. Ingresos, Egresos y Balance"),
     ("p", "El módulo de Finanzas separa los documentos según su tipo de movimiento: Ingresos y Egresos, cada uno en su propia pantalla con el mismo tipo de herramientas (búsqueda, filtros, columnas, paginación) y el total general del monto correspondiente."),
     ("p", "La pantalla de Balance muestra la comparación entre ingresos y egresos del periodo consultado."),
+    ("h2", "Ver qué documentos componen el total"),
+    ("p", "En el Panel de control, las tarjetas <b>Total ingresos</b> y <b>Total egresos</b> se pueden pulsar: llevan a la lista de Ingresos o Egresos con el mismo mes y año del panel. La lista abre con los documentos de <b>mayor a menor monto</b> (también puede ordenarse de menor a mayor o por los más recientes) y muestra el título, cuándo se subió, la fecha del documento, el monto, la categoría y el archivador. El filtro de Mes se suma a los de categoría, estado y año."),
+    ("p", "Al hacer clic en el <b>título</b> de un documento se abre, a la derecha, un <b>panel</b> con el monto registrado en grande y el archivo, para comprobar si el monto es correcto. El panel no bloquea la lista: se puede hacer clic en otro título y el panel cambia, así se revisan varios documentos seguidos. Los botones del panel son:"),
+    ("b", [
+        "<b>Abrir, Descargar, Pantalla completa y Detalle:</b> como en Documentos.",
+        "<b>Pasar a documentario (ícono del documento con check):</b> para un registro que no debería contar como dinero. El monto pasa a S/ 0.00 y el documento deja de sumar como ingreso o egreso (desaparece de la lista y de los totales). Pide confirmación y el monto anterior queda en Auditoría. Volver a financiero se hace desde Editar documento, indicando de nuevo naturaleza, monto y operación.",
+        "<b>Eliminar (tacho de basura):</b> envía el documento a la Papelera, de donde se puede restaurar; mientras esté allí su monto no suma. Pide confirmación.",
+        "<b>Corregir monto o datos:</b> abre la edición del documento en una pestaña nueva, sin perder el lugar en la lista.",
+    ]),
 
     ("h1", "11. Sindicatos"),
     ("p", "Este módulo (dentro de Finanzas) muestra lo que SUBCAFAE entrega a cada sindicato (gasto) y lo que recibe de él, calculado a partir de los documentos registrados. No hay nada que crear aquí: un sindicato aparece solo cuando se registra como <b>entidad de tipo Sindicato</b>, y su gasto es la suma de los documentos con esa entidad y naturaleza <b>Egreso</b>."),
