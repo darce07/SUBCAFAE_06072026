@@ -75,11 +75,11 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
     anio: year ? Number(year) : undefined,
     mes: month ? Number(month) : undefined,
   };
-  const { documentos, count, loading, error } = useDocumentos({ ...filters, ...ORDENES[orden], page, pageSize: PAGE_SIZE });
+  const { documentos, count, loading, error, refresh } = useDocumentos({ ...filters, ...ORDENES[orden], page, pageSize: PAGE_SIZE });
   // El total general se calcula sobre TODOS los registros que calzan con el filtro,
   // no solo los de la página visible — antes se sumaba `rows` y el monto mostrado
   // quedaba silenciosamente incompleto pasados 50 documentos.
-  const { total } = useMontoTotal(filters);
+  const { total, refresh: recargarTotal } = useMontoTotal(filters);
   const rows = useMemo(
     () => documentos.filter((documento) => documento.tipo_movimiento?.nombre === kind),
     [documentos, kind],
@@ -225,7 +225,7 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
 
       {seleccionId && (
         <div className="fixed inset-y-0 right-0 z-40 w-full max-w-xl p-2 xl:inset-y-auto xl:bottom-4 xl:right-4 xl:top-24 xl:w-[min(44rem,40vw)] xl:max-w-none xl:p-0">
-          <DocumentoPanel key={seleccionId} id={seleccionId} inicial={documentos.find((item) => item.id === seleccionId) ?? null} onClose={() => setSeleccionId(null)} />
+          <DocumentoPanel key={seleccionId} id={seleccionId} inicial={documentos.find((item) => item.id === seleccionId) ?? null} onClose={() => setSeleccionId(null)} onCambio={() => { void refresh(); recargarTotal(); }} />
         </div>
       )}
     </div>
