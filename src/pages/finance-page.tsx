@@ -11,6 +11,7 @@ import { useColumnVisibility } from "../hooks/use-column-visibility";
 import { formatCurrency, formatDate, formatDateTime, getStatusTone } from "../lib/utils";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import { ColumnsMenu } from "../components/columns-menu";
+import { DocumentoPanel } from "../components/documento-panel";
 import type { Documento } from "../types";
 
 const FINANCE_COLUMNS = [
@@ -54,6 +55,8 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
   const [month, setMonth] = useState(() => numeroDeUrl(searchParams.get("mes"), 1, 12));
   // Por defecto, los documentos que más pesan en el total van primero.
   const [orden, setOrden] = useState<Orden>("monto_desc");
+  // Documento abierto en el panel lateral (se puede cambiar de uno a otro sin cerrar el panel).
+  const [seleccionId, setSeleccionId] = useState<string | null>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [page, setPage] = useState(1);
   const columnVisibility = useColumnVisibility(`sigdaf:finanzas-${kind.toLowerCase()}-columnas-v2`, FINANCE_DEFAULTS);
@@ -96,6 +99,8 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
         description={`Documentos clasificados como ${kind.toLowerCase()} en la gestión financiera.`}
         action={canCreate("documentos") ? <Button onClick={() => navigate("/documentos/nuevo")}><FilePlus2 className="size-4" />Registrar documento</Button> : undefined}
       />
+      <div className={seleccionId ? "xl:mr-[calc(min(44rem,40vw)+1rem)]" : undefined}>
+      <div className="space-y-6">
       {error && <Alert>{error}</Alert>}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
@@ -158,14 +163,13 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
         ) : (
           <>
             <div className="responsive-card-list gap-3 p-3 sm:grid-cols-2">
-              {rows.map((row) => <FinanceMobileCard key={row.id} row={row} isIncome={isIncome} />)}
+              {rows.map((row) => <FinanceMobileCard key={row.id} row={row} isIncome={isIncome} onOpen={() => setSeleccionId(row.id)} />)}
             </div>
             <div className="table-scroll responsive-table" tabIndex={0}>
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900">
                   <tr>
-                    <th className="whitespace-nowrap px-4 py-3">Código</th>
-                    {columnVisibility.isVisible("titulo") && <th className="whitespace-nowrap px-4 py-3">Título</th>}
+                    {columnVisibility.isVisible("titulo") && <th className="whitespace-nowrap px-4 py-3">Documento <span className="font-normal normal-case text-slate-400">(clic para verlo)</span></th>}
                     {columnVisibility.isVisible("registrado") && <th className="whitespace-nowrap px-4 py-3">Subido el</th>}
                     {columnVisibility.isVisible("fecha") && <th className="whitespace-nowrap px-4 py-3">Fecha del documento</th>}
                     <th className="whitespace-nowrap px-4 py-3 text-right">Monto</th>
@@ -178,11 +182,12 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {rows.map((row) => (
-                    <tr key={row.id}>
-                      <td className="whitespace-nowrap px-4 py-3 font-bold text-teal-700">
-                        <button type="button" className="hover:underline" title="Ver detalle del documento" onClick={() => navigate(`/documentos/${row.id}`)}>{row.codigo_documento}</button>
-                      </td>
-                      {columnVisibility.isVisible("titulo") && <td className="max-w-72 truncate px-4 py-3" title={row.titulo}>{row.titulo}</td>}
+                    <tr key={row.id} className={seleccionId === row.id ? "bg-teal-50 dark:bg-teal-950/30" : undefined} aria-selected={seleccionId === row.id}>
+                      {columnVisibility.isVisible("titulo") && (
+                        <td className="max-w-80 px-4 py-3">
+                          <button type="button" className="block w-full truncate text-left font-semibold text-teal-700 hover:underline dark:text-teal-400" title={`${row.codigo_documento} · ${row.titulo}`} onClick={() => setSeleccionId(row.id)}>{row.titulo}</button>
+                        </td>
+                      )}
                       {columnVisibility.isVisible("registrado") && <td className="whitespace-nowrap px-4 py-3">{row.created_at ? formatDateTime(row.created_at) : "—"}</td>}
                       {columnVisibility.isVisible("fecha") && <td className="whitespace-nowrap px-4 py-3">{formatDate(row.fecha_documento)}</td>}
                       <td className={`whitespace-nowrap px-4 py-3 text-right font-black ${isIncome ? "text-emerald-600" : "text-rose-600"}`}>{isIncome ? "+" : "-"} {formatCurrency(row.monto)}</td>
@@ -215,17 +220,26 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
           </>
         )}
       </Card>
+      </div>
+      </div>
+
+      {seleccionId && (
+        <div className="fixed inset-y-0 right-0 z-40 w-full max-w-xl p-2 xl:inset-y-auto xl:bottom-4 xl:right-4 xl:top-24 xl:w-[min(44rem,40vw)] xl:max-w-none xl:p-0">
+          <DocumentoPanel key={seleccionId} id={seleccionId} inicial={documentos.find((item) => item.id === seleccionId) ?? null} onClose={() => setSeleccionId(null)} />
+        </div>
+      )}
     </div>
   );
 }
 
-function FinanceMobileCard({ row, isIncome }: { row: Documento; isIncome: boolean }) {
+function FinanceMobileCard({ row, isIncome, onOpen }: { row: Documento; isIncome: boolean; onOpen: () => void }) {
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="break-words text-sm font-black text-teal-700 dark:text-teal-400">{row.codigo_documento}</p>
-          <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-slate-950 dark:text-white">{row.titulo}</h2>
+          <button type="button" className="text-left" onClick={onOpen}>
+            <h2 className="line-clamp-2 text-sm font-semibold text-teal-700 hover:underline dark:text-teal-400">{row.titulo}</h2>
+          </button>
         </div>
         <Badge tone={getStatusTone(row.estado?.nombre)}>{row.estado?.nombre ?? "Sin estado"}</Badge>
       </div>
