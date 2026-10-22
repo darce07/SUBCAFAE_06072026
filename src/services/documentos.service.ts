@@ -136,6 +136,8 @@ export async function getDocumentos(filters: DocumentoFilters = {}): Promise<Pag
     .select(select, { count: "exact" })
     .eq("activo", !filters.soloEliminados)
     .order(filters.orderBy ?? (filters.soloEliminados ? "eliminado_at" : "fecha_documento"), { ascending: (filters.orderDirection ?? "desc") === "asc" })
+    // Desempate estable: con el mismo monto (o fecha), los más recientes primero.
+    .order("created_at", { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1);
 
   if (filters.search) {
@@ -157,6 +159,7 @@ export async function getDocumentos(filters: DocumentoFilters = {}): Promise<Pag
   if (filters.entidadId) query = query.eq("entidad_id", filters.entidadId);
   if (filters.creadorId) query = query.eq("created_by", filters.creadorId);
   if (filters.anio) query = query.eq("anio", filters.anio);
+  if (filters.mes) query = query.eq("mes", filters.mes);
   if (filters.tipoMovimientoId) query = query.eq("tipo_movimiento_id", filters.tipoMovimientoId);
   if (filters.tipoMovimientoNombre) query = query.eq("tipo_movimiento.nombre", filters.tipoMovimientoNombre);
   if (filters.hasHistoricalPath) query = query.not("ruta_historica", "is", null).neq("ruta_historica", "");
@@ -238,6 +241,7 @@ export async function getMontoTotal(filters: DocumentoFilters = {}): Promise<num
     if (filters.entidadId) query = query.eq("entidad_id", filters.entidadId);
     if (filters.creadorId) query = query.eq("created_by", filters.creadorId);
     if (filters.anio) query = query.eq("anio", filters.anio);
+    if (filters.mes) query = query.eq("mes", filters.mes);
     if (filters.tipoMovimientoId) query = query.eq("tipo_movimiento_id", filters.tipoMovimientoId);
     if (filters.tipoMovimientoNombre) query = query.eq("tipo_movimiento.nombre", filters.tipoMovimientoNombre);
     if (filters.hasHistoricalPath) query = query.not("ruta_historica", "is", null).neq("ruta_historica", "");
@@ -462,6 +466,7 @@ function filterMockDocumentos(filters: DocumentoFilters) {
       && (!filters.entidadId || documento.entidad_id === filters.entidadId)
       && (!filters.creadorId || documento.created_by === filters.creadorId)
       && (!filters.anio || documento.anio === filters.anio)
+      && (!filters.mes || documento.mes === filters.mes)
       && (!filters.tipoMovimientoId || documento.tipo_movimiento_id === filters.tipoMovimientoId)
       && (!filters.tipoMovimientoNombre || documento.tipo_movimiento?.nombre === filters.tipoMovimientoNombre)
       && (!filters.hasHistoricalPath || Boolean(documento.ruta_historica?.trim()));
@@ -473,6 +478,7 @@ function sortDocumentos(documentos: Documento[], filters: DocumentoFilters) {
   const direction = filters.orderDirection ?? "desc";
   const multiplier = direction === "asc" ? 1 : -1;
   return [...documentos].sort((left, right) => {
+    if (orderBy === "monto") return (Number(left.monto || 0) - Number(right.monto || 0)) * multiplier;
     const leftValue = orderBy === "created_at" ? left.created_at ?? "" : left.fecha_documento;
     const rightValue = orderBy === "created_at" ? right.created_at ?? "" : right.fecha_documento;
     return leftValue.localeCompare(rightValue) * multiplier;

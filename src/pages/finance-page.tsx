@@ -1,38 +1,62 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowDownCircle, ArrowUpCircle, ChevronLeft, ChevronRight, FilePlus2, Search, SlidersHorizontal } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDocumentos } from "../hooks/use-documentos";
 import { useMontoTotal } from "../hooks/use-monto-total";
 import { useCatalogos } from "../hooks/use-catalogos";
 import { useDebounce } from "../hooks/use-debounce";
 import { usePermissions } from "../hooks/use-permissions";
 import { useColumnVisibility } from "../hooks/use-column-visibility";
-import { formatCurrency, formatDate, getStatusTone } from "../lib/utils";
+import { formatCurrency, formatDate, formatDateTime, getStatusTone } from "../lib/utils";
 import { Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Skeleton } from "../components/ui";
 import { ColumnsMenu } from "../components/columns-menu";
 import type { Documento } from "../types";
 
 const FINANCE_COLUMNS = [
-  { id: "fecha", label: "Fecha" },
-  { id: "categoria", label: "Categoría" },
-  { id: "entidad", label: "Entidad" },
   { id: "titulo", label: "Título" },
+  { id: "registrado", label: "Subido el" },
+  { id: "fecha", label: "Fecha del documento" },
+  { id: "categoria", label: "Categoría" },
+  { id: "archivador", label: "Archivador" },
+  { id: "entidad", label: "Entidad" },
   { id: "operacion", label: "Operación" },
   { id: "estado", label: "Estado" },
 ];
+// Entidad, Operación y Estado siguen disponibles en el menú Columnas, pero no se muestran de inicio
+// para que la tabla se lea sin desplazarse.
+const FINANCE_DEFAULTS = { entidad: false, operacion: false, estado: false };
+
+const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+type Orden = "monto_desc" | "monto_asc" | "fecha_desc";
+const ORDENES: Record<Orden, { orderBy: "monto" | "fecha_documento"; orderDirection: "asc" | "desc" }> = {
+  monto_desc: { orderBy: "monto", orderDirection: "desc" },
+  monto_asc: { orderBy: "monto", orderDirection: "asc" },
+  fecha_desc: { orderBy: "fecha_documento", orderDirection: "desc" },
+};
+
+// Año o mes que llegan por la dirección (por ejemplo, desde el Panel de control); si no son válidos, vacío.
+function numeroDeUrl(valor: string | null, minimo: number, maximo: number) {
+  const numero = Number(valor);
+  return Number.isInteger(numero) && numero >= minimo && numero <= maximo ? String(numero) : "";
+}
 
 const PAGE_SIZE = 20;
 
 export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [statusId, setStatusId] = useState("");
-  const [year, setYear] = useState("");
+  const [year, setYear] = useState(() => numeroDeUrl(searchParams.get("anio"), 1900, 2200));
+  const [month, setMonth] = useState(() => numeroDeUrl(searchParams.get("mes"), 1, 12));
+  // Por defecto, los documentos que más pesan en el total van primero.
+  const [orden, setOrden] = useState<Orden>("monto_desc");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const columnVisibility = useColumnVisibility(`sigdaf:finanzas-${kind.toLowerCase()}-columnas`);
+  const columnVisibility = useColumnVisibility(`sigdaf:finanzas-${kind.toLowerCase()}-columnas-v2`, FINANCE_DEFAULTS);
   const debouncedSearch = useDebounce(search);
   const { canCreate } = usePermissions();
   const catalogos = useCatalogos({ includeEntidades: false });
@@ -46,8 +70,9 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
     categoriaId: categoryId || undefined,
     estadoId: statusId || undefined,
     anio: year ? Number(year) : undefined,
+    mes: month ? Number(month) : undefined,
   };
-  const { documentos, count, loading, error } = useDocumentos({ ...filters, page, pageSize: PAGE_SIZE });
+  const { documentos, count, loading, error } = useDocumentos({ ...filters, ...ORDENES[orden], page, pageSize: PAGE_SIZE });
   // El total general se calcula sobre TODOS los registros que calzan con el filtro,
   // no solo los de la página visible — antes se sumaba `rows` y el monto mostrado
   // quedaba silenciosamente incompleto pasados 50 documentos.
@@ -61,7 +86,7 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, kind, categoryId, statusId, year]);
+  }, [debouncedSearch, kind, categoryId, statusId, year, month, orden]);
 
   return (
     <div className="space-y-6">
@@ -107,7 +132,13 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
           <div className={`sm:contents ${mobileFiltersOpen ? "flex flex-wrap gap-2" : "hidden"}`}>
             <Select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">Todas las categorías</option>{catalogos.categorias.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
             <Select value={statusId} onChange={(event) => setStatusId(event.target.value)}><option value="">Todos los estados</option>{catalogos.estadosDocumento.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</Select>
+            <Select value={month} onChange={(event) => setMonth(event.target.value)} aria-label="Filtrar por mes"><option value="">Todos los meses</option>{MESES.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}</Select>
             <Select value={year} onChange={(event) => setYear(event.target.value)}><option value="">Todos los años</option>{years.map((value) => <option key={value}>{value}</option>)}</Select>
+            <Select value={orden} onChange={(event) => setOrden(event.target.value as Orden)} aria-label="Ordenar documentos">
+              <option value="monto_desc">Mayor monto primero</option>
+              <option value="monto_asc">Menor monto primero</option>
+              <option value="fecha_desc">Más recientes primero</option>
+            </Select>
             <ColumnsMenu columns={FINANCE_COLUMNS} isVisible={columnVisibility.isVisible} toggle={columnVisibility.toggle} />
           </div>
         </div>
@@ -134,26 +165,32 @@ export function FinancePage({ kind }: { kind: "Ingreso" | "Egreso" }) {
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900">
                   <tr>
                     <th className="whitespace-nowrap px-4 py-3">Código</th>
-                    {columnVisibility.isVisible("fecha") && <th className="whitespace-nowrap px-4 py-3">Fecha</th>}
-                    {columnVisibility.isVisible("categoria") && <th className="whitespace-nowrap px-4 py-3">Categoría</th>}
-                    {columnVisibility.isVisible("entidad") && <th className="whitespace-nowrap px-4 py-3">Entidad</th>}
                     {columnVisibility.isVisible("titulo") && <th className="whitespace-nowrap px-4 py-3">Título</th>}
+                    {columnVisibility.isVisible("registrado") && <th className="whitespace-nowrap px-4 py-3">Subido el</th>}
+                    {columnVisibility.isVisible("fecha") && <th className="whitespace-nowrap px-4 py-3">Fecha del documento</th>}
+                    <th className="whitespace-nowrap px-4 py-3 text-right">Monto</th>
+                    {columnVisibility.isVisible("categoria") && <th className="whitespace-nowrap px-4 py-3">Categoría</th>}
+                    {columnVisibility.isVisible("archivador") && <th className="whitespace-nowrap px-4 py-3">Archivador</th>}
+                    {columnVisibility.isVisible("entidad") && <th className="whitespace-nowrap px-4 py-3">Entidad</th>}
                     {columnVisibility.isVisible("operacion") && <th className="whitespace-nowrap px-4 py-3">Operación</th>}
                     {columnVisibility.isVisible("estado") && <th className="whitespace-nowrap px-4 py-3">Estado</th>}
-                    <th className="whitespace-nowrap px-4 py-3">Monto</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {rows.map((row) => (
                     <tr key={row.id}>
-                      <td className="px-4 py-3 font-bold text-teal-700">{row.codigo_documento}</td>
+                      <td className="whitespace-nowrap px-4 py-3 font-bold text-teal-700">
+                        <button type="button" className="hover:underline" title="Ver detalle del documento" onClick={() => navigate(`/documentos/${row.id}`)}>{row.codigo_documento}</button>
+                      </td>
+                      {columnVisibility.isVisible("titulo") && <td className="max-w-72 truncate px-4 py-3" title={row.titulo}>{row.titulo}</td>}
+                      {columnVisibility.isVisible("registrado") && <td className="whitespace-nowrap px-4 py-3">{row.created_at ? formatDateTime(row.created_at) : "—"}</td>}
                       {columnVisibility.isVisible("fecha") && <td className="whitespace-nowrap px-4 py-3">{formatDate(row.fecha_documento)}</td>}
+                      <td className={`whitespace-nowrap px-4 py-3 text-right font-black ${isIncome ? "text-emerald-600" : "text-rose-600"}`}>{isIncome ? "+" : "-"} {formatCurrency(row.monto)}</td>
                       {columnVisibility.isVisible("categoria") && <td className="px-4 py-3">{row.categoria?.nombre ?? "—"}</td>}
+                      {columnVisibility.isVisible("archivador") && <td className="px-4 py-3">{row.archivador?.nombre ?? "Sin archivador"}</td>}
                       {columnVisibility.isVisible("entidad") && <td className="px-4 py-3">{row.entidad?.nombre ?? "—"}</td>}
-                      {columnVisibility.isVisible("titulo") && <td className="max-w-64 truncate px-4 py-3">{row.titulo}</td>}
                       {columnVisibility.isVisible("operacion") && <td className="px-4 py-3">{row.tipo_operacion?.nombre ?? "—"}</td>}
                       {columnVisibility.isVisible("estado") && <td className="px-4 py-3"><Badge tone={getStatusTone(row.estado?.nombre)}>{row.estado?.nombre ?? "Sin estado"}</Badge></td>}
-                      <td className={`whitespace-nowrap px-4 py-3 text-right font-black ${isIncome ? "text-emerald-600" : "text-rose-600"}`}>{isIncome ? "+" : "-"} {formatCurrency(row.monto)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -196,7 +233,8 @@ function FinanceMobileCard({ row, isIncome }: { row: Documento; isIncome: boolea
         <span className="text-slate-500">{formatDate(row.fecha_documento)}</span>
         <strong className={`text-right ${isIncome ? "text-emerald-600" : "text-rose-600"}`}>{isIncome ? "+" : "-"} {formatCurrency(row.monto)}</strong>
         <span className="break-words text-slate-500">{row.categoria?.nombre ?? "Sin categoría"}</span>
-        <span className="break-words text-right text-slate-500">{row.entidad?.nombre ?? "Sin entidad"}</span>
+        <span className="break-words text-right text-slate-500">{row.archivador?.nombre ?? "Sin archivador"}</span>
+        <span className="col-span-2 text-slate-500">Subido el {row.created_at ? formatDateTime(row.created_at) : "—"}</span>
         <span className="col-span-2 text-slate-500">Operación: <strong className="text-slate-700 dark:text-slate-200">{row.tipo_operacion?.nombre ?? "No especificada"}</strong></span>
       </div>
     </article>

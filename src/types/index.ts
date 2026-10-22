@@ -229,11 +229,12 @@ export interface DocumentoFilters {
   entidadId?: string;
   creadorId?: string;
   anio?: number;
+  mes?: number;
   tipoMovimientoId?: string;
   tipoMovimientoNombre?: "Ingreso" | "Egreso" | "No aplica";
   hasHistoricalPath?: boolean;
   soloEliminados?: boolean;
-  orderBy?: "fecha_documento" | "created_at" | "eliminado_at";
+  orderBy?: "fecha_documento" | "created_at" | "eliminado_at" | "monto";
   orderDirection?: "asc" | "desc";
   page?: number;
   pageSize?: number;
