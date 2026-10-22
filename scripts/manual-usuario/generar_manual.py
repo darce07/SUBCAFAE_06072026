@@ -183,7 +183,8 @@ CONTENIDO = [
         "<b>Abrir, Descargar, Pantalla completa y Detalle:</b> como en Documentos.",
         "<b>Pasar a documentario (ícono del billete tachado):</b> para un registro que no debería contar como dinero. El monto pasa a S/ 0.00 y el documento deja de sumar como ingreso o egreso (desaparece de la lista y de los totales). Pide confirmación y el monto anterior queda en Auditoría. Volver a financiero se hace desde Editar documento, indicando de nuevo naturaleza, monto y operación.",
         "<b>Eliminar (tacho de basura):</b> envía el documento a la Papelera, de donde se puede restaurar; mientras esté allí su monto no suma. Pide confirmación.",
-        "<b>Corregir monto o datos:</b> abre la edición del documento en una pestaña nueva, sin perder el lugar en la lista.",
+        "<b>Editar el monto (lápiz junto al monto):</b> permite corregir el monto en el mismo panel. Se escribe el monto nuevo y se pulsa Guardar (o Enter; Esc cancela). La lista y el total de arriba se actualizan, y el monto anterior queda en Auditoría. El monto debe ser mayor que cero: si el registro no es dinero, se pasa a documentario.",
+        "<b>Editar todos los datos:</b> abre la edición completa del documento en una pestaña nueva, sin perder el lugar en la lista.",
     ]),
 
     ("h1", "11. Sindicatos"),

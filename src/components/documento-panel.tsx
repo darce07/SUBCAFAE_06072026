@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Download, ExternalLink, BanknoteX, FileText, LoaderCircle, Maximize2, Pencil, Trash2, X } from "lucide-react";
+import { BanknoteX, Check, ChevronDown, Download, ExternalLink, FileText, LoaderCircle, Maximize2, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge, Button } from "./ui";
 import { ConfirmDialog } from "./confirm-dialog";
+import { MontoInput } from "./monto-input";
 import { Field, FilePane } from "./documento-vista";
 import { useAuth } from "../features/auth/auth-context";
 import { useDocumentoVista } from "../hooks/use-documento-vista";
@@ -11,7 +12,7 @@ import { usePermissions } from "../hooks/use-permissions";
 import { formatCurrency, formatDate, formatDateTime, getStatusTone } from "../lib/utils";
 import { deleteDocumento, editDocumento } from "../services/documentos.service";
 import { downloadDocumentoFile } from "../services/storage.service";
-import type { Documento } from "../types";
+import type { Documento, UpdateDocumentoCommand } from "../types";
 
 // Panel lateral para revisar documentos uno tras otro sin perder la lista: NO bloquea la página, así que
 // se puede hacer clic en otro documento y el panel cambia. Muestra el monto bien visible junto al
@@ -22,7 +23,11 @@ export function DocumentoPanel({ id, inicial, onClose, onCambio }: { id: string;
   const { canEdit, canDelete } = usePermissions();
   const [confirmando, setConfirmando] = useState<"eliminar" | "documentario" | null>(null);
   const [procesando, setProcesando] = useState(false);
-  const { documento, preview, loading, cargandoArchivo, error } = useDocumentoVista(id, inicial);
+  const { documento, setDocumento, preview, loading, cargandoArchivo, error } = useDocumentoVista(id, inicial);
+  // Edición del monto en el mismo panel (sin ir a la pantalla completa de edición).
+  const [editandoMonto, setEditandoMonto] = useState(false);
+  const [montoBorrador, setMontoBorrador] = useState(0);
+  const [guardandoMonto, setGuardandoMonto] = useState(false);
   // Los datos secundarios van plegados para que el archivo ocupe casi todo el panel.
   const [masDatos, setMasDatos] = useState(false);
 
@@ -58,31 +63,73 @@ export function DocumentoPanel({ id, inicial, onClose, onCambio }: { id: string;
     }
   };
 
+  // La edición reemplaza todos los datos a la vez: se reenvían los actuales y solo cambia lo que se pide.
+  const comandoActual = (doc: Documento, cambios: Partial<UpdateDocumentoCommand> = {}): UpdateDocumentoCommand => ({
+    fechaDocumento: doc.fecha_documento,
+    categoriaId: doc.categoria_id,
+    tipoEntidadId: doc.tipo_entidad_id ?? null,
+    entidadId: doc.entidad_id ?? null,
+    tipoCategoriaId: doc.tipo_categoria_id ?? null,
+    estadoId: doc.estado_id,
+    titulo: doc.titulo,
+    descripcion: doc.descripcion ?? null,
+    rutaHistorica: doc.ruta_historica ?? null,
+    archivadorId: doc.archivador_id ?? null,
+    archivoPath: doc.archivo_path ?? null,
+    extension: doc.extension ?? null,
+    monto: Number(doc.monto || 0),
+    tipoMovimientoId: doc.tipo_movimiento_id ?? null,
+    tipoOperacionId: doc.tipo_operacion_id ?? null,
+    periodoMes: doc.periodo_mes ?? null,
+    periodoAnio: doc.periodo_anio ?? null,
+    ...cambios,
+  });
+
+  const empezarEdicionMonto = () => {
+    if (!documento) return;
+    setMontoBorrador(Number(documento.monto || 0));
+    setEditandoMonto(true);
+  };
+
+  const guardarMonto = async () => {
+    if (!documento || guardandoMonto) return;
+    const anterior = Number(documento.monto || 0);
+    if (!(montoBorrador > 0)) {
+      toast.error("El monto debe ser mayor que cero. Si el registro no es dinero, pásalo a documentario.");
+      return;
+    }
+    if (montoBorrador === anterior) {
+      setEditandoMonto(false);
+      return;
+    }
+    setGuardandoMonto(true);
+    try {
+      const actualizado = await editDocumento(documento.id, comandoActual(documento, { monto: montoBorrador }));
+      setDocumento(actualizado);
+      setEditandoMonto(false);
+      toast.success(`Monto actualizado: ${formatCurrency(montoBorrador)} (antes ${formatCurrency(anterior)}).`);
+      onCambio?.();
+    } catch (editError) {
+      toast.error(editError instanceof Error ? editError.message : "No se pudo guardar el monto.");
+    } finally {
+      setGuardandoMonto(false);
+    }
+  };
+
   // Pasar a documentario: monto 0 y sin naturaleza, operación, tipo de gestión ni periodo. Así deja de
   // contarse como ingreso o egreso. El monto anterior queda en el historial de auditoría.
   const pasarADocumentario = async () => {
     if (!documento) return;
     setProcesando(true);
     try {
-      await editDocumento(documento.id, {
-        fechaDocumento: documento.fecha_documento,
-        categoriaId: documento.categoria_id,
-        tipoEntidadId: documento.tipo_entidad_id ?? null,
-        entidadId: documento.entidad_id ?? null,
+      await editDocumento(documento.id, comandoActual(documento, {
         tipoCategoriaId: null,
-        estadoId: documento.estado_id,
-        titulo: documento.titulo,
-        descripcion: documento.descripcion ?? null,
-        rutaHistorica: documento.ruta_historica ?? null,
-        archivadorId: documento.archivador_id ?? null,
-        archivoPath: documento.archivo_path ?? null,
-        extension: documento.extension ?? null,
         monto: 0,
         tipoMovimientoId: null,
         tipoOperacionId: null,
         periodoMes: null,
         periodoAnio: null,
-      });
+      }));
       toast.success(`${documento.codigo_documento} ahora es documentario: ya no cuenta como ${documento.tipo_movimiento?.nombre?.toLowerCase() ?? "movimiento"}.`);
       setConfirmando(null);
       onCambio?.();
@@ -122,7 +169,7 @@ export function DocumentoPanel({ id, inicial, onClose, onCambio }: { id: string;
             )}
             {canEdit("documentos") && (
               <Link to={`/documentos/${documento.id}/editar`} target="_blank" rel="noopener noreferrer" title="Abre la edición en una pestaña nueva" className="ml-auto inline-flex min-h-8 items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-700">
-                <Pencil className="size-4" />Corregir monto o datos
+                <Pencil className="size-4" />Editar todos los datos
               </Link>
             )}
           </div>
@@ -145,9 +192,29 @@ export function DocumentoPanel({ id, inicial, onClose, onCambio }: { id: string;
             <div className="flex items-end justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Monto registrado ({documento.tipo_movimiento?.nombre ?? "sin naturaleza"})</p>
-                <p className={`text-2xl font-black leading-tight ${esIngreso ? "text-emerald-600" : esEgreso ? "text-rose-600" : "text-slate-700 dark:text-slate-200"}`}>
-                  {esIngreso ? "+ " : esEgreso ? "- " : ""}{formatCurrency(Number(documento.monto || 0))}
-                </p>
+                {editandoMonto ? (
+                  <div
+                    className="mt-1 flex flex-wrap items-center gap-1.5"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") { event.preventDefault(); void guardarMonto(); }
+                      if (event.key === "Escape") { event.stopPropagation(); setEditandoMonto(false); }
+                    }}
+                  >
+                    <span className="text-sm font-bold text-slate-500">S/</span>
+                    <MontoInput className="w-40 font-bold" value={montoBorrador} onChange={setMontoBorrador} disabled={guardandoMonto} />
+                    <Button size="sm" loading={guardandoMonto} onClick={() => void guardarMonto()}><Check className="size-4" />Guardar</Button>
+                    <Button size="sm" variant="ghost" disabled={guardandoMonto} onClick={() => setEditandoMonto(false)}>Cancelar</Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <p className={`text-2xl font-black leading-tight ${esIngreso ? "text-emerald-600" : esEgreso ? "text-rose-600" : "text-slate-700 dark:text-slate-200"}`}>
+                      {esIngreso ? "+ " : esEgreso ? "- " : ""}{formatCurrency(Number(documento.monto || 0))}
+                    </p>
+                    {canEdit("documentos") && esFinanciero && (
+                      <button type="button" title="Editar el monto aquí mismo" aria-label="Editar monto" onClick={empezarEdicionMonto} className="grid size-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-teal-700 dark:hover:bg-slate-800"><Pencil className="size-4" /></button>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex flex-col items-end gap-1">
                 <Badge tone={getStatusTone(documento.estado?.nombre)}>{documento.estado?.nombre ?? "Sin estado"}</Badge>
